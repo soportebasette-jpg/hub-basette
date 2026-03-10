@@ -84,7 +84,7 @@ if not st.session_state["password_correct"]:
             else: st.error("Clave incorrecta")
     st.stop()
 
-# 5. NAVEGACIÓN (Dashboard añadido al final)
+# 5. NAVEGACIÓN
 with st.sidebar:
     if os.path.exists(LOGO_PRINCIPAL): st.image(LOGO_PRINCIPAL)
     st.markdown("---")
@@ -225,24 +225,51 @@ elif menu == "📂 REPOSITORIO":
                 for fn in archivos:
                     with open(f"manuales/{fn}", "rb") as f: st.download_button(f"📥 {fn}", f, file_name=fn, key=f"b_{fn}")
 
-# --- DASHBOARD (Añadido sin tocar nada del resto) ---
+# --- DASHBOARD ACTUALIZADO CON TUS COLUMNAS REALES ---
 elif menu == "📈 DASHBOARD":
     st.header("🏆 Ranking y Análisis de Ventas")
+    
+    # 1. Intentar conectar (si fallan los secrets, no rompe la app)
     try:
         conn = st.connection("gsheets", type=GSheetsConnection)
+        #ttl=300 actualiza datos cada 5 minutos
         df = conn.read(ttl=300)
+        
+        # 2. Si hay datos, limpiarlos y visualizarlos
         if df is not None and not df.empty:
+            # Limpiar espacios extra en nombres de columnas
             df.columns = df.columns.str.strip()
+            
             col1, col2 = st.columns(2)
+            
             with col1:
                 st.markdown('<div class="block-header">🥇 RANKING COMERCIAL</div>', unsafe_allow_html=True)
+                # Usamos tu columna real: 'Comercial'
                 if 'Comercial' in df.columns:
-                    st.table(df.groupby('Comercial').size().reset_index(name='Ventas').sort_values('Ventas', ascending=False))
+                    ranking = df.groupby('Comercial').size().reset_index(name='Ventas').sort_values('Ventas', ascending=False)
+                    st.table(ranking)
+                else:
+                    st.warning("No se encontró la columna 'Comercial' en el Excel.")
+            
             with col2:
-                st.markdown('<div class="block-header">📊 REPARTO POR COMPAÑÍA</div>', unsafe_allow_html=True)
-                if 'Compañia' in df.columns:
-                    st.bar_chart(df['Compañia'].value_counts())
+                st.markdown('<div class="block-header">📊 REPARTO POR COMERCIALIZADORA</div>', unsafe_allow_html=True)
+                # Usamos tu columna real: 'Comercializadora'
+                if 'Comercializadora' in df.columns:
+                    reparto_cia = df['Comercializadora'].value_counts()
+                    st.bar_chart(reparto_cia)
+                else:
+                    st.warning("No se encontró la columna 'Comercializadora' en el Excel.")
+            
+            # Listado completo al final
             st.markdown('<div class="block-header">📋 TODAS LAS VENTAS</div>', unsafe_allow_html=True)
+            # Ordenar por 'Fecha Creación' si existe
+            if 'Fecha Creación' in df.columns:
+                df = df.sort_values(by='Fecha Creación', ascending=False)
             st.dataframe(df, use_container_width=True, hide_index=True)
+            
+        else:
+            st.info("Conectado a 'Ventas_CRM', pero el archivo parece estar vacío.")
+            
     except Exception as e:
-        st.warning("El Dashboard no está disponible. Revisa la configuración de Google Secrets.")
+        # Mensaje de seguridad si fallan los Secrets
+        st.warning("El Dashboard no está disponible. Revisa la configuración de Google Secrets en Streamlit Cloud.")
