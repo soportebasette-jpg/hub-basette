@@ -261,3 +261,52 @@ elif menu == "📂 REPOSITORIO":
                 archivos = [f for f in os.listdir("manuales") if busq in f.lower() and "argumentario" not in f.lower() and not f.lower().endswith('.png')]
                 for fn in archivos:
                     with open(f"manuales/{fn}", "rb") as f: st.download_button(f"📥 {fn}", f, file_name=fn, key=f"b_{fn}")
+# (Copia desde aquí hasta el final del archivo en tu GitHub)
+import streamlit as st
+import os
+import pandas as pd
+from datetime import datetime
+from fpdf import FPDF
+from streamlit_gsheets import GSheetsConnection
+
+# 1. CONFIGURACIÓN
+st.set_page_config(page_title="Basette Group | Hub", layout="wide")
+
+# (Aquí iría tu CSS y el Login que ya tienes...)
+
+# 2. NAVEGACIÓN
+with st.sidebar:
+    st.markdown("---")
+    menu = st.radio("Secciones:", ["🚀 CRM", "📊 PRECIOS", "⚖️ COMPARADOR", "📈 DASHBOARD VENTAS", "📢 PLANES Y ANUNCIOS", "📂 REPOSITORIO"])
+
+# --- SECCIÓN: DASHBOARD VENTAS ---
+if menu == "📈 DASHBOARD VENTAS":
+    st.header("Análisis de Ventas en Tiempo Real")
+    
+    try:
+        # Conexión usando los Secrets que pegaste
+        conn = st.connection("gsheets", type=GSheetsConnection)
+        
+        # Leer el Excel Ventas_CRM
+        df = conn.read()
+        
+        if df is not None and not df.empty:
+            # Mostrar métricas clave
+            col1, col2, col3 = st.columns(3)
+            col1.metric("Total Ventas", len(df))
+            if 'Importe' in df.columns:
+                col2.metric("Facturación", f"{df['Importe'].sum():.2f} €")
+            
+            st.markdown("### 📋 Listado de Operaciones")
+            st.dataframe(df, use_container_width=True)
+            
+            st.markdown("### 📊 Ventas por Comercial")
+            if 'Comercial' in df.columns:
+                st.bar_chart(df.groupby('Comercial').size())
+        else:
+            st.info("El Excel 'Ventas_CRM' está conectado pero aún no tiene datos.")
+            
+    except Exception as e:
+        st.error("No se pudo conectar con Google Drive. Revisa los Secrets.")
+
+# (El resto de tus secciones: CRM, Precios, etc., se mantienen igual)
