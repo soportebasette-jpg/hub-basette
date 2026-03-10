@@ -86,13 +86,11 @@ if not st.session_state["password_correct"]:
 with st.sidebar:
     if os.path.exists(LOGO_PRINCIPAL): st.image(LOGO_PRINCIPAL)
     st.markdown("---")
-    menu = st.radio("Secciones:", ["🚀 CRM", "📊 PRECIOS", "⚖️ COMPARADOR", "📂 REPOSITORIO"], label_visibility="collapsed")
+    menu = st.radio("Secciones:", ["🚀 CRM", "📊 PRECIOS", "⚖️ COMPARADOR", "📢 PLANES Y ANUNCIOS", "📂 REPOSITORIO"], label_visibility="collapsed")
 
 # --- CRM ---
 if menu == "🚀 CRM":
     st.header("Portales de Gestión")
-    
-    # NUEVA SECCIÓN: MARCADOR (Aparece la primera)
     st.markdown('<div class="block-header">⭐ MARCADOR</div>', unsafe_allow_html=True)
     st.markdown(f'''<div style="background:#161b22; padding:15px; border-radius:10px; border:2px solid #d2ff00; text-align:center; margin-bottom:10px;"><h4 style="color:white; margin:0;">MARCADOR PRINCIPAL</h4></div>''', unsafe_allow_html=True)
     st.link_button(f"ENTRAR AL MARCADOR", "https://grupobasette.vozipcenter.com/", use_container_width=True)
@@ -130,37 +128,24 @@ elif menu == "📊 PRECIOS":
         ])
         st.dataframe(df_gas, use_container_width=True, hide_index=True)
     with t3:
-        # SECCIÓN 1: SOLO FIBRA
         st.markdown('<div class="block-header">📡 SOLO FIBRA</div>', unsafe_allow_html=True)
         f_cols = st.columns(3)
         solo_fibra = [("300 Mb", "23€"), ("600 Mb", "27€"), ("1 Gb", "31€")]
         for i, (vel, pre) in enumerate(solo_fibra):
             with f_cols[i]:
                 st.markdown(f'<div class="price-card"><div class="price-title">FIBRA {vel}</div><div class="price-val">{pre}</div><div class="price-sub">Precio Final / Mes</div></div>', unsafe_allow_html=True)
-
-        # SECCIÓN 2: FIBRA Y MÓVIL
         st.markdown('<div class="block-header">🌐 FIBRA Y MÓVIL</div>', unsafe_allow_html=True)
         fm_cols = st.columns(4)
         fibra_movil = [("300 Mb", "40 GB", "30€", "1 LÍNEA"), ("600 Mb", "10+40 GB", "35€", "2 LÍNEAS"), ("600 Mb", "60 GB", "35€", "1 LÍNEA"), ("1 Gb", "120 GB", "38€", "1 LÍNEA")]
         for i, (vel, gb, pre, lin) in enumerate(fibra_movil):
             with fm_cols[i]:
                 st.markdown(f'<div class="price-card"><div class="price-title">{vel} + {lin}</div><div class="price-val">{pre}</div><div class="price-sub">{gb} de Datos</div></div>', unsafe_allow_html=True)
-
-        # SECCIÓN 3: FIBRA, MÓVIL Y TV (NUEVO FORMATO TARJETAS)
         st.markdown('<div class="block-header">📺 TELEVISIÓN Y PACKS TV</div>', unsafe_allow_html=True)
         tv_cols = st.columns(5)
-        packs_tv = [
-            ("SOLO TV", "", "9.99€", "M+ Suscripción"),
-            ("600 Mb + TV", "35 GB", "38€", "M+ Incluido"),
-            ("600 Mb + TV", "60 GB", "45€", "M+ / Netflix"),
-            ("1 Gb + TV", "350 GB", "50€", "M+ Incluido"),
-            ("1 Gb + TV", "375 GB", "56€", "M+ / Netflix")
-        ]
+        packs_tv = [("SOLO TV", "", "9.99€", "M+ Suscripción"), ("600 Mb + TV", "35 GB", "38€", "M+ Incluido"), ("600 Mb + TV", "60 GB", "45€", "M+ / Netflix"), ("1 Gb + TV", "350 GB", "50€", "M+ Incluido"), ("1 Gb + TV", "375 GB", "56€", "M+ / Netflix")]
         for i, (tit, gb, pre, extra) in enumerate(packs_tv):
             with tv_cols[i]:
                 st.markdown(f'<div class="price-card"><div class="price-title">{tit}</div><div class="price-val">{pre}</div><div class="price-sub">{gb if gb else extra}</div></div>', unsafe_allow_html=True)
-
-        # SECCIÓN 4: ADICIONALES (NUEVO FORMATO TARJETAS)
         st.markdown('<div class="block-header">➕ LÍNEAS ADICIONALES</div>', unsafe_allow_html=True)
         ad_cols = st.columns(3)
         ad_list = [("Móvil 40 GB", "5€"), ("Móvil 150 GB", "10€"), ("Móvil 300 GB", "15€")]
@@ -184,20 +169,16 @@ elif menu == "⚖️ COMPARADOR":
         sel = next(t for t in tarifas_luz if t["COMPAÑÍA"] == comp_sel and t["TARIFA"] == tarifa_sel_nombre)
         if os.path.exists(sel["logo"]): st.image(sel["logo"], width=120)
         consumo = st.number_input("Consumo del periodo (kWh)", value=0.0)
-
     try:
         p_calc = float(str(sel['ENERGIA']).split('/')[0].replace(',', '.')) if isinstance(sel['ENERGIA'], str) else sel['ENERGIA']
     except:
         p_calc = 0.11
-
     coste_p = (potencia * sel["P1"] * dias_factura) + (potencia * sel["P2"] * dias_factura)
     coste_e = consumo * p_calc
     coste_total_iva = (coste_p + coste_e) * 1.21
     ahorro = f_act - coste_total_iva
-
     st.info(f"**Tarifa Seleccionada:** {tarifa_sel_nombre} | Energía: **{sel['ENERGIA']}** €/kWh | Potencia: **{sel['P1']}** €/kW día")
     st.markdown(f'<div style="background:#d2ff00; padding:20px; border-radius:10px; text-align:center;"><h2 style="color:black;">AHORRO ESTIMADO: {ahorro:.2f} €</h2></div>', unsafe_allow_html=True)
-    
     if st.button("GENERAR ESTUDIO PDF PROFESIONAL"):
         pdf = FPDF()
         pdf.add_page()
@@ -218,19 +199,55 @@ elif menu == "⚖️ COMPARADOR":
         pdf.cell(190, 15, f"AHORRO TOTAL: {ahorro:.2f} EUR", ln=True, align="C", fill=True)
         st.download_button(label="📥 DESCARGAR ESTUDIO PDF", data=pdf.output(dest='S').encode('latin-1', 'replace'), file_name=f"Estudio_{cliente}.pdf")
 
+# --- PLANES Y ANUNCIOS ---
+elif menu == "📢 PLANES Y ANUNCIOS":
+    st.header("Planes y Comunicación")
+    
+    st.markdown('<div class="block-header">📢 ANUNCIOS BASETTE</div>', unsafe_allow_html=True)
+    with st.container():
+        st.markdown(f'''<div style="background:#161b22; padding:20px; border-radius:10px; border:1px solid #30363d; text-align:center;">
+            <h4 style="color:#d2ff00;">TABLÓN DE ANUNCIOS Y REDES</h4>
+            <p style="color:white;">Consulta novedades y síguenos en nuestras redes sociales.</p>
+        </div>''', unsafe_allow_html=True)
+        c_an1, c_an2 = st.columns(2)
+        with c_an1:
+            st.link_button("VER ANUNCIOS", "https://forms.gle/CyBfXF9SDqCsq9tx8", use_container_width=True)
+        with c_an2:
+            st.link_button("📸 INSTAGRAM", "https://www.instagram.com/basette.eu/", use_container_width=True)
+
+    st.markdown("---")
+
+    st.markdown('<div class="block-header">🤝 PLAN AMIGO</div>', unsafe_allow_html=True)
+    col_info, col_qr = st.columns([2, 1])
+    
+    with col_info:
+        st.markdown(f'''<div style="background:#161b22; padding:20px; border-radius:10px; border:1px solid #30363d; height:100%;">
+            <h4 style="color:#d2ff00;">¡GANA RECOMENDANDO!</h4>
+            <p style="color:white;">Utiliza tu enlace o el código QR para registrar tus recomendaciones.</p>
+            <br>
+        </div>''', unsafe_allow_html=True)
+        st.link_button("🔗 ENLACE FORMULARIO PLAN AMIGO", "https://forms.gle/mU6XzRvywDoBQ5Q47", use_container_width=True)
+
+    with col_qr:
+        # RUTA CORREGIDA PARA GITHUB (MI_INTRANET es la raíz, no parte de la ruta interna si estás ejecutando desde ahí)
+        qr_path = "anunciosbasette/qr-plan amigo.png"
+        if os.path.exists(qr_path):
+            st.image(qr_path, caption="QR Plan Amigo", use_container_width=True)
+            with open(qr_path, "rb") as file:
+                st.download_button(label="📥 DESCARGAR QR", data=file, file_name="QR_Plan_Amigo.png", mime="image/png", use_container_width=True)
+        else:
+            st.error(f"Archivo no encontrado en: {qr_path}")
+
 # --- REPOSITORIO ---
 elif menu == "📂 REPOSITORIO":
     st.header("Documentación")
-    
-    # NUEVA CARPETA: MANUAL DEL MARCADOR
     with st.expander("📂 MANUAL DEL MARCADOR"):
         manual_path = "manuales/Manual_Premiumnumber_Agente.pdf"
         if os.path.exists(manual_path):
             with open(manual_path, "rb") as f:
                 st.download_button("📖 DESCARGAR MANUAL MARCADOR", f, file_name="Manual_Marcador_Agente.pdf", key="manual_marcador")
         else:
-            st.warning("Archivo 'Manual_Premiumnumber_Agente.pdf' no encontrado en la carpeta manuales.")
-
+            st.warning("Archivo no encontrado en manuales.")
     with st.expander("📂 ARGUMENTARIOS DE VENTA"):
         docs = ["ARGUMENTARIO_ENERGÍA (Venta Fría) + Venta Cruzada Teleco.docx", "ARGUMENTARIO_TELECO (Clientes Movistar a O2) + Venta Cruzada Energía.docx", "FRASES PROHIBIDAS,PODER EN LA VENTA y REBATE OBJECIONES.docx"]
         for d in docs:
