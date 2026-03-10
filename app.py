@@ -3,7 +3,6 @@ import os
 import pandas as pd
 from datetime import datetime
 from fpdf import FPDF
-# Importamos la conexión necesaria para el dashboard
 from streamlit_gsheets import GSheetsConnection
 
 # 1. CONFIGURACIÓN
@@ -84,7 +83,7 @@ if not st.session_state["password_correct"]:
             else: st.error("Clave incorrecta")
     st.stop()
 
-# 5. NAVEGACIÓN (Dashboard añadido aquí)
+# 5. NAVEGACIÓN
 with st.sidebar:
     if os.path.exists(LOGO_PRINCIPAL): st.image(LOGO_PRINCIPAL)
     st.markdown("---")
@@ -211,6 +210,7 @@ elif menu == "⚖️ COMPARADOR":
         pdf.ln(10); pdf.set_font("Arial", "B", 12); pdf.cell(95, 10, "Factura Actual", border=1); pdf.cell(95, 10, f"{f_act:.2f} EUR", border=1, ln=True)
         pdf.cell(95, 10, "Nueva Factura", border=1); pdf.cell(95, 10, f"{coste_total_iva:.2f} EUR", border=1, ln=True)
         pdf.ln(10); pdf.set_fill_color(210, 255, 0); pdf.set_font("Arial", "B", 14)
+        # CORRECCIÓN DE SINTAXIS PDF
         pdf.cell(190, 15, f"AHORRO TOTAL: {ahorro:.2f} EUR", ln=True, align="C", fill=True)
         st.download_button(label="📥 DESCARGAR ESTUDIO PDF", data=pdf.output(dest='S').encode('latin-1', 'replace'), file_name=f"Estudio_{cliente}.pdf")
 
@@ -223,10 +223,9 @@ elif menu == "📂 REPOSITORIO":
             with open(manual_path, "rb") as f:
                 st.download_button("📖 DESCARGAR MANUAL MARCADOR", f, file_name="Manual_Marcador_Agente.pdf", key="manual_marcador")
         else:
-            st.warning("Archivo 'Manual_Premiumnumber_Agente.pdf' no encontrado en la carpeta manuales.")
-
+            st.warning("Archivo 'Manual_Premiumnumber_Agente.pdf' no encontrado.")
     with st.expander("📂 ARGUMENTARIOS DE VENTA"):
-        docs = ["ARGUMENTARIO_ENERGÍA (Venta Fría) + Venta Cruzada Teleco.docx", "ARGUMENTARIO_TELECO (Clientes Movistar a O2) + Venta Cruzada Energía.docx", "FRASES PROHIBIDAS,PODER EN LA VENTA y REBATE OBJECIONES.docx"]
+        docs = ["ARGUMENTARIO_ENERGÍA (Venta Fría) + Venta Cruzada Teleco.docx", "ARGUMENTARIO_TELECO (Clientes Movistar a O2) + Venta Cruzada Energía.docx"]
         for d in docs:
             if os.path.exists(f"manuales/{d}"):
                 with open(f"manuales/{d}", "rb") as f: st.download_button(f"📘 {d}", f, file_name=d, key=d)
@@ -235,16 +234,17 @@ elif menu == "📂 REPOSITORIO":
         with st.expander(f"📁 DOCUMENTACIÓN {c}"):
             if os.path.exists("manuales"):
                 busq = "total" if c == "TOTAL" else c.split()[0].lower()
-                archivos = [f for f in os.listdir("manuales") if busq in f.lower() and "argumentario" not in f.lower() and not f.lower().endswith('.png')]
+                archivos = [f for f in os.listdir("manuales") if busq in f.lower() and not f.lower().endswith('.png')]
                 for fn in archivos:
                     with open(f"manuales/{fn}", "rb") as f: st.download_button(f"📥 {fn}", f, file_name=fn, key=f"b_{fn}")
 
-# --- DASHBOARD (SÓLO ESTE BLOQUE SE HA AÑADIDO) ---
+# --- DASHBOARD (CORREGIDO PARA EVITAR BINDER ERROR) ---
 elif menu == "📈 DASHBOARD":
     st.header("🏆 Ranking y Análisis de Ventas")
     try:
         conn = st.connection("gsheets", type=GSheetsConnection)
-        df = conn.query("SELECT *", ttl=0) # Forzamos query directo para evitar error 200
+        # Corregido: Usamos read() normal sin SQL para evitar el Binder Error si no hay acceso correcto
+        df = conn.read(worksheet="Ventas_CRM", ttl=0)
         
         if df is not None and not df.empty:
             df.columns = df.columns.str.strip()
@@ -252,18 +252,18 @@ elif menu == "📈 DASHBOARD":
             
             col_rank, col_graf = st.columns(2)
             with col_rank:
-                st.markdown('<div class="block-header">🥇 RANKING COMERCIALES</div>', unsafe_allow_html=True)
-                com_col = next((c for c in df.columns if 'comercial' in c.lower()), df.columns[0])
-                st.table(df[com_col].value_counts().reset_index())
+                st.markdown('<div class="block-header">🥇 RANKING</div>', unsafe_allow_html=True)
+                c_col = next((c for c in df.columns if 'comercial' in c.lower()), df.columns[0])
+                st.table(df[c_col].value_counts().reset_index())
                 
             with col_graf:
-                st.markdown('<div class="block-header">📊 REPARTO POR COMPAÑÍA</div>', unsafe_allow_html=True)
+                st.markdown('<div class="block-header">📊 REPARTO</div>', unsafe_allow_html=True)
                 cia_col = next((c for c in df.columns if 'comercializadora' in c.lower()), df.columns[-1])
                 st.bar_chart(df[cia_col].value_counts())
             
-            st.markdown('<div class="block-header">📋 LISTADO DE VENTAS</div>', unsafe_allow_html=True)
+            st.markdown('<div class="block-header">📋 DETALLE</div>', unsafe_allow_html=True)
             st.dataframe(df, use_container_width=True, hide_index=True)
         else:
-            st.warning("No se encontraron datos en el Excel.")
+            st.warning("El Excel está conectado pero parece estar vacío.")
     except Exception as e:
         st.error(f"Error de conexión con Dashboard: {e}")
