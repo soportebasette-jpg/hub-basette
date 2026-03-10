@@ -91,6 +91,12 @@ with st.sidebar:
 # --- CRM ---
 if menu == "🚀 CRM":
     st.header("Portales de Gestión")
+    
+    # NUEVA SECCIÓN: MARCADOR (Aparece la primera)
+    st.markdown('<div class="block-header">⭐ MARCADOR</div>', unsafe_allow_html=True)
+    st.markdown(f'''<div style="background:#161b22; padding:15px; border-radius:10px; border:2px solid #d2ff00; text-align:center; margin-bottom:10px;"><h4 style="color:white; margin:0;">MARCADOR PRINCIPAL</h4></div>''', unsafe_allow_html=True)
+    st.link_button(f"ENTRAR AL MARCADOR", "https://grupobasette.vozipcenter.com/", use_container_width=True)
+    
     st.markdown('<div class="block-header">💡 🔥 ENERGÍA</div>', unsafe_allow_html=True)
     energia = [{"n": "CRM BASETTE", "u": "https://crm.grupobasette.eu/login"}, {"n": "GANA ENERGÍA", "u": "https://colaboradores.ganaenergia.com/"}, {"n": "NATURGY", "u": "https://checkout.naturgy.es/backoffice"}, {"n": "GAS TOTAL", "u": "https://totalenergiesespana.my.site.com/portalcolaboradores/s/login/?ec=302&startURL=%2Fportalcolaboradores%2Fs%2F"}, {"n": "LUZ TOTAL", "u": "https://agentes.totalenergies.es/#/resumen"}, {"n": "IBERDROLA", "u": "https://crm.gesventas.eu/login.php"}, {"n": "NIBA", "u": "https://clientes.niba.es/"}, {"n": "ENDESA", "u": "https://inergia.app"}]
     cols_en = st.columns(3)
@@ -215,6 +221,16 @@ elif menu == "⚖️ COMPARADOR":
 # --- REPOSITORIO ---
 elif menu == "📂 REPOSITORIO":
     st.header("Documentación")
+    
+    # NUEVA CARPETA: MANUAL DEL MARCADOR
+    with st.expander("📂 MANUAL DEL MARCADOR"):
+        manual_path = "manuales/Manual_Premiumnumber_Agente.pdf"
+        if os.path.exists(manual_path):
+            with open(manual_path, "rb") as f:
+                st.download_button("📖 DESCARGAR MANUAL MARCADOR", f, file_name="Manual_Marcador_Agente.pdf", key="manual_marcador")
+        else:
+            st.warning("Archivo 'Manual_Premiumnumber_Agente.pdf' no encontrado en la carpeta manuales.")
+
     with st.expander("📂 ARGUMENTARIOS DE VENTA"):
         docs = ["ARGUMENTARIO_ENERGÍA (Venta Fría) + Venta Cruzada Teleco.docx", "ARGUMENTARIO_TELECO (Clientes Movistar a O2) + Venta Cruzada Energía.docx", "FRASES PROHIBIDAS,PODER EN LA VENTA y REBATE OBJECIONES.docx"]
         for d in docs:
