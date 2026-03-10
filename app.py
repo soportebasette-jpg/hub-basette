@@ -231,7 +231,7 @@ elif menu == "📈 DASHBOARD":
     
     # 1. Intentar conectar (si fallan los secrets, no rompe la app)
     try:
-        conn = st.connection("gsheets", type=GSheetsConnection)
+        conn = st.connection(type=GSheetsConnection)
         #ttl=300 actualiza datos cada 5 minutos
         df = conn.read(ttl=300)
         
