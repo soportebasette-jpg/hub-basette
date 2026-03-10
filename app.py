@@ -198,4 +198,76 @@ elif menu == "⚖️ COMPARADOR":
         pdf.ln(10); pdf.set_font("Arial", "B", 12); pdf.cell(95, 10, "Factura Actual", border=1); pdf.cell(95, 10, f"{f_act:.2f} EUR", border=1, ln=True)
         pdf.cell(95, 10, "Nueva Factura", border=1); pdf.cell(95, 10, f"{coste_total_iva:.2f} EUR", border=1, ln=True)
         pdf.ln(10); pdf.set_fill_color(210, 255, 0); pdf.set_font("Arial", "B", 14)
-        pdf.cell(190, 15, f"AHORRO TOTAL: {ahorro:.2f} EUR",
+        pdf.cell(190, 15, f"AHORRO TOTAL: {ahorro:.2f} EUR", ln=True, align="C", fill=True)
+        st.download_button(label="📥 DESCARGAR ESTUDIO PDF", data=pdf.output(dest='S').encode('latin-1', 'replace'), file_name=f"Estudio_{cliente}.pdf")
+
+# --- REPOSITORIO ---
+elif menu == "📂 REPOSITORIO":
+    st.header("Documentación")
+    with st.expander("📂 MANUAL DEL MARCADOR"):
+        manual_path = "manuales/Manual_Premiumnumber_Agente.pdf"
+        if os.path.exists(manual_path):
+            with open(manual_path, "rb") as f:
+                st.download_button("📖 DESCARGAR MANUAL MARCADOR", f, file_name="Manual_Marcador_Agente.pdf", key="manual_marcador")
+        else:
+            st.warning("Archivo 'Manual_Premiumnumber_Agente.pdf' no encontrado.")
+    with st.expander("📂 ARGUMENTARIOS DE VENTA"):
+        docs = ["ARGUMENTARIO_ENERGÍA (Venta Fría) + Venta Cruzada Teleco.docx", "ARGUMENTARIO_TELECO (Clientes Movistar a O2) + Venta Cruzada Energía.docx", "FRASES PROHIBIDAS,PODER EN LA VENTA y REBATE OBJECIONES.docx"]
+        for d in docs:
+            if os.path.exists(f"manuales/{d}"):
+                with open(f"manuales/{d}", "rb") as f: st.download_button(f"📘 {d}", f, file_name=d, key=d)
+    st.markdown("---")
+    for c in ["GANA ENERGÍA", "NATURGY", "TOTAL", "ENDESA", "O2"]:
+        with st.expander(f"📁 DOCUMENTACIÓN {c}"):
+            if os.path.exists("manuales"):
+                busq = "total" if c == "TOTAL" else c.split()[0].lower()
+                archivos = [f for f in os.listdir("manuales") if busq in f.lower() and "argumentario" not in f.lower() and not f.lower().endswith('.png')]
+                for fn in archivos:
+                    with open(f"manuales/{fn}", "rb") as f: st.download_button(f"📥 {fn}", f, file_name=fn, key=f"b_{fn}")
+
+# --- DASHBOARD DIAGNÓSTICO ---
+elif menu == "📈 DASHBOARD":
+    st.header("🏆 Ranking y Análisis de Ventas")
+    
+    try:
+        conn = st.connection("gsheets", type=GSheetsConnection)
+        # Cargamos el archivo usando el ID configurado en Secrets
+        df = conn.read(ttl=0)
+        
+        if df is not None and not df.empty:
+            df.columns = df.columns.str.strip() # Limpiar nombres de columnas
+            
+            # KPI superiores
+            col_kpi1, col_kpi2, col_kpi3 = st.columns(3)
+            with col_kpi1:
+                st.metric("Ventas Totales", len(df))
+            
+            col1, col2 = st.columns(2)
+            with col1:
+                st.markdown('<div class="block-header">🥇 RANKING COMERCIAL</div>', unsafe_allow_html=True)
+                # Detección flexible de la columna Comercial
+                col_com = next((c for c in df.columns if c.lower() == 'comercial'), None)
+                if col_com:
+                    ranking = df.groupby(col_com).size().reset_index(name='Ventas').sort_values('Ventas', ascending=False)
+                    st.table(ranking)
+                else:
+                    st.error("⚠️ La columna 'Comercial' no existe en el Excel.")
+            
+            with col2:
+                st.markdown('<div class="block-header">📊 REPARTO POR COMPAÑÍA</div>', unsafe_allow_html=True)
+                # Detección flexible de la columna Comercializadora
+                col_cia = next((c for c in df.columns if c.lower() == 'comercializadora'), None)
+                if col_cia:
+                    reparto_cia = df[col_cia].value_counts()
+                    st.bar_chart(reparto_cia)
+                else:
+                    st.error("⚠️ La columna 'Comercializadora' no existe en el Excel.")
+            
+            st.markdown('<div class="block-header">📋 LISTADO DETALLADO</div>', unsafe_allow_html=True)
+            st.dataframe(df, use_container_width=True, hide_index=True)
+            
+        else:
+            st.info("La base de datos está conectada pero parece estar vacía.")
+
+    except Exception as e:
+        st.error(f"❌ Error de Conexión: {e}")
