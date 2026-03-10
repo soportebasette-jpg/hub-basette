@@ -65,7 +65,7 @@ tarifas_luz = [
     {"PRIORIDAD": 2, "COMPAÑÍA": "NATURGY", "TARIFA": "3T (TARIF NOCHE)", "P1": 0.123, "P2": 0.037, "ENERGIA": "0,180/0,107/0,718", "EXCEDENTE": 0.06, "DTO": "0%", "BATERIA": "SI_GRATIS", "logo": "manuales/logo_naturgy.png"},
     {"PRIORIDAD": 3, "COMPAÑÍA": "TOTAL LUZ", "TARIFA": "24H (A TU AIRE)", "P1": 0.081, "P2": 0.081, "ENERGIA": 0.114, "EXCEDENTE": 0.07, "DTO": "0%", "BATERIA": "NO", "logo": "manuales/logo_total.png"},
     {"PRIORIDAD": 4, "COMPAÑÍA": "ENDESA", "TARIFA": "SOLAR", "P1": 0.093, "P2": 0.093, "ENERGIA": 0.138, "EXCEDENTE": 0.06, "DTO": "-7%", "BATERIA": "SI_2€", "logo": "manuales/logo_endesa.png"},
-    {"PRIORIDAD": 4, "COMPAÑÍA": "ENDESA", "TARIFA": "24H", "P1": 0.093, "P2": 0.093, "ENEnergia": 0.119, "EXCEDENTE": "NO TIENE", "DTO": "0%", "BATERIA": "NO", "logo": "manuales/logo_endesa.png"},
+    {"PRIORIDAD": 4, "COMPAÑÍA": "ENDESA", "TARIFA": "24H", "P1": 0.093, "P2": 0.093, "ENERGIA": 0.119, "EXCEDENTE": "NO TIENE", "DTO": "0%", "BATERIA": "NO", "logo": "manuales/logo_endesa.png"},
     {"PRIORIDAD": 4, "COMPAÑÍA": "ENDESA", "TARIFA": "TU CASA 50", "P1": 0.093, "P2": 0.093, "ENERGIA": "HPROMO:0,076 RESTO:0,152", "EXCEDENTE": "NO TIENE", "DTO": "0%", "BATERIA": "NO", "logo": "manuales/logo_endesa.png"}
 ]
 
@@ -198,79 +198,4 @@ elif menu == "⚖️ COMPARADOR":
         pdf.ln(10); pdf.set_font("Arial", "B", 12); pdf.cell(95, 10, "Factura Actual", border=1); pdf.cell(95, 10, f"{f_act:.2f} EUR", border=1, ln=True)
         pdf.cell(95, 10, "Nueva Factura", border=1); pdf.cell(95, 10, f"{coste_total_iva:.2f} EUR", border=1, ln=True)
         pdf.ln(10); pdf.set_fill_color(210, 255, 0); pdf.set_font("Arial", "B", 14)
-        pdf.cell(190, 15, f"AHORRO TOTAL: {ahorro:.2f} EUR", ln=True, align="C", fill=True)
-        st.download_button(label="📥 DESCARGAR ESTUDIO PDF", data=pdf.output(dest='S').encode('latin-1', 'replace'), file_name=f"Estudio_{cliente}.pdf")
-
-# --- REPOSITORIO ---
-elif menu == "📂 REPOSITORIO":
-    st.header("Documentación")
-    with st.expander("📂 MANUAL DEL MARCADOR"):
-        manual_path = "manuales/Manual_Premiumnumber_Agente.pdf"
-        if os.path.exists(manual_path):
-            with open(manual_path, "rb") as f:
-                st.download_button("📖 DESCARGAR MANUAL MARCADOR", f, file_name="Manual_Marcador_Agente.pdf", key="manual_marcador")
-        else:
-            st.warning("Archivo 'Manual_Premiumnumber_Agente.pdf' no encontrado.")
-    with st.expander("📂 ARGUMENTARIOS DE VENTA"):
-        docs = ["ARGUMENTARIO_ENERGÍA (Venta Fría) + Venta Cruzada Teleco.docx", "ARGUMENTARIO_TELECO (Clientes Movistar a O2) + Venta Cruzada Energía.docx", "FRASES PROHIBIDAS,PODER EN LA VENTA y REBATE OBJECIONES.docx"]
-        for d in docs:
-            if os.path.exists(f"manuales/{d}"):
-                with open(f"manuales/{d}", "rb") as f: st.download_button(f"📘 {d}", f, file_name=d, key=d)
-    st.markdown("---")
-    for c in ["GANA ENERGÍA", "NATURGY", "TOTAL", "ENDESA", "O2"]:
-        with st.expander(f"📁 DOCUMENTACIÓN {c}"):
-            if os.path.exists("manuales"):
-                busq = "total" if c == "TOTAL" else c.split()[0].lower()
-                archivos = [f for f in os.listdir("manuales") if busq in f.lower() and "argumentario" not in f.lower() and not f.lower().endswith('.png')]
-                for fn in archivos:
-                    with open(f"manuales/{fn}", "rb") as f: st.download_button(f"📥 {fn}", f, file_name=fn, key=f"b_{fn}")
-
-# --- DASHBOARD DIAGNÓSTICO ---
-elif menu == "📈 DASHBOARD":
-    st.header("🏆 Ranking y Análisis de Ventas")
-    
-    try:
-        # Forzamos la conexión con los secrets del archivo
-        conn = st.connection("gsheets", type=GSheetsConnection)
-        # Cargamos específicamente la pestaña 'Ventas_CRM' y desactivamos caché (ttl=0)
-        df = conn.read(worksheet="Ventas_CRM", ttl=0)
-        
-        if df is not None and not df.empty:
-            df.columns = df.columns.str.strip() # Limpiar nombres de columnas
-            
-            # KPI superiores
-            col_kpi1, col_kpi2, col_kpi3 = st.columns(3)
-            with col_kpi1:
-                st.metric("Ventas Totales", len(df))
-            
-            col1, col2 = st.columns(2)
-            with col1:
-                st.markdown('<div class="block-header">🥇 RANKING COMERCIAL</div>', unsafe_allow_html=True)
-                if 'Comercial' in df.columns:
-                    ranking = df.groupby('Comercial').size().reset_index(name='Ventas').sort_values('Ventas', ascending=False)
-                    st.table(ranking)
-                else:
-                    st.error("⚠️ La columna 'Comercial' no existe en el Excel.")
-            
-            with col2:
-                st.markdown('<div class="block-header">📊 REPARTO POR COMPAÑÍA</div>', unsafe_allow_html=True)
-                if 'Comercializadora' in df.columns:
-                    reparto_cia = df['Comercializadora'].value_counts()
-                    st.bar_chart(reparto_cia)
-                else:
-                    st.error("⚠️ La columna 'Comercializadora' no existe en el Excel.")
-            
-            st.markdown('<div class="block-header">📋 LISTADO DETALLADO</div>', unsafe_allow_html=True)
-            st.dataframe(df, use_container_width=True, hide_index=True)
-            
-        else:
-            st.info("La hoja 'Ventas_CRM' está conectada pero parece estar vacía.")
-
-    except Exception as e:
-        st.error(f"❌ Error de Conexión: {e}")
-        st.markdown("""
-        **Pasos para solucionar esto:**
-        1. Asegúrate de que en el cuadro de **Secrets** de Streamlit tienes puesto: `[connections.gsheets]`
-        2. Verifica que el bot tenga acceso de **Editor** en el Excel.
-        3. Comprueba que la pestaña del Excel se llama exactamente **Ventas_CRM**.
-        """)
+        pdf.cell(190, 15, f"AHORRO TOTAL: {ahorro:.2f} EUR",
