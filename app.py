@@ -83,7 +83,7 @@ if not st.session_state["password_correct"]:
             else: st.error("Clave incorrecta")
     st.stop()
 
-# 5. NAVEGACIÓN (Dashboard añadido como opción)
+# 5. NAVEGACIÓN
 with st.sidebar:
     if os.path.exists(LOGO_PRINCIPAL): st.image(LOGO_PRINCIPAL)
     st.markdown("---")
@@ -238,39 +238,41 @@ elif menu == "📂 REPOSITORIO":
                 for fn in archivos:
                     with open(f"manuales/{fn}", "rb") as f: st.download_button(f"📥 {fn}", f, file_name=fn, key=f"b_{fn}")
 
-# --- DASHBOARD (SOLUCIÓN DEFINITIVA ERROR 200 Y BINDER) ---
+# --- DASHBOARD (SOLUCIÓN DEFINITIVA) ---
 elif menu == "📈 DASHBOARD":
     st.header("🏆 Análisis de Ventas en Tiempo Real")
     try:
-        # Usamos st.connection de forma directa y simple
+        # Conexión simplificada
         conn = st.connection("gsheets", type=GSheetsConnection)
         
-        # EL CAMBIO CLAVE: No usamos query(SQL) para evitar Binder Error. 
-        # Usamos read() que es directo a la hoja.
+        # Leemos la hoja completa directamente sin SQL complejo
         df = conn.read(ttl=0)
         
         if df is not None and not df.empty:
+            # Limpiamos nombres de columnas
             df.columns = df.columns.str.strip()
             
-            # Resumen Visual
-            st.metric("Total Ventas", len(df))
+            st.metric("Total Ventas Registradas", len(df))
             
             col_a, col_b = st.columns(2)
             with col_a:
-                st.markdown('<div class="block-header">🥇 RANKING</div>', unsafe_allow_html=True)
-                # Intentamos encontrar la columna comercial
+                st.markdown('<div class="block-header">🥇 RANKING COMERCIALES</div>', unsafe_allow_html=True)
+                # Buscamos la columna que contenga 'Comercial' o usamos la primera
                 col_c = next((c for c in df.columns if 'comercial' in c.lower()), df.columns[0])
-                st.table(df[col_c].value_counts().reset_index())
+                ranking = df[col_c].value_counts().reset_index()
+                ranking.columns = ['Comercial', 'Ventas']
+                st.table(ranking)
                 
             with col_b:
-                st.markdown('<div class="block-header">📊 POR COMPAÑÍA</div>', unsafe_allow_html=True)
+                st.markdown('<div class="block-header">📊 REPARTO POR CIA</div>', unsafe_allow_html=True)
                 col_cia = next((c for c in df.columns if 'cia' in c.lower() or 'comercializadora' in c.lower()), df.columns[-1])
                 st.bar_chart(df[col_cia].value_counts())
             
-            st.markdown('<div class="block-header">📋 LISTADO COMPLETO</div>', unsafe_allow_html=True)
+            st.markdown('<div class="block-header">📋 LISTADO DETALLADO</div>', unsafe_allow_html=True)
             st.dataframe(df, use_container_width=True, hide_index=True)
         else:
-            st.warning("El archivo está conectado pero no se detectan datos.")
+            st.warning("Se estableció conexión, pero la hoja parece estar vacía.")
             
     except Exception as e:
-        st.error(f"Error de conexión: {e}")
+        st.error(f"Error Crítico de Conexión: {e}")
+        st.info("💡 Por favor, verifica que los 'Secrets' en Streamlit Cloud tengan el formato correcto (especialmente las comillas triples en la clave privada).")
