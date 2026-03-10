@@ -228,7 +228,7 @@ elif menu == "📂 REPOSITORIO":
         docs = ["ARGUMENTARIO_ENERGÍA (Venta Fría) + Venta Cruzada Teleco.docx", "ARGUMENTARIO_TELECO (Clientes Movistar a O2) + Venta Cruzada Energía.docx", "FRASES PROHIBIDAS,PODER EN LA VENTA y REBATE OBJECIONES.docx"]
         for d in docs:
             if os.path.exists(f"manuales/{d}"):
-                with open(f"manuales/{d}", "rb") as f: st.download_button(f"📘 {d}", f, file_name=d, key=d)
+                with open(f"manuales/{d}") as f: st.download_button(f"📘 {d}", f, file_name=d, key=d)
     st.markdown("---")
     for c in ["GANA ENERGÍA", "NATURGY", "TOTAL", "ENDESA", "O2"]:
         with st.expander(f"📁 DOCUMENTACIÓN {c}"):
@@ -241,42 +241,36 @@ elif menu == "📂 REPOSITORIO":
 # --- DASHBOARD (SOLUCIÓN DEFINITIVA) ---
 elif menu == "📈 DASHBOARD":
     st.header("🏆 Análisis de Ventas en Tiempo Real")
+    
     try:
-        # Iniciamos la conexión usando los secretos
+        # Forzamos la lectura de la hoja "Sheet1" que es el estándar de Google
         conn = st.connection("gsheets", type=GSheetsConnection)
         
-        # Leemos el archivo. El parámetro 'spreadsheet' se saca de st.secrets automáticamente 
-        # o podemos forzarlo para evitar el Binder Error.
+        # Leemos los datos directamente
         df = conn.read(ttl=0)
         
         if df is not None and not df.empty:
-            # Limpiar espacios en blanco en los nombres de las columnas
             df.columns = df.columns.str.strip()
             
-            st.metric("Ventas Totales Registradas", len(df))
+            st.metric("Ventas Totales", len(df))
             
             col_rank, col_graf = st.columns(2)
-            
             with col_rank:
-                st.markdown('<div class="block-header">🥇 RANKING COMERCIALES</div>', unsafe_allow_html=True)
-                # Buscamos dinámicamente la columna que se llame "Comercial" o similar
-                col_comercial = next((c for c in df.columns if 'comercial' in c.lower()), df.columns[0])
-                ranking = df[col_comercial].value_counts().reset_index()
-                ranking.columns = ['Agente', 'Ventas']
-                st.table(ranking)
+                st.markdown('<div class="block-header">🥇 RANKING</div>', unsafe_allow_html=True)
+                # Buscamos columna de comercial de forma flexible
+                col_c = next((c for c in df.columns if 'comercial' in c.lower()), df.columns[0])
+                st.table(df[col_c].value_counts())
                 
             with col_graf:
-                st.markdown('<div class="block-header">📊 VENTAS POR COMPAÑÍA</div>', unsafe_allow_html=True)
-                # Buscamos la columna de comercializadora
+                st.markdown('<div class="block-header">📊 POR CIA</div>', unsafe_allow_html=True)
                 col_cia = next((c for c in df.columns if 'cia' in c.lower() or 'comercializadora' in c.lower()), df.columns[-1])
                 st.bar_chart(df[col_cia].value_counts())
             
-            st.markdown('<div class="block-header">📋 LISTADO DETALLADO</div>', unsafe_allow_html=True)
+            st.markdown('<div class="block-header">📋 LISTADO</div>', unsafe_allow_html=True)
             st.dataframe(df, use_container_width=True, hide_index=True)
-            
         else:
-            st.warning("Conexión establecida, pero la base de datos está vacía.")
+            st.warning("No hay datos en el Excel.")
             
     except Exception as e:
-        st.error(f"Error de visualización: {e}")
-        st.info("Asegúrate de que en el Excel la pestaña se llame 'Sheet1' (o especifícala en conn.read) y que el bot tenga acceso de Editor.")
+        st.error(f"Error de conexión: {str(e)}")
+        st.info("💡 REVISA TUS SECRETS: Asegúrate de que la 'private_key' no tenga espacios extra al final y use comillas triples.")
