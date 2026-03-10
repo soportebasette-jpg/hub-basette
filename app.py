@@ -65,7 +65,7 @@ tarifas_luz = [
     {"PRIORIDAD": 2, "COMPAÑÍA": "NATURGY", "TARIFA": "3T (TARIF NOCHE)", "P1": 0.123, "P2": 0.037, "ENERGIA": "0,180/0,107/0,718", "EXCEDENTE": 0.06, "DTO": "0%", "BATERIA": "SI_GRATIS", "logo": "manuales/logo_naturgy.png"},
     {"PRIORIDAD": 3, "COMPAÑÍA": "TOTAL LUZ", "TARIFA": "24H (A TU AIRE)", "P1": 0.081, "P2": 0.081, "ENERGIA": 0.114, "EXCEDENTE": 0.07, "DTO": "0%", "BATERIA": "NO", "logo": "manuales/logo_total.png"},
     {"PRIORIDAD": 4, "COMPAÑÍA": "ENDESA", "TARIFA": "SOLAR", "P1": 0.093, "P2": 0.093, "ENERGIA": 0.138, "EXCEDENTE": 0.06, "DTO": "-7%", "BATERIA": "SI_2€", "logo": "manuales/logo_endesa.png"},
-    {"PRIORIDAD": 4, "COMPAÑÍA": "ENDESA", "TARIFA": "24H", "P1": 0.093, "P2": 0.093, "ENERGIA": 0.119, "EXCEDENTE": "NO TIENE", "DTO": "0%", "BATERIA": "NO", "logo": "manuales/logo_endesa.png"},
+    {"PRIORIDAD": 4, "COMPAÑÍA": "ENDESA", "TARIFA": "24H", "P1": 0.093, "P2": 0.093, "ENEnergia": 0.119, "EXCEDENTE": "NO TIENE", "DTO": "0%", "BATERIA": "NO", "logo": "manuales/logo_endesa.png"},
     {"PRIORIDAD": 4, "COMPAÑÍA": "ENDESA", "TARIFA": "TU CASA 50", "P1": 0.093, "P2": 0.093, "ENERGIA": "HPROMO:0,076 RESTO:0,152", "EXCEDENTE": "NO TIENE", "DTO": "0%", "BATERIA": "NO", "logo": "manuales/logo_endesa.png"}
 ]
 
@@ -225,51 +225,52 @@ elif menu == "📂 REPOSITORIO":
                 for fn in archivos:
                     with open(f"manuales/{fn}", "rb") as f: st.download_button(f"📥 {fn}", f, file_name=fn, key=f"b_{fn}")
 
-# --- DASHBOARD ACTUALIZADO CON TUS COLUMNAS REALES ---
+# --- DASHBOARD DIAGNÓSTICO ---
 elif menu == "📈 DASHBOARD":
     st.header("🏆 Ranking y Análisis de Ventas")
     
-    # 1. Intentar conectar (si fallan los secrets, no rompe la app)
     try:
-        conn = st.connection(type=GSheetsConnection)
-        #ttl=300 actualiza datos cada 5 minutos
-        df = conn.read(ttl=300)
+        # Forzamos la conexión con los secrets del archivo
+        conn = st.connection("gsheets", type=GSheetsConnection)
+        # Cargamos específicamente la pestaña 'Ventas_CRM' y desactivamos caché (ttl=0)
+        df = conn.read(worksheet="Ventas_CRM", ttl=0)
         
-        # 2. Si hay datos, limpiarlos y visualizarlos
         if df is not None and not df.empty:
-            # Limpiar espacios extra en nombres de columnas
-            df.columns = df.columns.str.strip()
+            df.columns = df.columns.str.strip() # Limpiar nombres de columnas
+            
+            # KPI superiores
+            col_kpi1, col_kpi2, col_kpi3 = st.columns(3)
+            with col_kpi1:
+                st.metric("Ventas Totales", len(df))
             
             col1, col2 = st.columns(2)
-            
             with col1:
                 st.markdown('<div class="block-header">🥇 RANKING COMERCIAL</div>', unsafe_allow_html=True)
-                # Usamos tu columna real: 'Comercial'
                 if 'Comercial' in df.columns:
                     ranking = df.groupby('Comercial').size().reset_index(name='Ventas').sort_values('Ventas', ascending=False)
                     st.table(ranking)
                 else:
-                    st.warning("No se encontró la columna 'Comercial' en el Excel.")
+                    st.error("⚠️ La columna 'Comercial' no existe en el Excel.")
             
             with col2:
-                st.markdown('<div class="block-header">📊 REPARTO POR COMERCIALIZADORA</div>', unsafe_allow_html=True)
-                # Usamos tu columna real: 'Comercializadora'
+                st.markdown('<div class="block-header">📊 REPARTO POR COMPAÑÍA</div>', unsafe_allow_html=True)
                 if 'Comercializadora' in df.columns:
                     reparto_cia = df['Comercializadora'].value_counts()
                     st.bar_chart(reparto_cia)
                 else:
-                    st.warning("No se encontró la columna 'Comercializadora' en el Excel.")
+                    st.error("⚠️ La columna 'Comercializadora' no existe en el Excel.")
             
-            # Listado completo al final
-            st.markdown('<div class="block-header">📋 TODAS LAS VENTAS</div>', unsafe_allow_html=True)
-            # Ordenar por 'Fecha Creación' si existe
-            if 'Fecha Creación' in df.columns:
-                df = df.sort_values(by='Fecha Creación', ascending=False)
+            st.markdown('<div class="block-header">📋 LISTADO DETALLADO</div>', unsafe_allow_html=True)
             st.dataframe(df, use_container_width=True, hide_index=True)
             
         else:
-            st.info("Conectado a 'Ventas_CRM', pero el archivo parece estar vacío.")
-            
+            st.info("La hoja 'Ventas_CRM' está conectada pero parece estar vacía.")
+
     except Exception as e:
-        # Mensaje de seguridad si fallan los Secrets
-        st.warning("El Dashboard no está disponible. Revisa la configuración de Google Secrets en Streamlit Cloud.")
+        st.error(f"❌ Error de Conexión: {e}")
+        st.markdown("""
+        **Pasos para solucionar esto:**
+        1. Asegúrate de que en el cuadro de **Secrets** de Streamlit tienes puesto: `[connections.gsheets]`
+        2. Verifica que el bot tenga acceso de **Editor** en el Excel.
+        3. Comprueba que la pestaña del Excel se llama exactamente **Ventas_CRM**.
+        """)
