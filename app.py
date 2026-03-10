@@ -242,37 +242,41 @@ elif menu == "📂 REPOSITORIO":
 elif menu == "📈 DASHBOARD":
     st.header("🏆 Análisis de Ventas en Tiempo Real")
     try:
-        # Conexión simplificada
+        # Iniciamos la conexión usando los secretos
         conn = st.connection("gsheets", type=GSheetsConnection)
         
-        # Leemos la hoja completa directamente sin SQL complejo
+        # Leemos el archivo. El parámetro 'spreadsheet' se saca de st.secrets automáticamente 
+        # o podemos forzarlo para evitar el Binder Error.
         df = conn.read(ttl=0)
         
         if df is not None and not df.empty:
-            # Limpiamos nombres de columnas
+            # Limpiar espacios en blanco en los nombres de las columnas
             df.columns = df.columns.str.strip()
             
-            st.metric("Total Ventas Registradas", len(df))
+            st.metric("Ventas Totales Registradas", len(df))
             
-            col_a, col_b = st.columns(2)
-            with col_a:
+            col_rank, col_graf = st.columns(2)
+            
+            with col_rank:
                 st.markdown('<div class="block-header">🥇 RANKING COMERCIALES</div>', unsafe_allow_html=True)
-                # Buscamos la columna que contenga 'Comercial' o usamos la primera
-                col_c = next((c for c in df.columns if 'comercial' in c.lower()), df.columns[0])
-                ranking = df[col_c].value_counts().reset_index()
-                ranking.columns = ['Comercial', 'Ventas']
+                # Buscamos dinámicamente la columna que se llame "Comercial" o similar
+                col_comercial = next((c for c in df.columns if 'comercial' in c.lower()), df.columns[0])
+                ranking = df[col_comercial].value_counts().reset_index()
+                ranking.columns = ['Agente', 'Ventas']
                 st.table(ranking)
                 
-            with col_b:
-                st.markdown('<div class="block-header">📊 REPARTO POR CIA</div>', unsafe_allow_html=True)
+            with col_graf:
+                st.markdown('<div class="block-header">📊 VENTAS POR COMPAÑÍA</div>', unsafe_allow_html=True)
+                # Buscamos la columna de comercializadora
                 col_cia = next((c for c in df.columns if 'cia' in c.lower() or 'comercializadora' in c.lower()), df.columns[-1])
                 st.bar_chart(df[col_cia].value_counts())
             
             st.markdown('<div class="block-header">📋 LISTADO DETALLADO</div>', unsafe_allow_html=True)
             st.dataframe(df, use_container_width=True, hide_index=True)
+            
         else:
-            st.warning("Se estableció conexión, pero la hoja parece estar vacía.")
+            st.warning("Conexión establecida, pero la base de datos está vacía.")
             
     except Exception as e:
-        st.error(f"Error Crítico de Conexión: {e}")
-        st.info("💡 Por favor, verifica que los 'Secrets' en Streamlit Cloud tengan el formato correcto (especialmente las comillas triples en la clave privada).")
+        st.error(f"Error de visualización: {e}")
+        st.info("Asegúrate de que en el Excel la pestaña se llame 'Sheet1' (o especifícala en conn.read) y que el bot tenga acceso de Editor.")
