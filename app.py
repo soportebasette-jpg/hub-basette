@@ -213,80 +213,92 @@ elif menu == "⚖️ COMPARADOR":
         pdf.cell(190, 15, f"AHORRO TOTAL: {ahorro:.2f} EUR", ln=True, align="C", fill=True)
         st.download_button(label="📥 DESCARGAR ESTUDIO PDF", data=pdf.output(dest='S').encode('latin-1', 'replace'), file_name=f"Estudio_{cliente}.pdf")
 
-# --- DASHBOARD PROFESIONAL ---
+# --- DASHBOARD EJECUTIVO ACTUALIZADO ---
 elif menu == "📈 DASHBOARD":
     st.header("🏆 Dashboard Ejecutivo | Basette Group")
     
-    # URL CSV del Google Sheet
     sheet_url = "https://docs.google.com/spreadsheets/d/1W-Eq63SnBBlOykJlP9XgASXDPpWQhQnVW-oFHUlSMcQ/export?format=csv"
     
     try:
         df_raw = pd.read_csv(sheet_url)
-        # Limpieza rápida: asegurar que las fechas sean fechas si existe la columna
-        if 'FECHA' in df_raw.columns:
-            df_raw['FECHA'] = pd.to_datetime(df_raw['FECHA'], errors='coerce')
-            df_raw['MES'] = df_raw['FECHA'].dt.month_name()
-            df_raw['AÑO'] = df_raw['FECHA'].dt.year
         
+        # PROCESAMIENTO DE DATOS SEGÚN TUS COLUMNAS
+        df_raw['Fecha Creación'] = pd.to_datetime(df_raw['Fecha Creación'], errors='coerce')
+        df_raw['MES'] = df_raw['Fecha Creación'].dt.month_name()
+        df_raw['AÑO'] = df_raw['Fecha Creación'].dt.year
+        
+        # Lógica de conteo de ventas por celda no vacía
+        df_raw['Venta_Luz'] = df_raw['CUPS Luz'].notna().astype(int)
+        df_raw['Venta_Gas'] = df_raw['CUPS Gas'].notna().astype(int)
+        df_raw['TOTAL_VENTAS'] = df_raw['Venta_Luz'] + df_raw['Venta_Gas']
+
         # --- BLOQUE DE FILTROS ---
         with st.expander("🔍 FILTROS AVANZADOS", expanded=True):
             f1, f2, f3, f4 = st.columns(4)
             with f1:
-                meses = ["Todos"] + sorted(list(df_raw['MES'].dropna().unique())) if 'MES' in df_raw.columns else ["Todos"]
+                meses = ["Todos"] + sorted(list(df_raw['MES'].dropna().unique()))
                 sel_mes = st.selectbox("Mes", meses)
             with f2:
-                años = ["Todos"] + sorted(list(df_raw['AÑO'].dropna().unique().astype(str))) if 'AÑO' in df_raw.columns else ["Todos"]
+                años = ["Todos"] + sorted(list(df_raw['AÑO'].dropna().unique().astype(str)))
                 sel_año = st.selectbox("Año", años)
             with f3:
-                compañias = ["Todas"] + sorted(list(df_raw['COMPAÑIA'].dropna().unique())) if 'COMPAÑIA' in df_raw.columns else ["Todas"]
-                sel_comp = st.selectbox("Compañía", compañias)
+                comercializadoras = ["Todas"] + sorted(list(df_raw['Comercializadora'].dropna().unique()))
+                sel_comp = st.selectbox("Comercializadora", comercializadoras)
             with f4:
-                comerciales = ["Todos"] + sorted(list(df_raw['AGENTE'].dropna().unique())) if 'AGENTE' in df_raw.columns else ["Todos"]
+                comerciales = ["Todos"] + sorted(list(df_raw['Comercial'].dropna().unique()))
                 sel_com = st.selectbox("Comercial", comerciales)
 
         # Aplicar Filtros
         df = df_raw.copy()
         if sel_mes != "Todos": df = df[df['MES'] == sel_mes]
         if sel_año != "Todos": df = df[df['AÑO'] == int(sel_año)]
-        if sel_comp != "Todas": df = df[df['COMPAÑIA'] == sel_comp]
-        if sel_com != "Todos": df = df[df['AGENTE'] == sel_com]
+        if sel_comp != "Todas": df = df[df['Comercializadora'] == sel_comp]
+        if sel_com != "Todos": df = df[df['Comercial'] == sel_com]
 
-        # --- RANKING DE COMERCIALES (LO PRIMERO) ---
-        st.markdown('<div class="block-header">👑 RANKING DE VENTAS POR AGENTE</div>', unsafe_allow_html=True)
+        # --- CUADRO INTERACTIVO DE MÉTRICAS ---
+        st.markdown('<div class="block-header">📊 RESUMEN DE CIFRAS</div>', unsafe_allow_html=True)
+        m1, m2, m3 = st.columns(3)
+        total_luz = df['Venta_Luz'].sum()
+        total_gas = df['Venta_Gas'].sum()
+        total_global = df['TOTAL_VENTAS'].sum()
+        m1.metric("VENTAS LUZ", f"{total_luz} ⚡")
+        m2.metric("VENTAS GAS", f"{total_gas} 🔥")
+        m3.metric("TOTAL GLOBAL", f"{total_global} ✅")
+
+        # --- RANKING DE COMERCIALES ---
+        st.markdown('<div class="block-header">👑 RANKING POR COMERCIAL</div>', unsafe_allow_html=True)
         
-        # Calculamos totales por agente
-        ranking = df.groupby('AGENTE').agg(
-            Luz=('CUPS LUZ', 'count'),
-            Gas=('CUPS GAS', 'count')
-        ).reset_index()
-        ranking['Total'] = ranking['Luz'] + ranking['Gas']
-        ranking = ranking.sort_values(by='Total', ascending=False)
+        ranking = df.groupby('Comercial').agg(
+            Luz=('Venta_Luz', 'sum'),
+            Gas=('Venta_Gas', 'sum'),
+            Total=('TOTAL_VENTAS', 'sum')
+        ).reset_index().sort_values(by='Total', ascending=False)
+
+        # Calcular % para el gráfico
+        if total_global > 0:
+            ranking['% del Total'] = (ranking['Total'] / total_global * 100).round(1)
+        else:
+            ranking['% del Total'] = 0
 
         fig_ranking = px.bar(
-            ranking, x='AGENTE', y=['Luz', 'Gas'],
-            title=f"Ranking de Ventas - Filtro: {sel_mes}",
-            labels={'value': 'Ventas Realizadas', 'variable': 'Tipo'},
+            ranking, x='Comercial', y=['Luz', 'Gas'],
+            title=f"Ventas Totales por Agente (% del Total de Selección)",
+            labels={'value': 'Unidades', 'variable': 'Producto'},
+            text=ranking['% del Total'].apply(lambda x: f'{x}%' if x > 0 else ""),
             color_discrete_map={'Luz': '#d2ff00', 'Gas': '#ffffff'},
             template="plotly_dark", barmode='stack'
         )
         st.plotly_chart(fig_ranking, use_container_width=True)
 
-        # --- CUADRO INTERACTIVO DE MÉTRICAS ---
-        st.markdown('<div class="block-header">📊 RESUMEN DE CIFRAS</div>', unsafe_allow_html=True)
-        m1, m2, m3 = st.columns(3)
-        total_luz = df['CUPS LUZ'].count()
-        total_gas = df['CUPS GAS'].count()
-        m1.metric("TOTAL VENTAS LUZ", f"{total_luz} ⚡")
-        m2.metric("TOTAL VENTAS GAS", f"{total_gas} 🔥")
-        m3.metric("TOTAL GLOBAL", f"{total_luz + total_gas} ✅")
-
         # --- TABLA DE DATOS FILTRADA ---
         st.markdown('<div class="block-header">📋 DETALLE DE OPERACIONES</div>', unsafe_allow_html=True)
-        st.dataframe(df, use_container_width=True, hide_index=True)
+        # Mostrar columnas relevantes para el agente
+        st.dataframe(df[['Fecha Creación', 'Estado', 'Comercial', 'Comercializadora', 'Cliente', 'CUPS Luz', 'CUPS Gas']], 
+                     use_container_width=True, hide_index=True)
 
     except Exception as e:
         st.error(f"Error al cargar dashboard: {e}")
-        st.info("Revisa que los nombres de las columnas en el Excel sean: AGENTE, COMPAÑIA, CUPS LUZ, CUPS GAS, FECHA.")
+        st.info("Asegúrate de que el Google Sheet tenga las columnas: Fecha Creación, Comercial, Comercializadora, CUPS Luz, CUPS Gas.")
 
 # --- REPOSITORIO ---
 elif menu == "📂 REPOSITORIO":
