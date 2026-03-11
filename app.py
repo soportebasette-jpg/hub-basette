@@ -1,6 +1,7 @@
 import streamlit as st
 import os
 import pandas as pd
+import plotly.express as px
 from datetime import datetime
 from fpdf import FPDF
 
@@ -91,7 +92,6 @@ with st.sidebar:
 # --- CRM ---
 if menu == "🚀 CRM":
     st.header("Portales de Gestión")
-    
     st.markdown('<div class="block-header">⭐ MARCADOR</div>', unsafe_allow_html=True)
     st.markdown(f'''<div style="background:#161b22; padding:15px; border-radius:10px; border:2px solid #d2ff00; text-align:center; margin-bottom:10px;"><h4 style="color:white; margin:0;">MARCADOR PRINCIPAL</h4></div>''', unsafe_allow_html=True)
     st.link_button(f"ENTRAR AL MARCADOR", "https://grupobasette.vozipcenter.com/", use_container_width=True)
@@ -213,12 +213,37 @@ elif menu == "⚖️ COMPARADOR":
         pdf.cell(190, 15, f"AHORRO TOTAL: {ahorro:.2f} EUR", ln=True, align="C", fill=True)
         st.download_button(label="📥 DESCARGAR ESTUDIO PDF", data=pdf.output(dest='S').encode('latin-1', 'replace'), file_name=f"Estudio_{cliente}.pdf")
 
-# --- DASHBOARD ---
+# --- DASHBOARD (REPARADO CON PYTHON PURO) ---
 elif menu == "📈 DASHBOARD":
-    st.header("🏆 Dashboard de Ventas")
+    st.header("🏆 Dashboard de Ventas | Basette Group")
     st.markdown('<div class="block-header">📊 ESTADÍSTICAS EN TIEMPO REAL</div>', unsafe_allow_html=True)
-    url_dash = "https://lookerstudio.google.com/embed/reporting/4279107e-2185-4d08-8ea4-34655cf45a5f/page/PZqrF"
-    st.components.v1.iframe(url_dash, height=800, scrolling=True)
+    
+    # URL de descarga CSV del Google Sheet (ID: 1W-Eq63SnBBlOykJlP9XgASXDPpWQhQnVW-oFHUlSMcQ)
+    sheet_url = "https://docs.google.com/spreadsheets/d/1W-Eq63SnBBlOykJlP9XgASXDPpWQhQnVW-oFHUlSMcQ/export?format=csv"
+    
+    try:
+        df = pd.read_csv(sheet_url)
+        
+        # Métricas principales
+        c1, c2, c3 = st.columns(3)
+        c1.metric("Total Registros", len(df))
+        
+        # Gráficos Interactivos
+        st.markdown("### Rendimiento por Agente")
+        # Ajustamos el nombre de la columna según lo que suele haber en tus Excels (ej: AGENTE)
+        col_agente = 'AGENTE' if 'AGENTE' in df.columns else df.columns[0]
+        fig_agente = px.bar(df, x=col_agente, title="Ventas por Comercial", template="plotly_dark", color_discrete_sequence=['#d2ff00'])
+        st.plotly_chart(fig_agente, use_container_width=True)
+        
+        col_estado = 'ESTADO' if 'ESTADO' in df.columns else (df.columns[1] if len(df.columns) > 1 else df.columns[0])
+        st.markdown("### Estado de las Gestiones")
+        fig_pie = px.pie(df, names=col_estado, hole=0.4, title="Distribución de Estados", template="plotly_dark")
+        st.plotly_chart(fig_pie, use_container_width=True)
+
+        st.success("✅ Datos cargados correctamente desde la nube.")
+    except Exception as e:
+        st.error(f"Error al conectar con los datos: {e}")
+        st.info("Asegúrate de haber compartido el Google Sheets como 'Cualquier persona con el enlace'.")
 
 # --- REPOSITORIO ---
 elif menu == "📂 REPOSITORIO":
