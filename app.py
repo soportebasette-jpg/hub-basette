@@ -173,7 +173,7 @@ elif menu == "⚖️ COMPARADOR":
         potencia = st.number_input("Potencia contratada (kW)", value=4.6)
         dias_factura = st.number_input("Días del periodo de factura", value=30)
     with c2:
-        comp_sel = st.selectbox("Compañía Propuesta", sorted(list(set(t["COMPAÑÍA"] for t in tarifas_luz))))
+        comp_sel = st.selectbox("CompañÍA Propuesta", sorted(list(set(t["COMPAÑÍA"] for t in tarifas_luz))))
         tarifas_f = [t["TARIFA"] for t in tarifas_luz if t["COMPAÑÍA"] == comp_sel]
         tarifa_sel_nombre = st.selectbox("Tarifa Seleccionada", tarifas_f)
         sel = next(t for t in tarifas_luz if t["COMPAÑÍA"] == comp_sel and t["TARIFA"] == tarifa_sel_nombre)
@@ -213,80 +213,83 @@ elif menu == "⚖️ COMPARADOR":
         pdf.cell(190, 15, f"AHORRO TOTAL: {ahorro:.2f} EUR", ln=True, align="C", fill=True)
         st.download_button(label="📥 DESCARGAR ESTUDIO PDF", data=pdf.output(dest='S').encode('latin-1', 'replace'), file_name=f"Estudio_{cliente}.pdf")
 
-# --- DASHBOARD PROFESIONAL ---
+# --- DASHBOARD ACTUALIZADO Y CORREGIDO ---
 elif menu == "📈 DASHBOARD":
     st.header("🏆 Dashboard Ejecutivo | Basette Group")
     
-    # URL CSV del Google Sheet
     sheet_url = "https://docs.google.com/spreadsheets/d/1W-Eq63SnBBlOykJlP9XgASXDPpWQhQnVW-oFHUlSMcQ/export?format=csv"
     
     try:
         df_raw = pd.read_csv(sheet_url)
-        # Limpieza rápida: asegurar que las fechas sean fechas si existe la columna
-        if 'FECHA' in df_raw.columns:
-            df_raw['FECHA'] = pd.to_datetime(df_raw['FECHA'], errors='coerce')
-            df_raw['MES'] = df_raw['FECHA'].dt.month_name()
-            df_raw['AÑO'] = df_raw['FECHA'].dt.year
         
-        # --- BLOQUE DE FILTROS ---
+        # Mapeo de columnas para evitar errores de nombres
+        # Se asume que las columnas en el CSV son: AGENTE, COMPAÑIA, CUPS LUZ, CUPS GAS, FECHA
+        if 'FECHA' in df_raw.columns:
+            df_raw['FECHA'] = pd.to_datetime(df_raw['FECHA'], errors='coerce', dayfirst=True)
+            df_raw['MES'] = df_raw['FECHA'].dt.month_name()
+            df_raw['AÑO'] = df_raw['FECHA'].dt.year.fillna(2026).astype(int)
+        
+        # Filtros con selección múltiple
         with st.expander("🔍 FILTROS AVANZADOS", expanded=True):
             f1, f2, f3, f4 = st.columns(4)
             with f1:
-                meses = ["Todos"] + sorted(list(df_raw['MES'].dropna().unique())) if 'MES' in df_raw.columns else ["Todos"]
-                sel_mes = st.selectbox("Mes", meses)
+                meses_lista = ["Todos"] + list(df_raw['MES'].dropna().unique()) if 'MES' in df_raw.columns else ["Todos"]
+                sel_mes = st.selectbox("Seleccionar Mes", meses_lista)
             with f2:
-                años = ["Todos"] + sorted(list(df_raw['AÑO'].dropna().unique().astype(str))) if 'AÑO' in df_raw.columns else ["Todos"]
-                sel_año = st.selectbox("Año", años)
+                # El año empieza desde 2026
+                años_disponibles = sorted([y for y in df_raw['AÑO'].unique() if y >= 2026]) if 'AÑO' in df_raw.columns else [2026]
+                años_lista = ["Todos"] + [str(y) for y in años_disponibles]
+                sel_año = st.selectbox("Seleccionar Año", años_lista)
             with f3:
-                compañias = ["Todas"] + sorted(list(df_raw['COMPAÑIA'].dropna().unique())) if 'COMPAÑIA' in df_raw.columns else ["Todas"]
-                sel_comp = st.selectbox("Compañía", compañias)
+                comp_lista = ["Todas"] + list(df_raw['COMPAÑIA'].dropna().unique()) if 'COMPAÑIA' in df_raw.columns else ["Todas"]
+                sel_comp = st.selectbox("Seleccionar Compañía", comp_lista)
             with f4:
-                comerciales = ["Todos"] + sorted(list(df_raw['AGENTE'].dropna().unique())) if 'AGENTE' in df_raw.columns else ["Todos"]
-                sel_com = st.selectbox("Comercial", comerciales)
+                agentes_lista = list(df_raw['AGENTE'].dropna().unique()) if 'AGENTE' in df_raw.columns else []
+                sel_com = st.multiselect("Seleccionar Comerciales (Varios o Todos)", agentes_lista, default=agentes_lista)
 
-        # Aplicar Filtros
+        # Aplicación de la lógica de filtros
         df = df_raw.copy()
         if sel_mes != "Todos": df = df[df['MES'] == sel_mes]
         if sel_año != "Todos": df = df[df['AÑO'] == int(sel_año)]
         if sel_comp != "Todas": df = df[df['COMPAÑIA'] == sel_comp]
-        if sel_com != "Todos": df = df[df['AGENTE'] == sel_com]
+        if sel_com: df = df[df['AGENTE'].isin(sel_com)]
 
-        # --- RANKING DE COMERCIALES (LO PRIMERO) ---
+        # --- RANKING ---
         st.markdown('<div class="block-header">👑 RANKING DE VENTAS POR AGENTE</div>', unsafe_allow_html=True)
         
-        # Calculamos totales por agente
+        # Contamos registros válidos de CUPS LUZ y CUPS GAS
+        # Se asume que si hay un valor en la celda, es una venta
         ranking = df.groupby('AGENTE').agg(
             Luz=('CUPS LUZ', 'count'),
             Gas=('CUPS GAS', 'count')
         ).reset_index()
+        
         ranking['Total'] = ranking['Luz'] + ranking['Gas']
         ranking = ranking.sort_values(by='Total', ascending=False)
 
         fig_ranking = px.bar(
             ranking, x='AGENTE', y=['Luz', 'Gas'],
-            title=f"Ranking de Ventas - Filtro: {sel_mes}",
-            labels={'value': 'Ventas Realizadas', 'variable': 'Tipo'},
+            title=f"Rendimiento Comercial",
+            labels={'value': 'Cantidad', 'variable': 'Producto'},
             color_discrete_map={'Luz': '#d2ff00', 'Gas': '#ffffff'},
-            template="plotly_dark", barmode='stack'
+            template="plotly_dark", barmode='group'
         )
         st.plotly_chart(fig_ranking, use_container_width=True)
 
-        # --- CUADRO INTERACTIVO DE MÉTRICAS ---
-        st.markdown('<div class="block-header">📊 RESUMEN DE CIFRAS</div>', unsafe_allow_html=True)
+        # --- MÉTRICAS ---
+        st.markdown('<div class="block-header">📊 RESUMEN DE TOTALES</div>', unsafe_allow_html=True)
         m1, m2, m3 = st.columns(3)
-        total_luz = df['CUPS LUZ'].count()
-        total_gas = df['CUPS GAS'].count()
-        m1.metric("TOTAL VENTAS LUZ", f"{total_luz} ⚡")
-        m2.metric("TOTAL VENTAS GAS", f"{total_gas} 🔥")
-        m3.metric("TOTAL GLOBAL", f"{total_luz + total_gas} ✅")
+        m1.metric("VENTAS LUZ", f"{ranking['Luz'].sum()} ⚡")
+        m2.metric("VENTAS GAS", f"{ranking['Gas'].sum()} 🔥")
+        m3.metric("TOTAL GLOBAL", f"{ranking['Total'].sum()} ✅")
 
-        # --- TABLA DE DATOS FILTRADA ---
-        st.markdown('<div class="block-header">📋 DETALLE DE OPERACIONES</div>', unsafe_allow_html=True)
+        # --- TABLA ---
+        st.markdown('<div class="block-header">📋 DETALLE FILTRADO</div>', unsafe_allow_html=True)
         st.dataframe(df, use_container_width=True, hide_index=True)
 
     except Exception as e:
-        st.error(f"Error al cargar dashboard: {e}")
-        st.info("Revisa que los nombres de las columnas en el Excel sean: AGENTE, COMPAÑIA, CUPS LUZ, CUPS GAS, FECHA.")
+        st.error(f"Error al cargar dashboard: Asegúrese de que el archivo Google Sheets tiene las columnas: AGENTE, COMPAÑIA, CUPS LUZ, CUPS GAS, FECHA.")
+        st.info(f"Detalle técnico: {e}")
 
 # --- REPOSITORIO ---
 elif menu == "📂 REPOSITORIO":
