@@ -6,14 +6,14 @@ from fpdf import FPDF
 import gspread
 from google.oauth2.service_account import Credentials
 
-# 1. CONFIGURACIÓN (Restaurado)
+# 1. CONFIGURACIÓN
 st.set_page_config(
     page_title="Basette Group | Hub", 
     layout="wide", 
     initial_sidebar_state="expanded" 
 )
 
-# 2. TU DISEÑO CSS ORIGINAL
+# 2. CSS DE ALTA VISIBILIDAD (Tu diseño original)
 st.markdown("""
     <style>
     .stApp { background-color: #0d1117; color: #ffffff; }
@@ -57,7 +57,7 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# 3. TUS TARIFAS ORIGINALES
+# 3. BASE DE DATOS LUZ (Tu original)
 tarifas_luz = [
     {"PRIORIDAD": 1, "COMPAÑÍA": "GANA ENERGÍA", "TARIFA": "24H", "P1": 0.089, "P2": 0.089, "ENERGIA": 0.111, "EXCEDENTE": 0.05, "DTO": "0%", "BATERIA": "SI_GRATIS", "logo": "manuales/logo_gana.png"},
     {"PRIORIDAD": 1, "COMPAÑÍA": "GANA ENERGÍA", "TARIFA": "3T", "P1": 0.089, "P2": 0.089, "ENERGIA": "0,163/0,096/0,072", "EXCEDENTE": 0.05, "DTO": "0%", "BATERIA": "SI_GRATIS", "logo": "manuales/logo_gana.png"},
@@ -69,7 +69,7 @@ tarifas_luz = [
     {"PRIORIDAD": 4, "COMPAÑÍA": "ENDESA", "TARIFA": "TU CASA 50", "P1": 0.093, "P2": 0.093, "ENERGIA": "HPROMO:0,076 RESTO:0,152", "EXCEDENTE": "NO TIENE", "DTO": "0%", "BATERIA": "NO", "logo": "manuales/logo_endesa.png"}
 ]
 
-# 4. LOGIN ORIGINAL
+# 4. LOGIN
 LOGO_PRINCIPAL = "1000233813.jpg"
 if "password_correct" not in st.session_state: st.session_state["password_correct"] = False
 if not st.session_state["password_correct"]:
@@ -84,35 +84,68 @@ if not st.session_state["password_correct"]:
             else: st.error("Clave incorrecta")
     st.stop()
 
-# 5. NAVEGACIÓN ORIGINAL
+# 5. NAVEGACIÓN
 with st.sidebar:
     if os.path.exists(LOGO_PRINCIPAL): st.image(LOGO_PRINCIPAL)
     st.markdown("---")
     menu = st.radio("Secciones:", ["🚀 CRM", "📊 PRECIOS", "⚖️ COMPARADOR", "📂 REPOSITORIO", "📈 DASHBOARD"])
 
-# --- SECCIÓN CRM ---
+# --- CRM ---
 if menu == "🚀 CRM":
     st.header("Portales de Gestión")
     st.markdown('<div class="block-header">⭐ MARCADOR</div>', unsafe_allow_html=True)
     st.link_button(f"ENTRAR AL MARCADOR", "https://grupobasette.vozipcenter.com/", use_container_width=True)
-    # ... Resto de tu lógica de CRM ...
+    
+    st.markdown('<div class="block-header">💡 🔥 ENERGÍA</div>', unsafe_allow_html=True)
+    energia = [{"n": "CRM BASETTE", "u": "https://crm.grupobasette.eu/login"}, {"n": "GANA ENERGÍA", "u": "https://colaboradores.ganaenergia.com/"}, {"n": "NATURGY", "u": "https://checkout.naturgy.es/backoffice"}, {"n": "GAS TOTAL", "u": "https://totalenergiesespana.my.site.com/portalcolaboradores/s/login/?ec=302&startURL=%2Fportalcolaboradores%2Fs%2F"}, {"n": "LUZ TOTAL", "u": "https://agentes.totalenergies.es/#/resumen"}, {"n": "IBERDROLA", "u": "https://crm.gesventas.eu/login.php"}, {"n": "NIBA", "u": "https://clientes.niba.es/"}, {"n": "ENDESA", "u": "https://inergia.app"}]
+    cols_en = st.columns(3)
+    for i, p in enumerate(energia):
+        with cols_en[i % 3]:
+            st.markdown(f'''<div style="background:#161b22; padding:15px; border-radius:10px; border:1px solid #30363d; text-align:center; margin-bottom:10px;"><h4 style="color:white; margin:0;">{p["n"]}</h4></div>''', unsafe_allow_html=True)
+            st.link_button(f"ENTRAR", p["u"], use_container_width=True)
 
-# --- SECCIÓN REPOSITORIO (ARREGLADA) ---
+# --- PRECIOS ---
+elif menu == "📊 PRECIOS":
+    st.header("Tarifario Oficial")
+    t1, t2, t3 = st.tabs(["⚡ LUZ", "🔥 GAS", "📶 O2 / FIBRA"])
+    with t1:
+        st.dataframe(pd.DataFrame(tarifas_luz).drop(columns=['logo']), use_container_width=True, hide_index=True)
+    with t2:
+        df_gas = pd.DataFrame([
+            {"PRIORIDAD": 1, "COMPAÑÍA": "TOTAL GAS", "FIJO RL1": "9,50 €", "ENERGIA RL1": "0,059 €/kWh", "FIJO RL2": "14,50 €", "ENERGIA RL2": "0,057 €/kWh"},
+            {"PRIORIDAD": 2, "COMPAÑÍA": "NATURGY", "FIJO RL1": "5,34 €", "ENERGIA RL1": "0,084 €/kWh", "FIJO RL2": "10,03 €", "ENERGIA RL2": "0,081 €/kWh"},
+            {"PRIORIDAD": 3, "COMPAÑÍA": "GANA ENERGÍA", "FIJO RL1": "3,93 €", "ENERGIA RL1": "VAR.", "FIJO RL2": "8,11 €", "ENERGIA RL2": "VAR."}
+        ])
+        st.dataframe(df_gas, use_container_width=True, hide_index=True)
+    with t3:
+        st.markdown('<div class="block-header">📡 TARIFAS DESTACADAS O2</div>', unsafe_allow_html=True)
+        c_fibra = st.columns(3)
+        with c_fibra[0]: st.markdown('<div class="price-card">FIBRA 300<br><span class="price-val">23€</span></div>', unsafe_allow_html=True)
+        with c_fibra[1]: st.markdown('<div class="price-card">FIBRA 600<br><span class="price-val">27€</span></div>', unsafe_allow_html=True)
+        with c_fibra[2]: st.markdown('<div class="price-card">FIBRA 1Gb<br><span class="price-val">31€</span></div>', unsafe_allow_html=True)
+
+# --- COMPARADOR ---
+elif menu == "⚖️ COMPARADOR":
+    st.header("Estudio de Ahorro")
+    st.info("Introduce los datos de la factura para comparar.")
+    # (Aquí mantienes tu lógica de PDF del código original)
+
+# --- REPOSITORIO (Arreglado) ---
 elif menu == "📂 REPOSITORIO":
     st.header("Documentación")
     if os.path.exists("manuales"):
         for fn in os.listdir("manuales"):
             if fn.lower().endswith(('.pdf', '.docx', '.xlsx')):
-                # ARREGLO: 'rb' para que no dé error de Unicode al descargar
+                # ARREGLO: 'rb' para lectura binaria evita el UnicodeDecodeError
                 with open(f"manuales/{fn}", "rb") as f:
                     st.download_button(f"📥 {fn}", f, file_name=fn)
 
-# --- SECCIÓN DASHBOARD (RE-EQUIPADA) ---
+# --- DASHBOARD (Arreglado) ---
 elif menu == "📈 DASHBOARD":
     st.header("🏆 Análisis de Ventas")
     try:
-        # Recuperamos de secrets y limpiamos la clave PEM
         s = st.secrets["gcp_service_account"]
+        # Limpieza de la clave para evitar errores de carga PEM
         pk = s["private_key"].replace("\\n", "\n").strip()
         
         creds_dict = {
@@ -128,12 +161,16 @@ elif menu == "📈 DASHBOARD":
         creds = Credentials.from_service_account_info(creds_dict, scopes=scope)
         client = gspread.authorize(creds)
         
+        # Conexión directa por ID
         sh = client.open_by_key("1W-Eq63SnBBlOykJlP9XgASXDPpWQhQnVW-oFHUlSMcQ")
         df = pd.DataFrame(sh.get_worksheet(0).get_all_records())
 
         if not df.empty:
-            st.success("✅ Datos sincronizados")
+            st.success("Sincronización con Google Sheets OK")
             st.dataframe(df, use_container_width=True)
+            # Gráfico dinámico basado en la primera columna (ej: Agente)
             st.bar_chart(df.iloc[:, 0].value_counts())
+        else:
+            st.warning("El archivo Excel está vacío.")
     except Exception as e:
-        st.error("Error de conexión. Revisa que el formato en Secrets sea TOML.")
+        st.error(f"Error de conexión: {e}")
