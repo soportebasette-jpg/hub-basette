@@ -53,8 +53,8 @@ st.markdown("""
     .price-title { color: #d2ff00; font-size: 1.2rem; font-weight: bold; margin-bottom: 10px; }
     .price-val { color: white; font-size: 2rem; font-weight: 900; }
     .price-sub { color: #8b949e; font-size: 0.85rem; margin-bottom: 5px; }
-    
-    /* Corrección visibilidad selectores en Dashboard */
+
+    /* Forzar visibilidad del texto en selectores del Dashboard */
     .stSelectbox div[data-baseweb="select"], .stMultiSelect div[data-baseweb="select"] {
         background-color: #161b22 !important;
         color: white !important;
@@ -62,10 +62,10 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# 3. BASE DE DATOS LUZ
+# 3. BASE DE DATOS LUZ (ACTUALIZADA CON NUEVOS PRECIOS GANA ENERGÍA)
 tarifas_luz = [
-    {"PRIORIDAD": 1, "COMPAÑÍA": "GANA ENERGÍA", "TARIFA": "24H", "P1": 0.089, "P2": 0.089, "ENERGIA": 0.111, "EXCEDENTE": 0.05, "DTO": "0%", "BATERIA": "SI_GRATIS", "logo": "manuales/logo_gana.png"},
-    {"PRIORIDAD": 1, "COMPAÑÍA": "GANA ENERGÍA", "TARIFA": "3T", "P1": 0.089, "P2": 0.089, "ENERGIA": "0,163/0,096/0,072", "EXCEDENTE": 0.05, "DTO": "0%", "BATERIA": "SI_GRATIS", "logo": "manuales/logo_gana.png"},
+    {"PRIORIDAD": 1, "COMPAÑÍA": "GANA ENERGÍA", "TARIFA": "24H", "P1": 0.089, "P2": 0.089, "ENERGIA": 0.129, "EXCEDENTE": 0.05, "DTO": "0%", "BATERIA": "SI_GRATIS", "logo": "manuales/logo_gana.png"},
+    {"PRIORIDAD": 1, "COMPAÑÍA": "GANA ENERGÍA", "TARIFA": "3T", "P1": 0.089, "P2": 0.089, "ENERGIA": "0,181/0,114/0,090", "EXCEDENTE": 0.05, "DTO": "0%", "BATERIA": "SI_GRATIS", "logo": "manuales/logo_gana.png"},
     {"PRIORIDAD": 2, "COMPAÑÍA": "NATURGY", "TARIFA": "24H (POR USO)", "P1": 0.123, "P2": 0.037, "ENERGIA": 0.109, "EXCEDENTE": 0.06, "DTO": "0%", "BATERIA": "SI_GRATIS", "logo": "manuales/logo_naturgy.png"},
     {"PRIORIDAD": 2, "COMPAÑÍA": "NATURGY", "TARIFA": "3T (TARIF NOCHE)", "P1": 0.123, "P2": 0.037, "ENERGIA": "0,180/0,107/0,718", "EXCEDENTE": 0.06, "DTO": "0%", "BATERIA": "SI_GRATIS", "logo": "manuales/logo_naturgy.png"},
     {"PRIORIDAD": 3, "COMPAÑÍA": "TOTAL LUZ", "TARIFA": "24H (A TU AIRE)", "P1": 0.081, "P2": 0.081, "ENERGIA": 0.114, "EXCEDENTE": 0.07, "DTO": "0%", "BATERIA": "NO", "logo": "manuales/logo_total.png"},
@@ -141,12 +141,14 @@ elif menu == "📊 PRECIOS":
         for i, (vel, pre) in enumerate(solo_fibra):
             with f_cols[i]:
                 st.markdown(f'<div class="price-card"><div class="price-title">FIBRA {vel}</div><div class="price-val">{pre}</div><div class="price-sub">Precio Final / Mes</div></div>', unsafe_allow_html=True)
+
         st.markdown('<div class="block-header">🌐 FIBRA Y MÓVIL</div>', unsafe_allow_html=True)
         fm_cols = st.columns(4)
         fibra_movil = [("300 Mb", "40 GB", "30€", "1 LÍNEA"), ("600 Mb", "10+40 GB", "35€", "2 LÍNEAS"), ("600 Mb", "60 GB", "35€", "1 LÍNEA"), ("1 Gb", "120 GB", "38€", "1 LÍNEA")]
         for i, (vel, gb, pre, lin) in enumerate(fibra_movil):
             with fm_cols[i]:
                 st.markdown(f'<div class="price-card"><div class="price-title">{vel} + {lin}</div><div class="price-val">{pre}</div><div class="price-sub">{gb} de Datos</div></div>', unsafe_allow_html=True)
+
         st.markdown('<div class="block-header">📺 TELEVISIÓN Y PACKS TV</div>', unsafe_allow_html=True)
         tv_cols = st.columns(5)
         packs_tv = [
@@ -159,6 +161,7 @@ elif menu == "📊 PRECIOS":
         for i, (tit, gb, pre, extra) in enumerate(packs_tv):
             with tv_cols[i]:
                 st.markdown(f'<div class="price-card"><div class="price-title">{tit}</div><div class="price-val">{pre}</div><div class="price-sub">{gb if gb else extra}</div></div>', unsafe_allow_html=True)
+
         st.markdown('<div class="block-header">➕ LÍNEAS ADICIONALES</div>', unsafe_allow_html=True)
         ad_cols = st.columns(3)
         ad_list = [("Móvil 40 GB", "5€"), ("Móvil 150 GB", "10€"), ("Móvil 300 GB", "15€")]
@@ -216,7 +219,7 @@ elif menu == "⚖️ COMPARADOR":
         pdf.cell(190, 15, f"AHORRO TOTAL: {ahorro:.2f} EUR", ln=True, align="C", fill=True)
         st.download_button(label="📥 DESCARGAR ESTUDIO PDF", data=pdf.output(dest='S').encode('latin-1', 'replace'), file_name=f"Estudio_{cliente}.pdf")
 
-# --- DASHBOARD PROFESIONAL (MEJORADO) ---
+# --- DASHBOARD ---
 elif menu == "📈 DASHBOARD":
     st.header("🏆 Dashboard Ejecutivo | Basette Group")
     sheet_url = "https://docs.google.com/spreadsheets/d/1W-Eq63SnBBlOykJlP9XgASXDPpWQhQnVW-oFHUlSMcQ/export?format=csv"
@@ -224,54 +227,54 @@ elif menu == "📈 DASHBOARD":
     try:
         df_raw = pd.read_csv(sheet_url)
         
-        # Procesamiento de Fechas y Meses
+        # Procesamiento de Fecha de Creación
         if 'FECHA DE CREACIÓN' in df_raw.columns:
             df_raw['FECHA_DT'] = pd.to_datetime(df_raw['FECHA DE CREACIÓN'], dayfirst=True, errors='coerce')
-            df_raw['AÑO'] = df_raw['FECHA_DT'].dt.year.fillna(2026).astype(int)
-            meses_map = {1:'Enero', 2:'Febrero', 3:'Marzo', 4:'Abril', 5:'Mayo', 6:'Junio', 7:'Julio', 8:'Agosto', 9:'Septiembre', 10:'Octubre', 11:'Noviembre', 12:'Diciembre'}
-            df_raw['MES'] = df_raw['FECHA_DT'].dt.month.map(meses_map)
+            df_raw['AÑO_INT'] = df_raw['FECHA_DT'].dt.year.fillna(2026).astype(int)
+            meses_es = {1:'Enero', 2:'Febrero', 3:'Marzo', 4:'Abril', 5:'Mayo', 6:'Junio', 
+                        7:'Julio', 8:'Agosto', 9:'Septiembre', 10:'Octubre', 11:'Noviembre', 12:'Diciembre'}
+            df_raw['MES_NOMBRE'] = df_raw['FECHA_DT'].dt.month.map(meses_es).fillna('Sin Mes')
         
-        # --- BLOQUE DE FILTROS ---
+        # --- FILTROS ---
         with st.container():
             f1, f2, f3, f4 = st.columns(4)
             with f1:
                 lista_meses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
                 sel_mes = st.multiselect("Filtrar Meses", lista_meses, default=lista_meses)
             with f2:
-                años_disponibles = sorted([a for a in df_raw['AÑO'].unique() if a >= 2026]) if 'AÑO' in df_raw.columns else [2026]
-                sel_año = st.selectbox("Año", ["Todos"] + [str(a) for a in años_disponibles])
+                años_unicos = sorted([a for a in df_raw['AÑO_INT'].unique() if a >= 2026]) if 'AÑO_INT' in df_raw.columns else [2026]
+                sel_año = st.selectbox("Seleccionar Año", ["Todos"] + [str(a) for a in años_unicos])
             with f3:
-                # Compañía = Comercializadora
-                col_comp = 'COMERCIALIZADORA' if 'COMERCIALIZADORA' in df_raw.columns else 'COMPAÑIA'
-                comps = ["Todas"] + sorted(list(df_raw[col_comp].dropna().unique())) if col_comp in df_raw.columns else ["Todas"]
-                sel_comp = st.selectbox("Compañía", comps)
+                col_comercializadora = 'COMERCIALIZADORA' if 'COMERCIALIZADORA' in df_raw.columns else df_raw.columns[1]
+                lista_comercializadoras = ["Todas"] + sorted(df_raw[col_comercializadora].dropna().unique().tolist())
+                sel_comp = st.selectbox("Comercializadora", lista_comercializadoras)
             with f4:
-                col_com = 'COMERCIAL' if 'COMERCIAL' in df_raw.columns else 'AGENTE'
-                comerciales = sorted(list(df_raw[col_com].dropna().unique())) if col_com in df_raw.columns else []
-                sel_com = st.multiselect("Comerciales", comerciales, default=comerciales)
+                col_comercial = 'COMERCIAL' if 'COMERCIAL' in df_raw.columns else df_raw.columns[0]
+                lista_comerciales = sorted(df_raw[col_comercial].dropna().unique().tolist())
+                sel_com = st.multiselect("Comerciales", lista_comerciales, default=lista_comerciales)
 
-        # Aplicar Filtros
+        # Aplicar Lógica de Filtros
         df = df_raw.copy()
-        if sel_mes: df = df[df['MES'].isin(sel_mes)]
-        if sel_año != "Todos": df = df[df['AÑO'] == int(sel_año)]
-        if sel_comp != "Todas": df = df[df[col_comp] == sel_comp]
-        if sel_com: df = df[df[col_com].isin(sel_com)]
+        if sel_mes: df = df[df['MES_NOMBRE'].isin(sel_mes)]
+        if sel_año != "Todos": df = df[df['AÑO_INT'] == int(sel_año)]
+        if sel_comp != "Todas": df = df[df[col_comercializadora] == sel_comp]
+        if sel_com: df = df[df[col_comercial].isin(sel_com)]
 
         # --- RANKING ---
         st.markdown('<div class="block-header">👑 RANKING DE VENTAS POR COMERCIAL</div>', unsafe_allow_html=True)
-        ranking = df.groupby(col_com).size().reset_index(name='Total')
-        ranking = ranking.sort_values(by='Total', ascending=False)
-        fig_ranking = px.bar(ranking, x=col_com, y='Total', text='Total', color_discrete_sequence=['#d2ff00'], template="plotly_dark")
+        ranking = df.groupby(col_comercial).size().reset_index(name='Ventas')
+        ranking = ranking.sort_values(by='Ventas', ascending=False)
+        fig_ranking = px.bar(ranking, x=col_comercial, y='Ventas', text='Ventas', color_discrete_sequence=['#d2ff00'], template="plotly_dark")
         st.plotly_chart(fig_ranking, use_container_width=True)
 
         # --- MÉTRICAS ---
         st.markdown('<div class="block-header">📊 RESUMEN DE CIFRAS</div>', unsafe_allow_html=True)
         m1, m2, m3 = st.columns(3)
-        luz = df['CUPS LUZ'].count() if 'CUPS LUZ' in df.columns else 0
-        gas = df['CUPS GAS'].count() if 'CUPS GAS' in df.columns else 0
-        m1.metric("VENTAS LUZ", f"{luz} ⚡")
-        m2.metric("VENTAS GAS", f"{gas} 🔥")
-        m3.metric("TOTAL GLOBAL", f"{luz + gas} ✅")
+        luz_count = df['CUPS LUZ'].count() if 'CUPS LUZ' in df.columns else 0
+        gas_count = df['CUPS GAS'].count() if 'CUPS GAS' in df.columns else 0
+        m1.metric("VENTAS LUZ", f"{luz_count} ⚡")
+        m2.metric("VENTAS GAS", f"{gas_count} 🔥")
+        m3.metric("TOTAL GLOBAL", f"{luz_count + gas_count} ✅")
 
         # --- TABLA ---
         st.markdown('<div class="block-header">📋 DETALLE DE OPERACIONES</div>', unsafe_allow_html=True)
