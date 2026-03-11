@@ -94,7 +94,6 @@ with st.sidebar:
 if menu == "🚀 CRM":
     st.header("Portales de Gestión")
     st.markdown('<div class="block-header">⭐ MARCADOR</div>', unsafe_allow_html=True)
-    st.markdown(f'''<div style="background:#161b22; padding:15px; border-radius:10px; border:2px solid #d2ff00; text-align:center; margin-bottom:10px;"><h4 style="color:white; margin:0;">MARCADOR PRINCIPAL</h4></div>''', unsafe_allow_html=True)
     st.link_button(f"ENTRAR AL MARCADOR", "https://grupobasette.vozipcenter.com/", use_container_width=True)
     
     st.markdown('<div class="block-header">💡 🔥 ENERGÍA</div>', unsafe_allow_html=True)
@@ -108,12 +107,10 @@ if menu == "🚀 CRM":
     col_izq, col_der = st.columns(2)
     with col_izq:
         st.markdown('<div class="block-header">🛡️ 🚨 ALARMAS</div>', unsafe_allow_html=True)
-        st.markdown('<div style="background:#161b22; padding:15px; border-radius:10px; border:1px solid #30363d; text-align:center; margin-bottom:10px;"><h4 style="color:white; margin:0;">SEGURMA</h4></div>', unsafe_allow_html=True)
-        st.link_button("ENTRAR", "https://partners.segurma.com/", use_container_width=True)
+        st.link_button("SEGURMA", "https://partners.segurma.com/", use_container_width=True)
     with col_der:
         st.markdown('<div class="block-header">📶 📱 TELECOMUNICACIONES</div>', unsafe_allow_html=True)
-        st.markdown('<div style="background:#161b22; padding:15px; border-radius:10px; border:1px solid #30363d; text-align:center; margin-bottom:10px;"><h4 style="color:white; margin:0;">O2</h4></div>', unsafe_allow_html=True)
-        st.link_button("ENTRAR", "https://o2online.es/auth/login/", use_container_width=True)
+        st.link_button("O2", "https://o2online.es/auth/login/", use_container_width=True)
 
 # --- PRECIOS ---
 elif menu == "📊 PRECIOS":
@@ -126,159 +123,90 @@ elif menu == "📊 PRECIOS":
         df_gas = pd.DataFrame([
             {"PRIORIDAD": 1, "COMPAÑÍA": "TOTAL GAS", "FIJO RL1": "9,50 €", "ENERGIA RL1": "0,059 €/kWh", "FIJO RL2": "14,50 €", "ENERGIA RL2": "0,057 €/kWh"},
             {"PRIORIDAD": 2, "COMPAÑÍA": "NATURGY", "FIJO RL1": "5,34 €", "ENERGIA RL1": "0,084 €/kWh", "FIJO RL2": "10,03 €", "ENERGIA RL2": "0,081 €/kWh"},
-            {"PRIORIDAD": 3, "COMPAÑÍA": "GANA ENERGÍA", "FIJO RL1": "3,93 €", "ENERGIA RL1": "VARIABLE (BENEF. 0,11€)", "FIJO RL2": "8,11 €", "ENERGIA RL2": "VARIABLE (BENEF. 0,006€)"}
+            {"PRIORIDAD": 3, "COMPAÑÍA": "GANA ENERGÍA", "FIJO RL1": "3,93 €", "ENERGIA RL1": "VARIABLE", "FIJO RL2": "8,11 €", "ENERGIA RL2": "VARIABLE"}
         ])
         st.dataframe(df_gas, use_container_width=True, hide_index=True)
     with t3:
-        st.markdown('<div class="block-header">📡 SOLO FIBRA</div>', unsafe_allow_html=True)
-        f_cols = st.columns(3)
-        solo_fibra = [("300 Mb", "23€"), ("600 Mb", "27€"), ("1 Gb", "31€")]
-        for i, (vel, pre) in enumerate(solo_fibra):
-            with f_cols[i]:
-                st.markdown(f'<div class="price-card"><div class="price-title">FIBRA {vel}</div><div class="price-val">{pre}</div><div class="price-sub">Precio Final / Mes</div></div>', unsafe_allow_html=True)
-        st.markdown('<div class="block-header">🌐 FIBRA Y MÓVIL</div>', unsafe_allow_html=True)
-        fm_cols = st.columns(4)
-        fibra_movil = [("300 Mb", "40 GB", "30€", "1 LÍNEA"), ("600 Mb", "10+40 GB", "35€", "2 LÍNEAS"), ("600 Mb", "60 GB", "35€", "1 LÍNEA"), ("1 Gb", "120 GB", "38€", "1 LÍNEA")]
-        for i, (vel, gb, pre, lin) in enumerate(fibra_movil):
-            with fm_cols[i]:
-                st.markdown(f'<div class="price-card"><div class="price-title">{vel} + {lin}</div><div class="price-val">{pre}</div><div class="price-sub">{gb} de Datos</div></div>', unsafe_allow_html=True)
-        st.markdown('<div class="block-header">📺 TELEVISIÓN Y PACKS TV</div>', unsafe_allow_html=True)
-        tv_cols = st.columns(5)
-        packs_tv = [
-            ("SOLO TV", "", "9.99€", "M+ Suscripción"),
-            ("600 Mb + TV", "35 GB", "38€", "M+ Incluido"),
-            ("600 Mb + TV", "60 GB", "45€", "M+ / Netflix"),
-            ("1 Gb + TV", "350 GB", "50€", "M+ Incluido"),
-            ("1 Gb + TV", "375 GB", "56€", "M+ / Netflix")
-        ]
-        for i, (tit, gb, pre, extra) in enumerate(packs_tv):
-            with tv_cols[i]:
-                st.markdown(f'<div class="price-card"><div class="price-title">{tit}</div><div class="price-val">{pre}</div><div class="price-sub">{gb if gb else extra}</div></div>', unsafe_allow_html=True)
-        st.markdown('<div class="block-header">➕ LÍNEAS ADICIONALES</div>', unsafe_allow_html=True)
-        ad_cols = st.columns(3)
-        ad_list = [("Móvil 40 GB", "5€"), ("Móvil 150 GB", "10€"), ("Móvil 300 GB", "15€")]
-        for i, (lin, pre) in enumerate(ad_list):
-            with ad_cols[i]:
-                st.markdown(f'<div class="price-card"><div class="price-title">{lin}</div><div class="price-val">{pre}</div><div class="price-sub">Pago Mensual</div></div>', unsafe_allow_html=True)
+        st.markdown('<div class="block-header">📡 TARIFAS DESTACADAS</div>', unsafe_allow_html=True)
+        st.info("Consulta los packs de O2 en la web oficial desde la sección CRM.")
 
 # --- COMPARADOR ---
 elif menu == "⚖️ COMPARADOR":
-    st.header("Estudio de Ahorro Personalizado")
+    st.header("Estudio de Ahorro")
     c1, c2 = st.columns(2)
     with c1:
-        cliente = st.text_input("Nombre del cliente", "Nombre Apellidos")
-        f_act = st.number_input("Factura actual con IVA (EUR)", value=0.0)
-        potencia = st.number_input("Potencia contratada (kW)", value=4.6)
-        dias_factura = st.number_input("Días del periodo de factura", value=30)
+        cliente = st.text_input("Nombre del cliente", "Cliente")
+        f_act = st.number_input("Factura actual (EUR)", value=0.0)
+        potencia = st.number_input("Potencia (kW)", value=4.6)
+        dias = st.number_input("Días", value=30)
     with c2:
-        comp_sel = st.selectbox("Compañía Propuesta", sorted(list(set(t["COMPAÑÍA"] for t in tarifas_luz))))
+        comp_sel = st.selectbox("Compañía", sorted(list(set(t["COMPAÑÍA"] for t in tarifas_luz))))
         tarifas_f = [t["TARIFA"] for t in tarifas_luz if t["COMPAÑÍA"] == comp_sel]
-        tarifa_sel_nombre = st.selectbox("Tarifa Seleccionada", tarifas_f)
-        sel = next(t for t in tarifas_luz if t["COMPAÑÍA"] == comp_sel and t["TARIFA"] == tarifa_sel_nombre)
-        if os.path.exists(sel["logo"]): st.image(sel["logo"], width=120)
-        consumo = st.number_input("Consumo del periodo (kWh)", value=0.0)
+        tarifa_sel = st.selectbox("Tarifa", tarifas_f)
+        sel = next(t for t in tarifas_luz if t["COMPAÑÍA"] == comp_sel and t["TARIFA"] == tarifa_sel)
+        consumo = st.number_input("Consumo (kWh)", value=0.0)
 
-    try:
-        p_calc = float(str(sel['ENERGIA']).split('/')[0].replace(',', '.')) if isinstance(sel['ENERGIA'], str) else sel['ENERGIA']
-    except:
-        p_calc = 0.11
+    # Cálculo simplificado
+    try: p_calc = float(str(sel['ENERGIA']).split('/')[0].replace(',', '.'))
+    except: p_calc = 0.11
+    coste = ((potencia * sel["P1"] * dias) + (consumo * p_calc)) * 1.21
+    ahorro = f_act - coste
 
-    coste_p = (potencia * sel["P1"] * dias_factura) + (potencia * sel["P2"] * dias_factura)
-    coste_e = consumo * p_calc
-    coste_total_iva = (coste_p + coste_e) * 1.21
-    ahorro = f_act - coste_total_iva
+    st.markdown(f'<div style="background:#d2ff00; padding:20px; border-radius:10px; text-align:center;"><h2 style="color:black;">AHORRO: {ahorro:.2f} €</h2></div>', unsafe_allow_html=True)
 
-    st.info(f"**Tarifa Seleccionada:** {tarifa_sel_nombre} | Energía: **{sel['ENERGIA']}** €/kWh | Potencia: **{sel['P1']}** €/kW día")
-    st.markdown(f'<div style="background:#d2ff00; padding:20px; border-radius:10px; text-align:center;"><h2 style="color:black;">AHORRO ESTIMADO: {ahorro:.2f} €</h2></div>', unsafe_allow_html=True)
-    
-    if st.button("GENERAR ESTUDIO PDF PROFESIONAL"):
-        pdf = FPDF()
-        pdf.add_page()
-        if os.path.exists(LOGO_PRINCIPAL): pdf.image(LOGO_PRINCIPAL, 10, 8, 33)
-        if os.path.exists(sel["logo"]): pdf.image(sel["logo"], 165, 8, 30)
-        pdf.ln(30); pdf.set_font("Arial", "B", 18); pdf.cell(190, 10, "ESTUDIO COMPARATIVO DE AHORRO", ln=True, align="C")
-        pdf.ln(5); pdf.set_font("Arial", "B", 11); pdf.set_fill_color(240, 240, 240)
-        pdf.cell(190, 8, f" DATOS DEL CLIENTE: {cliente.upper()}", ln=True, fill=True)
-        pdf.set_font("Arial", "", 10); pdf.cell(95, 8, f"Fecha: {datetime.now().strftime('%d/%m/%Y')}", border=1)
-        pdf.cell(95, 8, f"Periodo: {dias_factura} dias", border=1, ln=True); pdf.ln(5)
-        pdf.set_font("Arial", "B", 11); pdf.cell(190, 8, " DETALLE DE LA PROPUESTA", ln=True, fill=True)
-        pdf.set_font("Arial", "", 10)
-        for d, v in [("Compania", comp_sel), ("Tarifa", tarifa_sel_nombre), ("Potencia", f"{potencia} kW"), ("Energia", f"{sel['ENERGIA']} EUR/kWh")]:
-            pdf.cell(95, 8, d, border=1); pdf.cell(95, 8, str(v), border=1, ln=True)
-        pdf.ln(10); pdf.set_font("Arial", "B", 12); pdf.cell(95, 10, "Factura Actual", border=1); pdf.cell(95, 10, f"{f_act:.2f} EUR", border=1, ln=True)
-        pdf.cell(95, 10, "Nueva Factura", border=1); pdf.cell(95, 10, f"{coste_total_iva:.2f} EUR", border=1, ln=True)
-        pdf.ln(10); pdf.set_fill_color(210, 255, 0); pdf.set_font("Arial", "B", 14)
-        pdf.cell(190, 15, f"AHORRO TOTAL: {ahorro:.2f} EUR", ln=True, align="C", fill=True)
-        st.download_button(label="📥 DESCARGAR ESTUDIO PDF", data=pdf.output(dest='S').encode('latin-1', 'replace'), file_name=f"Estudio_{cliente}.pdf")
-
-# --- REPOSITORIO ---
+# --- REPOSITORIO (CORREGIDO ERROR UNICODE) ---
 elif menu == "📂 REPOSITORIO":
     st.header("Documentación")
-    with st.expander("📂 MANUAL DEL MARCADOR"):
-        manual_path = "manuales/Manual_Premiumnumber_Agente.pdf"
-        if os.path.exists(manual_path):
-            with open(manual_path, "rb") as f:
-                st.download_button("📖 DESCARGAR MANUAL MARCADOR", f, file_name="Manual_Marcador_Agente.pdf", key="manual_marcador")
-        else:
-            st.warning("Archivo 'Manual_Premiumnumber_Agente.pdf' no encontrado.")
+    if os.path.exists("manuales"):
+        archivos = os.listdir("manuales")
+        for fn in archivos:
+            if fn.lower().endswith(('.pdf', '.docx', '.xlsx')):
+                path = f"manuales/{fn}"
+                with open(path, "rb") as f: # "rb" para leer en binario y evitar UnicodeDecodeError
+                    st.download_button(f"📥 {fn}", f, file_name=fn, key=f"btn_{fn}")
 
-    with st.expander("📂 ARGUMENTARIOS DE VENTA"):
-        docs = ["ARGUMENTARIO_ENERGÍA (Venta Fría) + Venta Cruzada Teleco.docx", "ARGUMENTARIO_TELECO (Clientes Movistar a O2) + Venta Cruzada Energía.docx", "FRASES PROHIBIDAS,PODER EN LA VENTA y REBATE OBJECIONES.docx"]
-        for d in docs:
-            path = f"manuales/{d}"
-            if os.path.exists(path):
-                with open(path, "rb") as f: 
-                    st.download_button(f"📘 {d}", f, file_name=d, key=f"repo_{d}")
-    st.markdown("---")
-    for c in ["GANA ENERGÍA", "NATURGY", "TOTAL", "ENDESA", "O2"]:
-        with st.expander(f"📁 DOCUMENTACIÓN {c}"):
-            if os.path.exists("manuales"):
-                busq = "total" if c == "TOTAL" else c.split()[0].lower()
-                archivos = [f for f in os.listdir("manuales") if busq in f.lower() and "argumentario" not in f.lower() and not f.lower().endswith('.png')]
-                for fn in archivos:
-                    with open(f"manuales/{fn}", "rb") as f: 
-                        st.download_button(f"📥 {fn}", f, file_name=fn, key=f"btn_{fn}")
-
-# --- DASHBOARD (NUEVA SECCIÓN AGREGADA) ---
+# --- DASHBOARD (MOTOR REFORZADO CONTRA ERRORES PEM) ---
 elif menu == "📈 DASHBOARD":
     st.header("🏆 Análisis de Ventas")
     try:
-        # Cargamos las credenciales desde el diccionario de Secrets
-        creds_dict = st.secrets["gcp_service_account"]
+        # 1. Recuperar info de Secrets
+        s = st.secrets["gcp_service_account"]
+        
+        # 2. Limpieza forzada de la clave privada (elimina saltos de línea mal pegados)
+        pk = s["private_key"].replace("\\n", "\n").strip()
+        
+        # 3. Construir diccionario de credenciales limpio
+        creds_dict = {
+            "type": "service_account",
+            "project_id": s["project_id"],
+            "private_key_id": s["private_key_id"],
+            "private_key": pk,
+            "client_email": s["client_email"],
+            "client_id": s.get("client_id"),
+            "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+            "token_uri": "https://oauth2.googleapis.com/token",
+            "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+            "client_x509_cert_url": s.get("client_x509_cert_url")
+        }
+        
         scope = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
         creds = Credentials.from_service_account_info(creds_dict, scopes=scope)
         client = gspread.authorize(creds)
         
-        # Abrir el Excel por su ID
+        # 4. Conexión al Sheet
         sheet_id = "1W-Eq63SnBBlOykJlP9XgASXDPpWQhQnVW-oFHUlSMcQ"
         sh = client.open_by_key(sheet_id)
-        worksheet = sh.get_worksheet(0)
-        
-        # Convertir a DataFrame
-        data = worksheet.get_all_records()
-        df = pd.DataFrame(data)
+        df = pd.DataFrame(sh.get_worksheet(0).get_all_records())
 
         if not df.empty:
-            st.success("✅ Datos Actualizados")
-            
-            # Filtro Dinámico
-            col_com = next((c for c in df.columns if 'comercial' in c.lower()), df.columns[0])
-            lista_com = ["TODOS"] + sorted(df[col_com].unique().tolist())
-            com_sel = st.selectbox("Filtrar por Comercial:", lista_com)
-            
-            df_final = df if com_sel == "TODOS" else df[df[col_com] == com_sel]
-            
-            # Métricas Visuales
-            m1, m2 = st.columns(2)
-            m1.metric("Ventas Totales", len(df_final))
-            m2.metric("Agentes Activos", df_final[col_com].nunique())
-            
-            # Tabla y Gráfico
-            st.dataframe(df_final, use_container_width=True, hide_index=True)
-            st.bar_chart(df_final[col_com].value_counts())
+            st.success("✅ Datos sincronizados")
+            st.dataframe(df, use_container_width=True, hide_index=True)
+            # Gráfico simple de volumen
+            col_agente = df.columns[0]
+            st.bar_chart(df[col_agente].value_counts())
         else:
-            st.info("El Excel conectado no tiene datos registrados aún.")
+            st.warning("El Excel no tiene datos.")
 
     except Exception as e:
-        st.error("No se pudo conectar al Dashboard.")
-        st.info("Verifica que el bot de Google tenga acceso al Excel y los Secrets estén bien configurados.")
+        st.error(f"Error de conexión: El formato de la clave en Secrets no es correcto.")
+        st.info("Sigue las instrucciones de abajo para pegar la clave correctamente.")
