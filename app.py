@@ -213,37 +213,80 @@ elif menu == "⚖️ COMPARADOR":
         pdf.cell(190, 15, f"AHORRO TOTAL: {ahorro:.2f} EUR", ln=True, align="C", fill=True)
         st.download_button(label="📥 DESCARGAR ESTUDIO PDF", data=pdf.output(dest='S').encode('latin-1', 'replace'), file_name=f"Estudio_{cliente}.pdf")
 
-# --- DASHBOARD (REPARADO CON PYTHON PURO) ---
+# --- DASHBOARD PROFESIONAL ---
 elif menu == "📈 DASHBOARD":
-    st.header("🏆 Dashboard de Ventas | Basette Group")
-    st.markdown('<div class="block-header">📊 ESTADÍSTICAS EN TIEMPO REAL</div>', unsafe_allow_html=True)
+    st.header("🏆 Dashboard Ejecutivo | Basette Group")
     
-    # URL de descarga CSV del Google Sheet (ID: 1W-Eq63SnBBlOykJlP9XgASXDPpWQhQnVW-oFHUlSMcQ)
+    # URL CSV del Google Sheet
     sheet_url = "https://docs.google.com/spreadsheets/d/1W-Eq63SnBBlOykJlP9XgASXDPpWQhQnVW-oFHUlSMcQ/export?format=csv"
     
     try:
-        df = pd.read_csv(sheet_url)
+        df_raw = pd.read_csv(sheet_url)
+        # Limpieza rápida: asegurar que las fechas sean fechas si existe la columna
+        if 'FECHA' in df_raw.columns:
+            df_raw['FECHA'] = pd.to_datetime(df_raw['FECHA'], errors='coerce')
+            df_raw['MES'] = df_raw['FECHA'].dt.month_name()
+            df_raw['AÑO'] = df_raw['FECHA'].dt.year
         
-        # Métricas principales
-        c1, c2, c3 = st.columns(3)
-        c1.metric("Total Registros", len(df))
-        
-        # Gráficos Interactivos
-        st.markdown("### Rendimiento por Agente")
-        # Ajustamos el nombre de la columna según lo que suele haber en tus Excels (ej: AGENTE)
-        col_agente = 'AGENTE' if 'AGENTE' in df.columns else df.columns[0]
-        fig_agente = px.bar(df, x=col_agente, title="Ventas por Comercial", template="plotly_dark", color_discrete_sequence=['#d2ff00'])
-        st.plotly_chart(fig_agente, use_container_width=True)
-        
-        col_estado = 'ESTADO' if 'ESTADO' in df.columns else (df.columns[1] if len(df.columns) > 1 else df.columns[0])
-        st.markdown("### Estado de las Gestiones")
-        fig_pie = px.pie(df, names=col_estado, hole=0.4, title="Distribución de Estados", template="plotly_dark")
-        st.plotly_chart(fig_pie, use_container_width=True)
+        # --- BLOQUE DE FILTROS ---
+        with st.expander("🔍 FILTROS AVANZADOS", expanded=True):
+            f1, f2, f3, f4 = st.columns(4)
+            with f1:
+                meses = ["Todos"] + sorted(list(df_raw['MES'].dropna().unique())) if 'MES' in df_raw.columns else ["Todos"]
+                sel_mes = st.selectbox("Mes", meses)
+            with f2:
+                años = ["Todos"] + sorted(list(df_raw['AÑO'].dropna().unique().astype(str))) if 'AÑO' in df_raw.columns else ["Todos"]
+                sel_año = st.selectbox("Año", años)
+            with f3:
+                compañias = ["Todas"] + sorted(list(df_raw['COMPAÑIA'].dropna().unique())) if 'COMPAÑIA' in df_raw.columns else ["Todas"]
+                sel_comp = st.selectbox("Compañía", compañias)
+            with f4:
+                comerciales = ["Todos"] + sorted(list(df_raw['AGENTE'].dropna().unique())) if 'AGENTE' in df_raw.columns else ["Todos"]
+                sel_com = st.selectbox("Comercial", comerciales)
 
-        st.success("✅ Datos cargados correctamente desde la nube.")
+        # Aplicar Filtros
+        df = df_raw.copy()
+        if sel_mes != "Todos": df = df[df['MES'] == sel_mes]
+        if sel_año != "Todos": df = df[df['AÑO'] == int(sel_año)]
+        if sel_comp != "Todas": df = df[df['COMPAÑIA'] == sel_comp]
+        if sel_com != "Todos": df = df[df['AGENTE'] == sel_com]
+
+        # --- RANKING DE COMERCIALES (LO PRIMERO) ---
+        st.markdown('<div class="block-header">👑 RANKING DE VENTAS POR AGENTE</div>', unsafe_allow_html=True)
+        
+        # Calculamos totales por agente
+        ranking = df.groupby('AGENTE').agg(
+            Luz=('CUPS LUZ', 'count'),
+            Gas=('CUPS GAS', 'count')
+        ).reset_index()
+        ranking['Total'] = ranking['Luz'] + ranking['Gas']
+        ranking = ranking.sort_values(by='Total', ascending=False)
+
+        fig_ranking = px.bar(
+            ranking, x='AGENTE', y=['Luz', 'Gas'],
+            title=f"Ranking de Ventas - Filtro: {sel_mes}",
+            labels={'value': 'Ventas Realizadas', 'variable': 'Tipo'},
+            color_discrete_map={'Luz': '#d2ff00', 'Gas': '#ffffff'},
+            template="plotly_dark", barmode='stack'
+        )
+        st.plotly_chart(fig_ranking, use_container_width=True)
+
+        # --- CUADRO INTERACTIVO DE MÉTRICAS ---
+        st.markdown('<div class="block-header">📊 RESUMEN DE CIFRAS</div>', unsafe_allow_html=True)
+        m1, m2, m3 = st.columns(3)
+        total_luz = df['CUPS LUZ'].count()
+        total_gas = df['CUPS GAS'].count()
+        m1.metric("TOTAL VENTAS LUZ", f"{total_luz} ⚡")
+        m2.metric("TOTAL VENTAS GAS", f"{total_gas} 🔥")
+        m3.metric("TOTAL GLOBAL", f"{total_luz + total_gas} ✅")
+
+        # --- TABLA DE DATOS FILTRADA ---
+        st.markdown('<div class="block-header">📋 DETALLE DE OPERACIONES</div>', unsafe_allow_html=True)
+        st.dataframe(df, use_container_width=True, hide_index=True)
+
     except Exception as e:
-        st.error(f"Error al conectar con los datos: {e}")
-        st.info("Asegúrate de haber compartido el Google Sheets como 'Cualquier persona con el enlace'.")
+        st.error(f"Error al cargar dashboard: {e}")
+        st.info("Revisa que los nombres de las columnas en el Excel sean: AGENTE, COMPAÑIA, CUPS LUZ, CUPS GAS, FECHA.")
 
 # --- REPOSITORIO ---
 elif menu == "📂 REPOSITORIO":
