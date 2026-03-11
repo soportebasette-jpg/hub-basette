@@ -4,14 +4,14 @@ import pandas as pd
 from datetime import datetime
 from fpdf import FPDF
 
-# 1. CONFIGURACIÓN
+# 1. CONFIGURACIÓN DE PÁGINA
 st.set_page_config(
     page_title="Basette Group | Hub", 
     layout="wide", 
     initial_sidebar_state="expanded" 
 )
 
-# 2. CSS DE ALTA VISIBILIDAD
+# 2. DISEÑO CSS DE ALTA VISIBILIDAD (Colores Basette)
 st.markdown("""
     <style>
     .stApp { background-color: #0d1117; color: #ffffff; }
@@ -67,7 +67,7 @@ tarifas_luz = [
     {"PRIORIDAD": 4, "COMPAÑÍA": "ENDESA", "TARIFA": "TU CASA 50", "P1": 0.093, "P2": 0.093, "ENERGIA": "HPROMO:0,076 RESTO:0,152", "EXCEDENTE": "NO TIENE", "DTO": "0%", "BATERIA": "NO", "logo": "manuales/logo_endesa.png"}
 ]
 
-# 4. LOGIN
+# 4. SISTEMA DE LOGIN
 LOGO_PRINCIPAL = "1000233813.jpg"
 if "password_correct" not in st.session_state: st.session_state["password_correct"] = False
 if not st.session_state["password_correct"]:
@@ -82,13 +82,13 @@ if not st.session_state["password_correct"]:
             else: st.error("Clave incorrecta")
     st.stop()
 
-# 5. NAVEGACIÓN
+# 5. BARRA LATERAL (NAVEGACIÓN)
 with st.sidebar:
     if os.path.exists(LOGO_PRINCIPAL): st.image(LOGO_PRINCIPAL)
     st.markdown("---")
     menu = st.radio("Secciones:", ["🚀 CRM", "📊 PRECIOS", "⚖️ COMPARADOR", "📈 DASHBOARD", "📂 REPOSITORIO"], label_visibility="collapsed")
 
-# --- CRM ---
+# --- SECCIÓN: CRM ---
 if menu == "🚀 CRM":
     st.header("Portales de Gestión")
     
@@ -97,12 +97,22 @@ if menu == "🚀 CRM":
     st.link_button(f"ENTRAR AL MARCADOR", "https://grupobasette.vozipcenter.com/", use_container_width=True)
     
     st.markdown('<div class="block-header">💡 🔥 ENERGÍA</div>', unsafe_allow_html=True)
-    energia = [{"n": "CRM BASETTE", "u": "https://crm.grupobasette.eu/login"}, {"n": "GANA ENERGÍA", "u": "https://colaboradores.ganaenergia.com/"}, {"n": "NATURGY", "u": "https://checkout.naturgy.es/backoffice"}, {"n": "GAS TOTAL", "u": "https://totalenergiesespana.my.site.com/portalcolaboradores/s/login/?ec=302&startURL=%2Fportalcolaboradores%2Fs%2F"}, {"n": "LUZ TOTAL", "u": "https://agentes.totalenergies.es/#/resumen"}, {"n": "IBERDROLA", "u": "https://crm.gesventas.eu/login.php"}, {"n": "NIBA", "u": "https://clientes.niba.es/"}, {"n": "ENDESA", "u": "https://inergia.app"}]
+    energia = [
+        {"n": "CRM BASETTE", "u": "https://crm.grupobasette.eu/login"}, 
+        {"n": "GANA ENERGÍA", "u": "https://colaboradores.ganaenergia.com/"}, 
+        {"n": "NATURGY", "u": "https://checkout.naturgy.es/backoffice"}, 
+        {"n": "GAS TOTAL", "u": "https://totalenergiesespana.my.site.com/portalcolaboradores/s/login/?ec=302&startURL=%2Fportalcolaboradores%2Fs%2F"}, 
+        {"n": "LUZ TOTAL", "u": "https://agentes.totalenergies.es/#/resumen"}, 
+        {"n": "IBERDROLA", "u": "https://crm.gesventas.eu/login.php"}, 
+        {"n": "NIBA", "u": "https://clientes.niba.es/"}, 
+        {"n": "ENDESA", "u": "https://inergia.app"}
+    ]
     cols_en = st.columns(3)
     for i, p in enumerate(energia):
         with cols_en[i % 3]:
             st.markdown(f'''<div style="background:#161b22; padding:15px; border-radius:10px; border:1px solid #30363d; text-align:center; margin-bottom:10px;"><h4 style="color:white; margin:0;">{p["n"]}</h4></div>''', unsafe_allow_html=True)
             st.link_button(f"ENTRAR", p["u"], use_container_width=True)
+    
     st.markdown("---")
     col_izq, col_der = st.columns(2)
     with col_izq:
@@ -114,7 +124,7 @@ if menu == "🚀 CRM":
         st.markdown('<div style="background:#161b22; padding:15px; border-radius:10px; border:1px solid #30363d; text-align:center; margin-bottom:10px;"><h4 style="color:white; margin:0;">O2</h4></div>', unsafe_allow_html=True)
         st.link_button("ENTRAR", "https://o2online.es/auth/login/", use_container_width=True)
 
-# --- PRECIOS ---
+# --- SECCIÓN: PRECIOS ---
 elif menu == "📊 PRECIOS":
     st.header("Tarifario Oficial")
     t1, t2, t3 = st.tabs(["⚡ LUZ", "🔥 GAS", "📶 O2 / FIBRA"])
@@ -156,14 +166,7 @@ elif menu == "📊 PRECIOS":
             with tv_cols[i]:
                 st.markdown(f'<div class="price-card"><div class="price-title">{tit}</div><div class="price-val">{pre}</div><div class="price-sub">{gb if gb else extra}</div></div>', unsafe_allow_html=True)
 
-        st.markdown('<div class="block-header">➕ LÍNEAS ADICIONALES</div>', unsafe_allow_html=True)
-        ad_cols = st.columns(3)
-        ad_list = [("Móvil 40 GB", "5€"), ("Móvil 150 GB", "10€"), ("Móvil 300 GB", "15€")]
-        for i, (lin, pre) in enumerate(ad_list):
-            with ad_cols[i]:
-                st.markdown(f'<div class="price-card"><div class="price-title">{lin}</div><div class="price-val">{pre}</div><div class="price-sub">Pago Mensual</div></div>', unsafe_allow_html=True)
-
-# --- COMPARADOR ---
+# --- SECCIÓN: COMPARADOR ---
 elif menu == "⚖️ COMPARADOR":
     st.header("Estudio de Ahorro Personalizado")
     c1, c2 = st.columns(2)
@@ -205,7 +208,7 @@ elif menu == "⚖️ COMPARADOR":
         pdf.cell(95, 8, f"Periodo: {dias_factura} dias", border=1, ln=True); pdf.ln(5)
         pdf.set_font("Arial", "B", 11); pdf.cell(190, 8, " DETALLE DE LA PROPUESTA", ln=True, fill=True)
         pdf.set_font("Arial", "", 10)
-        for d, v in [("Compania", comp_sel), ("Tarifa", tarifa_sel_nombre), ("Potencia", f"{potencia} kW"), ("Energia", f"{sel['ENERGIA']} EUR/kWh")]:
+        for d, v in [("Compañía", comp_sel), ("Tarifa", tarifa_sel_nombre), ("Potencia", f"{potencia} kW"), ("Energía", f"{sel['ENERGIA']} EUR/kWh")]:
             pdf.cell(95, 8, d, border=1); pdf.cell(95, 8, str(v), border=1, ln=True)
         pdf.ln(10); pdf.set_font("Arial", "B", 12); pdf.cell(95, 10, "Factura Actual", border=1); pdf.cell(95, 10, f"{f_act:.2f} EUR", border=1, ln=True)
         pdf.cell(95, 10, "Nueva Factura", border=1); pdf.cell(95, 10, f"{coste_total_iva:.2f} EUR", border=1, ln=True)
@@ -213,18 +216,18 @@ elif menu == "⚖️ COMPARADOR":
         pdf.cell(190, 15, f"AHORRO TOTAL: {ahorro:.2f} EUR", ln=True, align="C", fill=True)
         st.download_button(label="📥 DESCARGAR ESTUDIO PDF", data=pdf.output(dest='S').encode('latin-1', 'replace'), file_name=f"Estudio_{cliente}.pdf")
 
-# --- DASHBOARD (LOOKER STUDIO) ---
+# --- SECCIÓN: DASHBOARD (NUEVO) ---
 elif menu == "📈 DASHBOARD":
     st.header("🏆 Dashboard de Ventas | Basette Group")
     st.markdown('<div class="block-header">📊 ESTADÍSTICAS EN TIEMPO REAL</div>', unsafe_allow_html=True)
     
-    # URL de inserción de Looker Studio
-    url_looker = "https://lookerstudio.google.com/embed/reporting/4279107e-2185-4d08-8ea4-34655cf45a5f"
+    # URL de inserción final con el formato embed correcto
+    url_looker = "https://lookerstudio.google.com/embed/reporting/4279107e-2185-4d08-8ea4-34655cf45a5f/page/PZqrF"
     
-    # Mostrar el Dashboard a través de un Iframe
-    st.components.v1.iframe(url_looker, height=800, scrolling=True)
+    # Inserción del Dashboard
+    st.components.v1.iframe(url_looker, height=900, scrolling=True)
 
-# --- REPOSITORIO ---
+# --- SECCIÓN: REPOSITORIO ---
 elif menu == "📂 REPOSITORIO":
     st.header("Documentación")
     
@@ -237,15 +240,20 @@ elif menu == "📂 REPOSITORIO":
             st.warning("Archivo 'Manual_Premiumnumber_Agente.pdf' no encontrado.")
 
     with st.expander("📂 ARGUMENTARIOS DE VENTA"):
-        docs = ["ARGUMENTARIO_ENERGÍA (Venta Fría) + Venta Cruzada Teleco.docx", "ARGUMENTARIO_TELECO (Clientes Movistar a O2) + Venta Cruzada Energía.docx", "FRASES PROHIBIDAS,PODER EN LA VENTA y REBATE OBJECIONES.docx"]
+        docs = [
+            "ARGUMENTARIO_ENERGÍA (Venta Fría) + Venta Cruzada Teleco.docx", 
+            "ARGUMENTARIO_TELECO (Clientes Movistar a O2) + Venta Cruzada Energía.docx", 
+            "FRASES PROHIBIDAS,PODER EN LA VENTA y REBATE OBJECIONES.docx"
+        ]
         for d in docs:
             if os.path.exists(f"manuales/{d}"):
                 with open(f"manuales/{d}", "rb") as f: st.download_button(f"📘 {d}", f, file_name=d, key=d)
+    
     st.markdown("---")
     for c in ["GANA ENERGÍA", "NATURGY", "TOTAL", "ENDESA", "O2"]:
         with st.expander(f"📁 DOCUMENTACIÓN {c}"):
             if os.path.exists("manuales"):
                 busq = "total" if c == "TOTAL" else c.split()[0].lower()
-                archivos = [f for f in os.listdir("manuales") if busq in f.lower() and "argumentario" not in f.lower() and not f.lower().endswith('.png')]
+                archivos = [f for f in os.listdir("manuales") if busq in f.lower() and "argumentario" not in f.lower() and not f.lower().endswith(('.png', '.jpg'))]
                 for fn in archivos:
                     with open(f"manuales/{fn}", "rb") as f: st.download_button(f"📥 {fn}", f, file_name=fn, key=f"b_{fn}")
