@@ -12,7 +12,7 @@ st.set_page_config(
     initial_sidebar_state="expanded" 
 )
 
-# 2. CSS DE ALTA VISIBILIDAD (MEJORADO)
+# 2. CSS DE ALTA VISIBILIDAD (MEJORADO CON FONDO BLANCO EN MÉTRICAS)
 st.markdown("""
     <style>
     .stApp { background-color: #0d1117; color: #ffffff; }
@@ -37,26 +37,25 @@ st.markdown("""
         border-radius: 5px !important;
     }
 
-    /* Estilo de métricas Premium */
+    /* Estilo de métricas Premium - FONDO BLANCO PARA VISIBILIDAD */
     [data-testid="stMetricValue"] { 
         font-size: 3rem !important; 
         font-weight: 900 !important; 
-        color: black !important;
+        color: #000000 !important;
     }
     [data-testid="stMetricLabel"] p { 
         color: #333333 !important; 
         font-size: 1.1rem !important; 
         font-weight: bold !important; 
         text-transform: uppercase;
-        background-color: transparent !important; /* Quitar fondo verde flúor aquí */
         padding: 0 !important;
     }
     div[data-testid="metric-container"] {
-        background: linear-gradient(135deg, #d2ff00 0%, #afff00 100%);
+        background-color: #ffffff !important; /* Fondo blanco solicitado */
         border-radius: 15px;
         padding: 20px;
-        border: None;
-        box-shadow: 0px 8px 20px rgba(210, 255, 0, 0.4);
+        border: 2px solid #d2ff00;
+        box-shadow: 0px 8px 20px rgba(255, 255, 255, 0.1);
         text-align: center;
     }
 
@@ -92,10 +91,10 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# 3. BASE DE DATOS LUZ
+# 3. BASE DE DATOS LUZ (PRECIOS ACTUALIZADOS GANA)
 tarifas_luz = [
-    {"PRIORIDAD": 1, "COMPAÑÍA": "GANA ENERGÍA", "TARIFA": "24H", "P1": 0.089, "P2": 0.089, "ENERGIA": 0.111, "EXCEDENTE": 0.05, "DTO": "0%", "BATERIA": "SI_GRATIS", "logo": "manuales/logo_gana.png"},
-    {"PRIORIDAD": 1, "COMPAÑÍA": "GANA ENERGÍA", "TARIFA": "3T", "P1": 0.089, "P2": 0.089, "ENERGIA": "0,163/0,096/0,072", "EXCEDENTE": 0.05, "DTO": "0%", "BATERIA": "SI_GRATIS", "logo": "manuales/logo_gana.png"},
+    {"PRIORIDAD": 1, "COMPAÑÍA": "GANA ENERGÍA", "TARIFA": "24H", "P1": 0.089, "P2": 0.089, "ENERGIA": 0.129, "EXCEDENTE": 0.05, "DTO": "0%", "BATERIA": "SI_GRATIS", "logo": "manuales/logo_gana.png"},
+    {"PRIORIDAD": 1, "COMPAÑÍA": "GANA ENERGÍA", "TARIFA": "3T", "P1": 0.089, "P2": 0.089, "ENERGIA": "0.09/0.114/0.181", "EXCEDENTE": 0.05, "DTO": "0%", "BATERIA": "SI_GRATIS", "logo": "manuales/logo_gana.png"},
     {"PRIORIDAD": 2, "COMPAÑÍA": "NATURGY", "TARIFA": "24H (POR USO)", "P1": 0.123, "P2": 0.037, "ENERGIA": 0.109, "EXCEDENTE": 0.06, "DTO": "0%", "BATERIA": "SI_GRATIS", "logo": "manuales/logo_naturgy.png"},
     {"PRIORIDAD": 2, "COMPAÑÍA": "NATURGY", "TARIFA": "3T (TARIF NOCHE)", "P1": 0.123, "P2": 0.037, "ENERGIA": "0,180/0,107/0,718", "EXCEDENTE": 0.06, "DTO": "0%", "BATERIA": "SI_GRATIS", "logo": "manuales/logo_naturgy.png"},
     {"PRIORIDAD": 3, "COMPAÑÍA": "TOTAL LUZ", "TARIFA": "24H (A TU AIRE)", "P1": 0.081, "P2": 0.081, "ENERGIA": 0.114, "EXCEDENTE": 0.07, "DTO": "0%", "BATERIA": "NO", "logo": "manuales/logo_total.png"},
@@ -233,21 +232,17 @@ elif menu == "⚖️ COMPARADOR":
         pdf = FPDF()
         pdf.add_page()
         if os.path.exists(LOGO_PRINCIPAL): pdf.image(LOGO_PRINCIPAL, 10, 8, 33)
-        # pdf.ln(30); pdf.set_font("Arial", "B", 18); pdf.cell(190, 10, "ESTUDIO COMPARATIVO DE AHORRO", ln=True, align="C")
-        # st.download_button(label="📥 DESCARGAR ESTUDIO PDF", data=pdf.output(dest='S').encode('latin-1', 'replace'), file_name=f"Estudio_{cliente}.pdf")
         st.warning("Función de PDF en desarrollo")
 
-# --- SECCIÓN DASHBOARD (MEJORADA) ---
+# --- SECCIÓN DASHBOARD ---
 elif menu == "📈 DASHBOARD":
     st.header("🏆 Dashboard Ejecutivo | Basette Group")
     sheet_url = "https://docs.google.com/spreadsheets/d/1W-Eq63SnBBlOykJlP9XgASXDPpWQhQnVW-oFHUlSMcQ/export?format=csv"
     
     try:
-        # ARREGLO DE FECHA:dayfirst=True para DD/MM/AAAA
         df_raw = pd.read_csv(sheet_url)
         df_raw['Fecha Creación'] = pd.to_datetime(df_raw['Fecha Creación'], dayfirst=True, errors='coerce')
         
-        # Traducción de meses
         meses_traduccion = {
             "Enero": "January", "Febrero": "February", "Marzo": "March", "Abril": "April",
             "Mayo": "May", "Junio": "June", "Julio": "July", "Agosto": "August",
@@ -260,7 +255,6 @@ elif menu == "📈 DASHBOARD":
         df_raw['Venta_Gas'] = df_raw['CUPS Gas'].notna().astype(int)
         df_raw['TOTAL_VENTAS'] = df_raw['Venta_Luz'] + df_raw['Venta_Gas']
 
-        # FILTROS DIRECTOS (CON CSS APLICADO)
         f1, f2, f3, f4 = st.columns(4)
         with f1: sel_mes_esp = st.selectbox("Mes", ["Todos"] + list(meses_traduccion.keys()))
         with f2:
@@ -279,7 +273,6 @@ elif menu == "📈 DASHBOARD":
         if sel_comp != "Todas": df = df[df['Comercializadora'] == sel_comp]
         if sel_com != "Todos": df = df[df['Comercial'] == sel_com]
 
-        # --- MÉTRICAS RESALTADAS PREMIUN ---
         st.markdown('<div class="block-header">📊 RESUMEN DE CIFRAS</div>', unsafe_allow_html=True)
         m1, m2, m3 = st.columns(3)
         total_luz = df['Venta_Luz'].sum()
@@ -289,7 +282,6 @@ elif menu == "📈 DASHBOARD":
         m2.metric("VENTAS GAS", f"{total_gas} 🔥")
         m3.metric("TOTAL GLOBAL", f"{total_global} ✅")
 
-        # --- GRÁFICOS PARALELOS ---
         col_g1, col_g2 = st.columns(2)
 
         with col_g1:
@@ -305,25 +297,33 @@ elif menu == "📈 DASHBOARD":
             if not df.empty:
                 df_comp = df.groupby('Comercializadora')['TOTAL_VENTAS'].sum().reset_index()
                 df_comp = df_comp.sort_values(by='TOTAL_VENTAS', ascending=False)
-                fig_pie = px.pie(df_comp, values='TOTAL_VENTAS', names='Comercializadora', 
-                                 hole=0.4, title="Mix de Ventas por Compañía",
-                                 color_discrete_sequence=['#d2ff00', '#ffffff', '#888888', '#333333'],
-                                 template="plotly_dark")
-                # Mostrar % y cantidad
+                fig_pie = px.pie(df_comp, values='TOTAL_VENTAS', names='Comercializadora', hole=0.4, color_discrete_sequence=['#d2ff00', '#ffffff', '#888888', '#333333'], template="plotly_dark")
                 fig_pie.update_traces(textposition='inside', textinfo='percent+label+value', textfont_size=14)
                 st.plotly_chart(fig_pie, use_container_width=True)
             else: st.warning("Sin datos")
 
-        # --- TABLA ---
         st.markdown('<div class="block-header">📋 DETALLE DE OPERACIONES</div>', unsafe_allow_html=True)
         st.dataframe(df[['Fecha Creación', 'Estado', 'Comercial', 'Comercializadora', 'Cliente', 'CUPS Luz', 'CUPS Gas']], use_container_width=True, hide_index=True)
 
     except Exception as e:
         st.error(f"Error: {e}")
 
-# --- SECCIÓN REPOSITORIO (IGUAL) ---
+# --- SECCIÓN REPOSITORIO (CORREGIDA) ---
 elif menu == "📂 REPOSITORIO":
-    st.header("Documentación")
-    with st.expander("📂 ARGUMENTARIOS DE VENTA"):
-        st.button("📘 ARGUMENTARIO ENERGÍA")
-        st.button("📙 ARGUMENTARIO TELECO")
+    st.header("Centro de Documentación")
+    
+    st.markdown('<div class="block-header">📂 ARGUMENTARIOS DE VENTA</div>', unsafe_allow_html=True)
+    col_arg1, col_arg2 = st.columns(2)
+    with col_arg1:
+        st.button("📘 ARGUMENTARIO ENERGÍA", use_container_width=True)
+    with col_arg2:
+        st.button("📙 ARGUMENTARIO TELECO", use_container_width=True)
+
+    st.markdown('<div class="block-header">📂 FORMACIÓN Y MANUALES</div>', unsafe_allow_html=True)
+    col_man1, col_man2, col_man3 = st.columns(3)
+    with col_man1:
+        st.button("📄 MANUAL CRM BASETTE", use_container_width=True)
+    with col_man2:
+        st.button("📄 GUÍA DE PORTALES", use_container_width=True)
+    with col_man3:
+        st.button("📄 SCRIPT DE CIERRE", use_container_width=True)
