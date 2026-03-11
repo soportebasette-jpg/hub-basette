@@ -1,7 +1,6 @@
 import streamlit as st
 import os
 import pandas as pd
-import plotly.express as px
 from datetime import datetime
 from fpdf import FPDF
 
@@ -87,11 +86,13 @@ if not st.session_state["password_correct"]:
 with st.sidebar:
     if os.path.exists(LOGO_PRINCIPAL): st.image(LOGO_PRINCIPAL)
     st.markdown("---")
-    menu = st.radio("Secciones:", ["🚀 CRM", "📊 PRECIOS", "⚖️ COMPARADOR", "📈 DASHBOARD", "📂 REPOSITORIO"], label_visibility="collapsed")
+    menu = st.radio("Secciones:", ["🚀 CRM", "📊 PRECIOS", "⚖️ COMPARADOR", "📂 REPOSITORIO"], label_visibility="collapsed")
 
 # --- CRM ---
 if menu == "🚀 CRM":
     st.header("Portales de Gestión")
+    
+    # NUEVA SECCIÓN: MARCADOR (Aparece la primera)
     st.markdown('<div class="block-header">⭐ MARCADOR</div>', unsafe_allow_html=True)
     st.markdown(f'''<div style="background:#161b22; padding:15px; border-radius:10px; border:2px solid #d2ff00; text-align:center; margin-bottom:10px;"><h4 style="color:white; margin:0;">MARCADOR PRINCIPAL</h4></div>''', unsafe_allow_html=True)
     st.link_button(f"ENTRAR AL MARCADOR", "https://grupobasette.vozipcenter.com/", use_container_width=True)
@@ -129,6 +130,7 @@ elif menu == "📊 PRECIOS":
         ])
         st.dataframe(df_gas, use_container_width=True, hide_index=True)
     with t3:
+        # SECCIÓN 1: SOLO FIBRA
         st.markdown('<div class="block-header">📡 SOLO FIBRA</div>', unsafe_allow_html=True)
         f_cols = st.columns(3)
         solo_fibra = [("300 Mb", "23€"), ("600 Mb", "27€"), ("1 Gb", "31€")]
@@ -136,6 +138,7 @@ elif menu == "📊 PRECIOS":
             with f_cols[i]:
                 st.markdown(f'<div class="price-card"><div class="price-title">FIBRA {vel}</div><div class="price-val">{pre}</div><div class="price-sub">Precio Final / Mes</div></div>', unsafe_allow_html=True)
 
+        # SECCIÓN 2: FIBRA Y MÓVIL
         st.markdown('<div class="block-header">🌐 FIBRA Y MÓVIL</div>', unsafe_allow_html=True)
         fm_cols = st.columns(4)
         fibra_movil = [("300 Mb", "40 GB", "30€", "1 LÍNEA"), ("600 Mb", "10+40 GB", "35€", "2 LÍNEAS"), ("600 Mb", "60 GB", "35€", "1 LÍNEA"), ("1 Gb", "120 GB", "38€", "1 LÍNEA")]
@@ -143,6 +146,7 @@ elif menu == "📊 PRECIOS":
             with fm_cols[i]:
                 st.markdown(f'<div class="price-card"><div class="price-title">{vel} + {lin}</div><div class="price-val">{pre}</div><div class="price-sub">{gb} de Datos</div></div>', unsafe_allow_html=True)
 
+        # SECCIÓN 3: FIBRA, MÓVIL Y TV (NUEVO FORMATO TARJETAS)
         st.markdown('<div class="block-header">📺 TELEVISIÓN Y PACKS TV</div>', unsafe_allow_html=True)
         tv_cols = st.columns(5)
         packs_tv = [
@@ -156,6 +160,7 @@ elif menu == "📊 PRECIOS":
             with tv_cols[i]:
                 st.markdown(f'<div class="price-card"><div class="price-title">{tit}</div><div class="price-val">{pre}</div><div class="price-sub">{gb if gb else extra}</div></div>', unsafe_allow_html=True)
 
+        # SECCIÓN 4: ADICIONALES (NUEVO FORMATO TARJETAS)
         st.markdown('<div class="block-header">➕ LÍNEAS ADICIONALES</div>', unsafe_allow_html=True)
         ad_cols = st.columns(3)
         ad_list = [("Móvil 40 GB", "5€"), ("Móvil 150 GB", "10€"), ("Móvil 300 GB", "15€")]
@@ -213,103 +218,18 @@ elif menu == "⚖️ COMPARADOR":
         pdf.cell(190, 15, f"AHORRO TOTAL: {ahorro:.2f} EUR", ln=True, align="C", fill=True)
         st.download_button(label="📥 DESCARGAR ESTUDIO PDF", data=pdf.output(dest='S').encode('latin-1', 'replace'), file_name=f"Estudio_{cliente}.pdf")
 
-# --- DASHBOARD EJECUTIVO ACTUALIZADO ---
-elif menu == "📈 DASHBOARD":
-    st.header("🏆 Dashboard Ejecutivo | Basette Group")
-    
-    sheet_url = "https://docs.google.com/spreadsheets/d/1W-Eq63SnBBlOykJlP9XgASXDPpWQhQnVW-oFHUlSMcQ/export?format=csv"
-    
-    try:
-        df_raw = pd.read_csv(sheet_url)
-        
-        # PROCESAMIENTO DE DATOS SEGÚN TUS COLUMNAS
-        df_raw['Fecha Creación'] = pd.to_datetime(df_raw['Fecha Creación'], errors='coerce')
-        df_raw['MES'] = df_raw['Fecha Creación'].dt.month_name()
-        df_raw['AÑO'] = df_raw['Fecha Creación'].dt.year
-        
-        # Lógica de conteo de ventas por celda no vacía
-        df_raw['Venta_Luz'] = df_raw['CUPS Luz'].notna().astype(int)
-        df_raw['Venta_Gas'] = df_raw['CUPS Gas'].notna().astype(int)
-        df_raw['TOTAL_VENTAS'] = df_raw['Venta_Luz'] + df_raw['Venta_Gas']
-
-        # --- BLOQUE DE FILTROS ---
-        with st.expander("🔍 FILTROS AVANZADOS", expanded=True):
-            f1, f2, f3, f4 = st.columns(4)
-            with f1:
-                meses = ["Todos"] + sorted(list(df_raw['MES'].dropna().unique()))
-                sel_mes = st.selectbox("Mes", meses)
-            with f2:
-                años = ["Todos"] + sorted(list(df_raw['AÑO'].dropna().unique().astype(str)))
-                sel_año = st.selectbox("Año", años)
-            with f3:
-                comercializadoras = ["Todas"] + sorted(list(df_raw['Comercializadora'].dropna().unique()))
-                sel_comp = st.selectbox("Comercializadora", comercializadoras)
-            with f4:
-                comerciales = ["Todos"] + sorted(list(df_raw['Comercial'].dropna().unique()))
-                sel_com = st.selectbox("Comercial", comerciales)
-
-        # Aplicar Filtros
-        df = df_raw.copy()
-        if sel_mes != "Todos": df = df[df['MES'] == sel_mes]
-        if sel_año != "Todos": df = df[df['AÑO'] == int(sel_año)]
-        if sel_comp != "Todas": df = df[df['Comercializadora'] == sel_comp]
-        if sel_com != "Todos": df = df[df['Comercial'] == sel_com]
-
-        # --- CUADRO INTERACTIVO DE MÉTRICAS ---
-        st.markdown('<div class="block-header">📊 RESUMEN DE CIFRAS</div>', unsafe_allow_html=True)
-        m1, m2, m3 = st.columns(3)
-        total_luz = df['Venta_Luz'].sum()
-        total_gas = df['Venta_Gas'].sum()
-        total_global = df['TOTAL_VENTAS'].sum()
-        m1.metric("VENTAS LUZ", f"{total_luz} ⚡")
-        m2.metric("VENTAS GAS", f"{total_gas} 🔥")
-        m3.metric("TOTAL GLOBAL", f"{total_global} ✅")
-
-        # --- RANKING DE COMERCIALES ---
-        st.markdown('<div class="block-header">👑 RANKING POR COMERCIAL</div>', unsafe_allow_html=True)
-        
-        ranking = df.groupby('Comercial').agg(
-            Luz=('Venta_Luz', 'sum'),
-            Gas=('Venta_Gas', 'sum'),
-            Total=('TOTAL_VENTAS', 'sum')
-        ).reset_index().sort_values(by='Total', ascending=False)
-
-        # Calcular % para el gráfico
-        if total_global > 0:
-            ranking['% del Total'] = (ranking['Total'] / total_global * 100).round(1)
-        else:
-            ranking['% del Total'] = 0
-
-        fig_ranking = px.bar(
-            ranking, x='Comercial', y=['Luz', 'Gas'],
-            title=f"Ventas Totales por Agente (% del Total de Selección)",
-            labels={'value': 'Unidades', 'variable': 'Producto'},
-            text=ranking['% del Total'].apply(lambda x: f'{x}%' if x > 0 else ""),
-            color_discrete_map={'Luz': '#d2ff00', 'Gas': '#ffffff'},
-            template="plotly_dark", barmode='stack'
-        )
-        st.plotly_chart(fig_ranking, use_container_width=True)
-
-        # --- TABLA DE DATOS FILTRADA ---
-        st.markdown('<div class="block-header">📋 DETALLE DE OPERACIONES</div>', unsafe_allow_html=True)
-        # Mostrar columnas relevantes para el agente
-        st.dataframe(df[['Fecha Creación', 'Estado', 'Comercial', 'Comercializadora', 'Cliente', 'CUPS Luz', 'CUPS Gas']], 
-                     use_container_width=True, hide_index=True)
-
-    except Exception as e:
-        st.error(f"Error al cargar dashboard: {e}")
-        st.info("Asegúrate de que el Google Sheet tenga las columnas: Fecha Creación, Comercial, Comercializadora, CUPS Luz, CUPS Gas.")
-
 # --- REPOSITORIO ---
 elif menu == "📂 REPOSITORIO":
     st.header("Documentación")
+    
+    # NUEVA CARPETA: MANUAL DEL MARCADOR
     with st.expander("📂 MANUAL DEL MARCADOR"):
         manual_path = "manuales/Manual_Premiumnumber_Agente.pdf"
         if os.path.exists(manual_path):
             with open(manual_path, "rb") as f:
                 st.download_button("📖 DESCARGAR MANUAL MARCADOR", f, file_name="Manual_Marcador_Agente.pdf", key="manual_marcador")
         else:
-            st.warning("Archivo 'Manual_Premiumnumber_Agente.pdf' no encontrado.")
+            st.warning("Archivo 'Manual_Premiumnumber_Agente.pdf' no encontrado en la carpeta manuales.")
 
     with st.expander("📂 ARGUMENTARIOS DE VENTA"):
         docs = ["ARGUMENTARIO_ENERGÍA (Venta Fría) + Venta Cruzada Teleco.docx", "ARGUMENTARIO_TELECO (Clientes Movistar a O2) + Venta Cruzada Energía.docx", "FRASES PROHIBIDAS,PODER EN LA VENTA y REBATE OBJECIONES.docx"]
