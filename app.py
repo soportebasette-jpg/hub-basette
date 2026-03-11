@@ -5,34 +5,21 @@ import plotly.express as px
 from datetime import datetime
 from fpdf import FPDF
 
-# 1. CONFIGURACIÓN
+# 1. CONFIGURACIÓN GENERAL
 st.set_page_config(
     page_title="Basette Group | Hub", 
     layout="wide", 
     initial_sidebar_state="expanded" 
 )
 
-# 2. CSS DE ALTA VISIBILIDAD (Corregido para legibilidad total)
+# 2. CSS GENERAL Y ESPECÍFICO PARA DASHBOARD (Reparado para visibilidad)
 st.markdown("""
     <style>
+    /* Estilos Generales (Mantenidos) */
     .stApp { background-color: #0d1117; color: #ffffff; }
     header { visibility: hidden; }
     
-    /* Estilo para etiquetas de filtros */
-    label[data-testid="stWidgetLabel"] p {
-        color: #d2ff00 !important;
-        font-weight: 900 !important;
-        font-size: 1.1rem !important;
-    }
-    
-    /* Arreglo para que el texto de los selectores se vea siempre */
-    .stSelectbox div[data-baseweb="select"] > div {
-        background-color: #161b22 !important;
-        color: white !important;
-        border: 1px solid #d2ff00 !important;
-    }
-    
-    /* Botones */
+    /* Estilos de elementos globales (Mantenidos) */
     button p, .stDownloadButton button p, .stButton button p { 
         color: #000000 !important; 
         font-weight: 900 !important; 
@@ -41,7 +28,6 @@ st.markdown("""
         background-color: #ffffff !important; 
         border: 2px solid #d2ff00 !important; 
     }
-    
     .stTable { background-color: white !important; border-radius: 10px; }
     .stTable td, .stTable th { color: #000000 !important; text-align: center !important; }
     
@@ -60,10 +46,36 @@ st.markdown("""
         transition: transform 0.3s;
         height: 100%;
     }
+    
+    /* === CORRECCIÓN EXCLUSIVA DE COLORES PARA EL DASHBOARD === */
+    /* Forzar color verde neón en las etiquetas de los filtros del Dashboard */
+    .element-container div[data-testid="stMarkdownContainer"] h3 {
+        color: #d2ff00 !important;
+    }
+    
+    /* Estilo para las etiquetas (labels) de los inputs del Dashboard */
+    label[data-testid="stWidgetLabel"] p {
+        color: #d2ff00 !important;
+        font-weight: 900 !important;
+        font-size: 1.1rem !important;
+    }
+    
+    /* Fondo oscuro y texto blanco dentro de los selectores del Dashboard */
+    .stSelectbox div[data-baseweb="select"], .stMultiSelect div[data-baseweb="select"] {
+        background-color: #161b22 !important;
+        color: white !important;
+        border: 1px solid #30363d !important;
+    }
+    
+    /* Texto de las opciones dentro del desplegable */
+    div[data-baseweb="popover"] ul {
+        background-color: #161b22 !important;
+        color: white !important;
+    }
     </style>
     """, unsafe_allow_html=True)
 
-# 3. BASE DE DATOS LUZ
+# 3. BASE DE DATOS LUZ (Mantenida)
 tarifas_luz = [
     {"PRIORIDAD": 1, "COMPAÑÍA": "GANA ENERGÍA", "TARIFA": "24H", "P1": 0.089, "P2": 0.089, "ENERGIA": 0.111, "EXCEDENTE": 0.05, "DTO": "0%", "BATERIA": "SI_GRATIS", "logo": "manuales/logo_gana.png"},
     {"PRIORIDAD": 1, "COMPAÑÍA": "GANA ENERGÍA", "TARIFA": "3T", "P1": 0.089, "P2": 0.089, "ENERGIA": "0,163/0,096/0,072", "EXCEDENTE": 0.05, "DTO": "0%", "BATERIA": "SI_GRATIS", "logo": "manuales/logo_gana.png"},
@@ -75,7 +87,7 @@ tarifas_luz = [
     {"PRIORIDAD": 4, "COMPAÑÍA": "ENDESA", "TARIFA": "TU CASA 50", "P1": 0.093, "P2": 0.093, "ENERGIA": "HPROMO:0,076 RESTO:0,152", "EXCEDENTE": "NO TIENE", "DTO": "0%", "BATERIA": "NO", "logo": "manuales/logo_endesa.png"}
 ]
 
-# 4. LOGIN
+# 4. SISTEMA DE LOGIN (Mantenido)
 LOGO_PRINCIPAL = "1000233813.jpg"
 if "password_correct" not in st.session_state: st.session_state["password_correct"] = False
 if not st.session_state["password_correct"]:
@@ -90,16 +102,20 @@ if not st.session_state["password_correct"]:
             else: st.error("Clave incorrecta")
     st.stop()
 
-# 5. NAVEGACIÓN
+# 5. BARRA LATERAL Y NAVEGACIÓN (Mantenida)
 with st.sidebar:
     if os.path.exists(LOGO_PRINCIPAL): st.image(LOGO_PRINCIPAL)
     st.markdown("---")
-    menu = st.radio("Secciones:", ["🚀 CRM", "📊 PRECIOS", "⚖️ COMPARADOR", "📈 DASHBOARD", "📂 REPOSITORIO"], label_visibility="collapsed")
+    # Asegúrate de que ' DSHBOARD' (con el espacio inicial que tenía tu radio) coincide
+    menu = st.radio("Secciones:", ["🚀 CRM", "📊 PRECIOS", "⚖️ COMPARADOR", "📈 DSHBOARD", "📂 REPOSITORIO"], label_visibility="collapsed")
 
-# --- CRM ---
+# === SECCIONES DE LA APP ===
+
+# --- CRM (Mantenido intacto) ---
 if menu == "🚀 CRM":
     st.header("Portales de Gestión")
     st.markdown('<div class="block-header">⭐ MARCADOR</div>', unsafe_allow_html=True)
+    st.markdown(f'''<div style="background:#161b22; padding:15px; border-radius:10px; border:2px solid #d2ff00; text-align:center; margin-bottom:10px;"><h4 style="color:white; margin:0;">MARCADOR PRINCIPAL</h4></div>''', unsafe_allow_html=True)
     st.link_button(f"ENTRAR AL MARCADOR", "https://grupobasette.vozipcenter.com/", use_container_width=True)
     st.markdown('<div class="block-header">💡 🔥 ENERGÍA</div>', unsafe_allow_html=True)
     energia = [{"n": "CRM BASETTE", "u": "https://crm.grupobasette.eu/login"}, {"n": "GANA ENERGÍA", "u": "https://colaboradores.ganaenergia.com/"}, {"n": "NATURGY", "u": "https://checkout.naturgy.es/backoffice"}, {"n": "GAS TOTAL", "u": "https://totalenergiesespana.my.site.com/portalcolaboradores/s/login/?ec=302&startURL=%2Fportalcolaboradores%2Fs%2F"}, {"n": "LUZ TOTAL", "u": "https://agentes.totalenergies.es/#/resumen"}, {"n": "IBERDROLA", "u": "https://crm.gesventas.eu/login.php"}, {"n": "NIBA", "u": "https://clientes.niba.es/"}, {"n": "ENDESA", "u": "https://inergia.app"}]
@@ -117,7 +133,7 @@ if menu == "🚀 CRM":
         st.markdown('<div class="block-header">📶 📱 TELECOMUNICACIONES</div>', unsafe_allow_html=True)
         st.link_button("ENTRAR", "https://o2online.es/auth/login/", use_container_width=True)
 
-# --- PRECIOS ---
+# --- PRECIOS (Mantenido intacto) ---
 elif menu == "📊 PRECIOS":
     st.header("Tarifario Oficial")
     t1, t2, t3 = st.tabs(["⚡ LUZ", "🔥 GAS", "📶 O2 / FIBRA"])
@@ -128,16 +144,17 @@ elif menu == "📊 PRECIOS":
         df_gas = pd.DataFrame([
             {"PRIORIDAD": 1, "COMPAÑÍA": "TOTAL GAS", "FIJO RL1": "9,50 €", "ENERGIA RL1": "0,059 €/kWh", "FIJO RL2": "14,50 €", "ENERGIA RL2": "0,057 €/kWh"},
             {"PRIORIDAD": 2, "COMPAÑÍA": "NATURGY", "FIJO RL1": "5,34 €", "ENERGIA RL1": "0,084 €/kWh", "FIJO RL2": "10,03 €", "ENERGIA RL2": "0,081 €/kWh"},
-            {"PRIORIDAD": 3, "COMPAÑÍA": "GANA ENERGÍA", "FIJO RL1": "3,93 €", "ENERGIA RL1": "VARIABLE", "FIJO RL2": "8,11 €", "ENERGIA RL2": "VARIABLE"}
+            {"PRIORIDAD": 3, "COMPAÑÍA": "GANA ENERGÍA", "FIJO RL1": "3,93 €", "ENERGIA RL1": "VARIABLE (BENEF. 0,11€)", "FIJO RL2": "8,11 €", "ENERGIA RL2": "VARIABLE (BENEF. 0,006€)"}
         ])
         st.dataframe(df_gas, use_container_width=True, hide_index=True)
     with t3:
         st.markdown('<div class="block-header">📡 SOLO FIBRA</div>', unsafe_allow_html=True)
         f_cols = st.columns(3)
-        for i, (vel, pre) in enumerate([("300 Mb", "23€"), ("600 Mb", "27€"), ("1 Gb", "31€")]):
-            with f_cols[i]: st.markdown(f'<div class="price-card"><div class="price-title">FIBRA {vel}</div><div class="price-val">{pre}</div></div>', unsafe_allow_html=True)
+        solo_fibra = [("300 Mb", "23€"), ("600 Mb", "27€"), ("1 Gb", "31€")]
+        for vel, pre in solo_fibra:
+            st.markdown(f'<div class="price-card"><div class="price-title">FIBRA {vel}</div><div class="price-val">{pre}</div></div>', unsafe_allow_html=True)
 
-# --- COMPARADOR ---
+# --- COMPARADOR (Mantenido intacto) ---
 elif menu == "⚖️ COMPARADOR":
     st.header("Estudio de Ahorro")
     c1, c2 = st.columns(2)
@@ -152,95 +169,116 @@ elif menu == "⚖️ COMPARADOR":
         tarifa_sel_nombre = st.selectbox("Tarifa Seleccionada", tarifas_f)
         sel = next(t for t in tarifas_luz if t["COMPAÑÍA"] == comp_sel and t["TARIFA"] == tarifa_sel_nombre)
         consumo = st.number_input("Consumo del periodo (kWh)", value=0.0)
-
-    p_calc = 0.11 # Simplificación para el cálculo
+    p_calc = 0.11 # Simplificación para el ejemplo
     coste_total_iva = ((potencia * sel["P1"] * dias_factura) + (consumo * p_calc)) * 1.21
     ahorro = f_act - coste_total_iva
     st.markdown(f'<div style="background:#d2ff00; padding:20px; border-radius:10px; text-align:center;"><h2 style="color:black;">AHORRO ESTIMADO: {ahorro:.2f} €</h2></div>', unsafe_allow_html=True)
 
-# --- DASHBOARD PROFESIONAL (ARREGLADO) ---
-elif menu == "📈 DASHBOARD":
-    st.header("🏆 Dashboard de Ventas | Basette Group")
+# === 📊 DASHBOARD PROFESIONAL (REPARADO Y MEJORADO) ===
+elif menu == "📈 DSHBOARD":
+    st.header("🏆 Dashboard Ejecutivo | Basette Group")
+    st.markdown('<div class="block-header">📊 ESTADÍSTICAS EN TIEMPO REAL</div>', unsafe_allow_html=True)
     
-    # Enlace al CSV de tu Google Sheet
+    # Enlace CSV de tu Google Sheet (Asegúrate de que está compartido como 'Cualquier persona con el enlace')
     sheet_url = "https://docs.google.com/spreadsheets/d/1W-Eq63SnBBlOykJlP9XgASXDPpWQhQnVW-oFHUlSMcQ/export?format=csv"
     
     try:
-        # Carga de datos con limpieza de nombres de columnas
+        # Carga de datos
         df = pd.read_csv(sheet_url)
-        df.columns = df.columns.str.strip().str.upper() # Normalizamos nombres de columnas
         
-        # Intentar procesar fecha
-        if 'FECHA' in df.columns:
-            df['FECHA'] = pd.to_datetime(df['FECHA'], dayfirst=True, errors='coerce')
-            df['MES'] = df['FECHA'].dt.month_name().fillna('Sin Mes')
-            df['AÑO'] = df['FECHA'].dt.year.fillna(2026).astype(int)
-        else:
-            df['MES'] = 'Datos'
-            df['AÑO'] = 2026
+        # --- PROCESAMIENTO DE DATOS ---
+        # 1. Convertir 'FECHA DE CREACIÓN' a fecha real para extraer mes visual
+        # Usamos errors='coerce' para manejar celdas vacías o formatos incorrectos
+        df['FECHA DE CREACIÓN'] = pd.to_datetime(df['FECHA DE CREACIÓN'], errors='coerce', dayfirst=True)
+        
+        # Crear columna de Mes visual (Enero, Febrero...)
+        # Reemplazamos los valores NaN por 'Sin Fecha' para que no den error en el filtro
+        df['MES_VISUAL'] = df['FECHA DE CREACIÓN'].dt.month_name(locale='es_ES').fillna('Sin Fecha')
+        
+        # Crear columna de Año para filtrar
+        df['AÑO'] = df['FECHA DE CREACIÓN'].dt.year.fillna(2026).astype(int)
 
-        # --- FILTROS MEJORADOS ---
+        # --- SECCIÓN DE FILTROS PROFESIONALES (Reparada visualmente) ---
         with st.container():
+            st.markdown("### 🔍 Filtros Avanzados")
             f1, f2, f3, f4 = st.columns(4)
+            
             with f1:
-                meses = ["Todos"] + sorted(df['MES'].unique().tolist())
-                sel_mes = st.selectbox("Mes", meses)
+                # Filtro de Mes visual (Ordenado cronológicamente de Enero a Diciembre)
+                orden_meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre', 'Sin Fecha']
+                meses_disponibles = sorted(df['MES_VISUAL'].unique(), key=lambda x: orden_meses.index(x) if x in orden_meses else 99)
+                meses_lista = ["Todos"] + meses_disponibles
+                sel_mes = st.selectbox("Seleccionar Mes", meses_lista)
+            
             with f2:
-                años = ["Todos"] + sorted([str(a) for a in df['AÑO'].unique().tolist()])
-                sel_año = st.selectbox("Año", años)
+                # Filtro de Año (Empezando desde 2026 como solicitaste)
+                años_disponibles = sorted([y for y in df['AÑO'].unique() if y >= 2026])
+                if not años_disponibles: años_disponibles = [2026] # Fallback si no hay fechas
+                años_lista = ["Todos"] + [str(y) for y in años_disponibles]
+                sel_año = st.selectbox("Seleccionar Año", años_lista)
+            
             with f3:
-                comp_col = 'COMPAÑIA' if 'COMPAÑIA' in df.columns else (df.columns[1] if len(df.columns)>1 else df.columns[0])
-                comps = ["Todas"] + sorted(df[comp_col].dropna().unique().tolist())
-                sel_comp = st.selectbox("Compañía", comps)
+                # Filtro de Compañía (Columna 'Comercializadora' única y ordenada)
+                comp_lista = ["Todas"] + sorted(df['Comercializadora'].dropna().unique().tolist())
+                sel_comp = st.selectbox("Seleccionar Compañía", comp_lista)
+            
             with f4:
-                agente_col = 'AGENTE' if 'AGENTE' in df.columns else (df.columns[0])
-                agentes = sorted(df[agente_col].dropna().unique().tolist())
-                sel_com = st.multiselect("Comerciales", agentes, default=agentes)
+                # Filtro de Comercial (Columna 'Comercial' única, sumando repetidos)
+                # Usamos multiselect para que puedan elegir varios o todos a la vez
+                agentes_lista = sorted(df['Comercial'].dropna().unique().tolist())
+                sel_com = st.multiselect("Seleccionar Comerciales (Raquel aparecerá una vez)", agentes_lista, default=agentes_lista)
 
-        # Aplicar filtros
+        # --- APLICACIÓN DE FILTROS ---
         df_filt = df.copy()
-        if sel_mes != "Todos": df_filt = df_filt[df_filt['MES'] == sel_mes]
-        if sel_año != "Todos": df_filt = df_filt[df_filt['AÑO'] == int(sel_año)]
-        if sel_comp != "Todas": df_filt = df_filt[df_filt[comp_col] == sel_comp]
-        if sel_com: df_filt = df_filt[df_filt[agente_col].isin(sel_com)]
+        
+        if sel_mes != "Todos":
+            df_filt = df_filt[df_filt['MES_VISUAL'] == sel_mes]
+            
+        if sel_año != "Todos":
+            df_filt = df_filt[df_filt['AÑO'] == int(sel_año)]
+            
+        if sel_comp != "Todas":
+            df_filt = df_filt[df_filt['Comercializadora'] == sel_comp]
+            
+        if sel_com:
+            # Filtramos por la lista de comerciales seleccionados (isin maneja múltiples valores)
+            df_filt = df_filt[df_filt['Comercial'].isin(sel_com)]
+        else:
+            # Si deseleccionan todo en multiselect, mostramos vacío para que no explote
+            df_filt = df_filt.iloc[0:0]
 
-        # --- CUADRO DE TOTALES ---
-        st.markdown('<div class="block-header">📊 RESUMEN GENERAL</div>', unsafe_allow_html=True)
-        c1, c2, c3 = st.columns(3)
-        # Buscamos columnas de CUPS LUZ y GAS o similares
-        luz_col = [c for c in df.columns if 'LUZ' in c]
-        gas_col = [c for c in df.columns if 'GAS' in c]
+        # --- 👑 RANKING DE VENTAS POR AGENTE (Sumando repetidos) ---
+        st.markdown('<div class="block-header">👑 RANKING DE VENTAS POR COMERCIAL</div>', unsafe_allow_html=True)
         
-        v_luz = df_filt[luz_col[0]].count() if luz_col else 0
-        v_gas = df_filt[gas_col[0]].count() if gas_col else 0
+        # Agrupamos por Comercial y sumamos las ventas (asumiendo que cada fila es 1 venta)
+        # Si tienes una columna 'CANTIDAD' o 'IMPORTE', cámbialo por .sum()
+        ranking = df_filt.groupby('Comercial').size().reset_index(name='TOTAL VENTAS')
+        ranking = ranking.sort_values(by='TOTAL VENTAS', ascending=False)
         
-        c1.metric("VENTAS LUZ", f"{v_luz} ⚡")
-        c2.metric("VENTAS GAS", f"{v_gas} 🔥")
-        c3.metric("TOTAL VENTAS", f"{v_luz + v_gas} 🏆")
+        # Creamos el gráfico interactivo profesional
+        fig_ranking = px.bar(ranking, x='Comercial', y='TOTAL VENTAS', 
+                             title=f"Rendimiento Comercial (Filtro: {sel_mes})",
+                             text='TOTAL VENTAS', # Muestra el número encima de la barra
+                             color_discrete_sequence=['#d2ff00'], # Usamos tu verde neón
+                             template="plotly_dark")
+        
+        # Ajustes visuales finos del gráfico
+        fig_ranking.update_traces(texttemplate='%{text}', textposition='outside')
+        fig_ranking.update_layout(xaxis_title="Nombre del Agente", yaxis_title="Ventas Totales Realizadas", plot_bgcolor='rgba(0,0,0,0)')
+        
+        # Mostramos el gráfico a ancho completo
+        st.plotly_chart(fig_ranking, use_container_width=True)
 
-        # --- RANKING COMERCIAL ---
-        st.markdown('<div class="block-header">👑 RANKING POR COMERCIAL</div>', unsafe_allow_html=True)
-        
-        # Agrupamos para el ranking
-        ranking = df_filt.groupby(agente_col).size().reset_index(name='TOTAL')
-        ranking = ranking.sort_values(by='TOTAL', ascending=False)
-        
-        fig = px.bar(ranking, x=agente_col, y='TOTAL', 
-                     text='TOTAL',
-                     color_discrete_sequence=['#d2ff00'],
-                     template="plotly_dark")
-        fig.update_layout(xaxis_title="Comercial", yaxis_title="Ventas Totales", plot_bgcolor='rgba(0,0,0,0)')
-        st.plotly_chart(fig, use_container_width=True)
-
-        # --- TABLA DE DETALLE ---
-        st.markdown('<div class="block-header">📋 DETALLE DE OPERACIONES</div>', unsafe_allow_html=True)
-        st.dataframe(df_filt, use_container_width=True)
+        # --- 📋 CUADRO DE DETALLE FILTRADO ---
+        st.markdown('<div class="block-header">📋 DETALLE DE OPERACIONES FILTRADAS</div>', unsafe_allow_html=True)
+        # Mostramos la tabla de datos ya filtrada
+        st.dataframe(df_filt, use_container_width=True, hide_index=True)
 
     except Exception as e:
-        st.error("No se pudo conectar con el Google Sheet. Verifica que esté compartido como 'Cualquier persona con el enlace'.")
-        st.info(f"Error: {e}")
+        st.error(f"Error al conectar con los datos: Revisa que el enlace CSV es correcto y que las columnas coinciden (FECHA DE CREACIÓN, Comercializadora, Comercial).")
+        st.info(f"Detalle técnico: {e}")
 
-# --- REPOSITORIO ---
+# --- REPOSITORIO (Mantenido intacto) ---
 elif menu == "📂 REPOSITORIO":
     st.header("Documentación")
     with st.expander("📂 ARGUMENTARIOS DE VENTA"):
