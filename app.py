@@ -134,14 +134,12 @@ elif menu == "📊 PRECIOS":
         for i, (vel, pre) in enumerate(solo_fibra):
             with f_cols[i]:
                 st.markdown(f'<div class="price-card"><div class="price-title">FIBRA {vel}</div><div class="price-val">{pre}</div><div class="price-sub">Precio Final / Mes</div></div>', unsafe_allow_html=True)
-
         st.markdown('<div class="block-header">🌐 FIBRA Y MÓVIL</div>', unsafe_allow_html=True)
         fm_cols = st.columns(4)
         fibra_movil = [("300 Mb", "40 GB", "30€", "1 LÍNEA"), ("600 Mb", "10+40 GB", "35€", "2 LÍNEAS"), ("600 Mb", "60 GB", "35€", "1 LÍNEA"), ("1 Gb", "120 GB", "38€", "1 LÍNEA")]
         for i, (vel, gb, pre, lin) in enumerate(fibra_movil):
             with fm_cols[i]:
                 st.markdown(f'<div class="price-card"><div class="price-title">{vel} + {lin}</div><div class="price-val">{pre}</div><div class="price-sub">{gb} de Datos</div></div>', unsafe_allow_html=True)
-
         st.markdown('<div class="block-header">📺 TELEVISIÓN Y PACKS TV</div>', unsafe_allow_html=True)
         tv_cols = st.columns(5)
         packs_tv = [
@@ -154,7 +152,6 @@ elif menu == "📊 PRECIOS":
         for i, (tit, gb, pre, extra) in enumerate(packs_tv):
             with tv_cols[i]:
                 st.markdown(f'<div class="price-card"><div class="price-title">{tit}</div><div class="price-val">{pre}</div><div class="price-sub">{gb if gb else extra}</div></div>', unsafe_allow_html=True)
-
         st.markdown('<div class="block-header">➕ LÍNEAS ADICIONALES</div>', unsafe_allow_html=True)
         ad_cols = st.columns(3)
         ad_list = [("Móvil 40 GB", "5€"), ("Móvil 150 GB", "10€"), ("Móvil 300 GB", "15€")]
@@ -178,20 +175,16 @@ elif menu == "⚖️ COMPARADOR":
         sel = next(t for t in tarifas_luz if t["COMPAÑÍA"] == comp_sel and t["TARIFA"] == tarifa_sel_nombre)
         if os.path.exists(sel["logo"]): st.image(sel["logo"], width=120)
         consumo = st.number_input("Consumo del periodo (kWh)", value=0.0)
-
     try:
         p_calc = float(str(sel['ENERGIA']).split('/')[0].replace(',', '.')) if isinstance(sel['ENERGIA'], str) else sel['ENERGIA']
     except:
         p_calc = 0.11
-
     coste_p = (potencia * sel["P1"] * dias_factura) + (potencia * sel["P2"] * dias_factura)
     coste_e = consumo * p_calc
     coste_total_iva = (coste_p + coste_e) * 1.21
     ahorro = f_act - coste_total_iva
-
     st.info(f"**Tarifa Seleccionada:** {tarifa_sel_nombre} | Energía: **{sel['ENERGIA']}** €/kWh | Potencia: **{sel['P1']}** €/kW día")
     st.markdown(f'<div style="background:#d2ff00; padding:20px; border-radius:10px; text-align:center;"><h2 style="color:black;">AHORRO ESTIMADO: {ahorro:.2f} €</h2></div>', unsafe_allow_html=True)
-    
     if st.button("GENERAR ESTUDIO PDF PROFESIONAL"):
         pdf = FPDF()
         pdf.add_page()
@@ -221,13 +214,15 @@ elif menu == "📂 REPOSITORIO":
             with open(manual_path, "rb") as f:
                 st.download_button("📖 DESCARGAR MANUAL MARCADOR", f, file_name="Manual_Marcador_Agente.pdf", key="manual_marcador")
         else:
-            st.warning("Archivo 'Manual_Premiumnumber_Agente.pdf' no encontrado en la carpeta manuales.")
-
+            st.warning("Archivo 'Manual_Premiumnumber_Agente.pdf' no encontrado.")
     with st.expander("📂 ARGUMENTARIOS DE VENTA"):
         docs = ["ARGUMENTARIO_ENERGÍA (Venta Fría) + Venta Cruzada Teleco.docx", "ARGUMENTARIO_TELECO (Clientes Movistar a O2) + Venta Cruzada Energía.docx", "FRASES PROHIBIDAS,PODER EN LA VENTA y REBATE OBJECIONES.docx"]
         for d in docs:
-            if os.path.exists(f"manuales/{d}"):
-                with open(f"manuales/{d}", "rb") as f: st.download_button(f"📘 {d}", f, file_name=d, key=d)
+            path = f"manuales/{d}"
+            if os.path.exists(path):
+                # IMPORTANTE: Abrir en modo binario "rb" para archivos .docx
+                with open(path, "rb") as f:
+                    st.download_button(f"📘 {d}", f, file_name=d, key=f"btn_{d}")
     st.markdown("---")
     for c in ["GANA ENERGÍA", "NATURGY", "TOTAL", "ENDESA", "O2"]:
         with st.expander(f"📁 DOCUMENTACIÓN {c}"):
@@ -235,70 +230,48 @@ elif menu == "📂 REPOSITORIO":
                 busq = "total" if c == "TOTAL" else c.split()[0].lower()
                 archivos = [f for f in os.listdir("manuales") if busq in f.lower() and "argumentario" not in f.lower() and not f.lower().endswith('.png')]
                 for fn in archivos:
-                    with open(f"manuales/{fn}", "rb") as f: st.download_button(f"📥 {fn}", f, file_name=fn, key=f"b_{fn}")
+                    with open(f"manuales/{fn}", "rb") as f:
+                        st.download_button(f"📥 {fn}", f, file_name=fn, key=f"b_{fn}")
 
-# --- DASHBOARD (NUEVA SECCIÓN) ---
+# --- DASHBOARD ---
 elif menu == "📈 DASHBOARD":
-    st.header("🏆 Análisis de Ventas en Tiempo Real")
-    
+    st.header("🏆 Análisis de Ventas")
     try:
-        # Conexión con Google Sheets usando los Secrets configurados
+        # Usamos st.connection para manejar los secrets correctamente
         conn = st.connection("gsheets", type=GSheetsConnection)
-        
-        # Lectura de datos (sin caché para actualización en tiempo real)
+        # Se especifica ttl=0 para datos en tiempo real y evitar errores de caché
         df = conn.read(ttl=0)
         
         if df is not None and not df.empty:
-            # Limpieza de nombres de columnas
             df.columns = df.columns.str.strip()
-            
-            # Convertir columna de fecha (asumiendo que hay una columna llamada 'FECHA' o similar)
             col_fecha = next((c for c in df.columns if 'fecha' in c.lower()), None)
             if col_fecha:
                 df[col_fecha] = pd.to_datetime(df[col_fecha])
                 df['Mes'] = df[col_fecha].dt.strftime('%B %Y')
-                
-                # Selector de Mes Interactivo
                 meses_disponibles = df['Mes'].unique().tolist()
-                mes_sel = st.selectbox("Seleccionar Mes para Filtrar:", meses_disponibles)
+                mes_sel = st.selectbox("Seleccionar Mes:", meses_disponibles)
                 df_filtrado = df[df['Mes'] == mes_sel]
             else:
                 df_filtrado = df
-                st.warning("No se detectó columna de 'FECHA'. Mostrando datos totales.")
 
-            # Indicadores Clave (KPIs)
-            kpi1, kpi2 = st.columns(2)
-            with kpi1:
-                st.metric("Ventas Totales del Periodo", len(df_filtrado))
-            with kpi2:
-                comerciales_activos = df_filtrado.iloc[:, 0].nunique() # Asume primera col como comercial si no hay nombres
-                st.metric("Comerciales Activos", comerciales_activos)
+            k1, k2 = st.columns(2)
+            k1.metric("Ventas Totales", len(df_filtrado))
+            k2.metric("Comerciales", df_filtrado.iloc[:, 0].nunique())
 
             st.markdown("---")
+            c1, c2 = st.columns(2)
+            with c1:
+                st.markdown('<div class="block-header">🥇 RANKING</div>', unsafe_allow_html=True)
+                col_com = next((c for c in df.columns if 'comercial' in c.lower()), df.columns[0])
+                st.bar_chart(df_filtrado[col_com].value_counts())
+            with c2:
+                st.markdown('<div class="block-header">🏢 COMPAÑÍAS</div>', unsafe_allow_html=True)
+                col_cia = next((c for c in df.columns if 'cia' in c.lower() or 'compañia' in c.lower()), df.columns[-1])
+                st.bar_chart(df_filtrado[col_cia].value_counts())
             
-            # Gráficos e Interactividad
-            col_graf1, col_graf2 = st.columns(2)
-            
-            with col_graf1:
-                st.markdown('<div class="block-header">🥇 RANKING POR COMERCIAL</div>', unsafe_allow_html=True)
-                # Intentar buscar columna de comercial o usar la primera
-                col_comercial = next((c for c in df.columns if 'comercial' in c.lower()), df.columns[0])
-                ranking_com = df_filtrado[col_comercial].value_counts()
-                st.bar_chart(ranking_com)
-
-            with col_graf2:
-                st.markdown('<div class="block-header">🏢 VENTAS POR COMPAÑÍA</div>', unsafe_allow_html=True)
-                # Intentar buscar columna de cia o usar la última
-                col_cia = next((c for c in df.columns if 'cia' in c.lower() or 'compañia' in c.lower() or 'comercializadora' in c.lower()), df.columns[-1])
-                ventas_cia = df_filtrado[col_cia].value_counts()
-                st.bar_chart(ventas_cia)
-
-            st.markdown('<div class="block-header">📋 DETALLE DE OPERACIONES</div>', unsafe_allow_html=True)
             st.dataframe(df_filtrado, use_container_width=True, hide_index=True)
-            
         else:
-            st.error("No se pudieron cargar los datos del Google Sheet. Verifica que la hoja no esté vacía.")
-            
+            st.warning("No se encontraron datos.")
     except Exception as e:
-        st.error(f"Error de conexión: {str(e)}")
-        st.info("Asegúrate de haber copiado el bloque [connections.gsheets] completo en los 'Secrets' de Streamlit Cloud.")
+        st.error(f"Error de visualización: {str(e)}")
+        st.info("REVISA TUS SECRETS: Asegúrate de que la 'private_key' use comillas triples y no tenga espacios extra.")
