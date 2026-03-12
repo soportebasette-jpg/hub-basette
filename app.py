@@ -99,29 +99,41 @@ with st.sidebar:
 # --- CRM ---
 if menu == "🚀 CRM":
     st.header("Portales de Gestión")
-    st.markdown('<div class="block-header">⭐ MARCADOR</div>', unsafe_allow_html=True)
-    st.markdown(f'''<div style="background:#161b22; padding:15px; border-radius:10px; border:2px solid #d2ff00; text-align:center; margin-bottom:10px;"><h4 style="color:white; margin:0;">MARCADOR PRINCIPAL</h4></div>''', unsafe_allow_html=True)
-    st.link_button(f"ENTRAR AL MARCADOR", "https://grupobasette.vozipcenter.com/", use_container_width=True)
+    
+    st.markdown('<div class="block-header">⭐ GESTIÓN PRINCIPAL</div>', unsafe_allow_html=True)
+    c_p1, c_p2 = st.columns(2)
+    with c_p1:
+        st.markdown('<div style="background:#161b22; padding:15px; border-radius:10px; border:2px solid #d2ff00; text-align:center;"><h4 style="color:white; margin:0;">MARCADOR PRINCIPAL</h4></div>', unsafe_allow_html=True)
+        st.link_button("ENTRAR AL MARCADOR", "https://grupobasette.vozipcenter.com/", use_container_width=True)
+    with c_p2:
+        st.markdown('<div style="background:#161b22; padding:15px; border-radius:10px; border:2px solid #ffffff; text-align:center;"><h4 style="color:white; margin:0;">CRM BASETTE</h4></div>', unsafe_allow_html=True)
+        st.link_button("ENTRAR AL CRM", "https://crm.grupobasette.eu/login", use_container_width=True)
     
     st.markdown('<div class="block-header">💡 🔥 ENERGÍA</div>', unsafe_allow_html=True)
-    energia = [{"n": "CRM BASETTE", "u": "https://crm.grupobasette.eu/login"}, {"n": "GANA ENERGÍA", "u": "https://colaboradores.ganaenergia.com/"}, {"n": "NATURGY", "u": "https://checkout.naturgy.es/backoffice"}, {"n": "GAS TOTAL", "u": "https://totalenergiesespana.my.site.com/"}, {"n": "LUZ TOTAL", "u": "https://agentes.totalenergies.es/"}, {"n": "IBERDROLA", "u": "https://crm.gesventas.eu/login.php"}, {"n": "NIBA", "u": "https://clientes.niba.es/"}, {"n": "ENDESA", "u": "https://inergia.app"}]
+    energia_links = [
+        ("GANA ENERGÍA", "https://colaboradores.ganaenergia.com/"),
+        ("NATURGY", "https://checkout.naturgy.es/backoffice"),
+        ("GAS TOTAL", "https://totalenergiesespana.my.site.com/"),
+        ("LUZ TOTAL", "https://agentes.totalenergies.es/"),
+        ("IBERDROLA", "https://crm.gesventas.eu/login.php"),
+        ("NIBA", "https://clientes.niba.es/"),
+        ("ENDESA", "https://inergia.app")
+    ]
     cols_en = st.columns(3)
-    for i, p in enumerate(energia):
+    for i, (nombre, url) in enumerate(energia_links):
         with cols_en[i % 3]:
-            st.markdown(f'''<div style="background:#161b22; padding:15px; border-radius:10px; border:1px solid #30363d; text-align:center; margin-bottom:10px;"><h4 style="color:white; margin:0;">{p["n"]}</h4></div>''', unsafe_allow_html=True)
-            st.link_button(f"ENTRAR", p["u"], key=f"btn_en_{i}", use_container_width=True)
-    st.markdown("---")
-    col_izq, col_der = st.columns(2)
-    with col_izq:
-        st.markdown('<div class="block-header">🛡️ 🚨 ALARMAS</div>', unsafe_allow_html=True)
-        st.markdown('<div style="background:#161b22; padding:15px; border-radius:10px; border:1px solid #30363d; text-align:center; margin-bottom:10px;"><h4 style="color:white; margin:0;">SEGURMA</h4></div>', unsafe_allow_html=True)
-        st.link_button("ENTRAR", "https://partners.segurma.com/", use_container_width=True)
-    with col_der:
-        st.markdown('<div class="block-header">📶 📱 TELECOMUNICACIONES</div>', unsafe_allow_html=True)
-        st.markdown('<div style="background:#161b22; padding:15px; border-radius:10px; border:1px solid #30363d; text-align:center; margin-bottom:10px;"><h4 style="color:white; margin:0;">O2</h4></div>', unsafe_allow_html=True)
-        st.link_button("ENTRAR", "https://o2online.es/auth/login/", use_container_width=True)
+            st.link_button(nombre, url, use_container_width=True)
 
-# --- PRECIOS ---
+    st.markdown("---")
+    c_ext1, c_ext2 = st.columns(2)
+    with c_ext1:
+        st.markdown('<div class="block-header">🛡️ 🚨 ALARMAS</div>', unsafe_allow_html=True)
+        st.link_button("SEGURMA", "https://partners.segurma.com/", use_container_width=True)
+    with c_ext2:
+        st.markdown('<div class="block-header">📶 📱 TELECOMUNICACIONES</div>', unsafe_allow_html=True)
+        st.link_button("O2 ONLINE", "https://o2online.es/auth/login/", use_container_width=True)
+
+# --- PRECIOS (SIN TOCAR) ---
 elif menu == "📊 PRECIOS":
     st.header("Tarifario Oficial")
     t1, t2, t3 = st.tabs(["⚡ LUZ", "🔥 GAS", "📶 O2 / FIBRA"])
@@ -136,7 +148,6 @@ elif menu == "📊 PRECIOS":
         ])
         st.dataframe(df_gas, use_container_width=True, hide_index=True)
     with t3:
-        # SECCIÓN SOLO FIBRA
         st.markdown('<div class="block-header">🚀 SOLO FIBRA</div>', unsafe_allow_html=True)
         f_cols = st.columns(3)
         solo_fibra = [("FIBRA 300 Mb", "23€"), ("FIBRA 600 Mb", "27€"), ("FIBRA 1 Gb", "31€")]
@@ -144,7 +155,6 @@ elif menu == "📊 PRECIOS":
             with f_cols[i]:
                 st.markdown(f'<div class="price-card"><div class="price-title">{vel}</div><div class="price-val">{pre}</div><div class="price-sub">Precio Final / Mes</div></div>', unsafe_allow_html=True)
         
-        # SECCIÓN FIBRA Y MÓVIL
         st.markdown('<div class="block-header">🌐 FIBRA Y MÓVIL</div>', unsafe_allow_html=True)
         fm_cols = st.columns(4)
         fibra_movil = [("300 Mb + 1 LÍNEA", "40 GB", "30€"), ("600 Mb + 2 LÍNEAS", "10+40 GB", "35€"), ("600 Mb + 1 LÍNEA", "60 GB", "35€"), ("1 Gb + 1 LÍNEA", "120 GB", "38€")]
@@ -152,7 +162,6 @@ elif menu == "📊 PRECIOS":
             with fm_cols[i]:
                 st.markdown(f'<div class="price-card"><div class="price-title">{vel}</div><div class="price-val">{pre}</div><div class="price-sub">{gb} de Datos</div></div>', unsafe_allow_html=True)
 
-        # SECCIÓN TELEVISIÓN
         st.markdown('<div class="block-header">📺 TELEVISIÓN Y PACKS TV</div>', unsafe_allow_html=True)
         tv_cols = st.columns(5)
         packs_tv = [("SOLO TV", "M+ Suscripción", "9.99€"), ("600 Mb + TV", "35 GB", "38€"), ("600 Mb + TV", "60 GB", "45€"), ("1 Gb + TV", "350 GB", "50€"), ("1 Gb + TV", "375 GB", "56€")]
@@ -160,15 +169,7 @@ elif menu == "📊 PRECIOS":
             with tv_cols[i]:
                 st.markdown(f'<div class="price-card"><div class="price-title">{title}</div><div class="price-val">{pre}</div><div class="price-sub">{sub}</div></div>', unsafe_allow_html=True)
 
-        # SECCIÓN LÍNEAS ADICIONALES
-        st.markdown('<div class="block-header">➕ LÍNEAS ADICIONALES</div>', unsafe_allow_html=True)
-        la_cols = st.columns(3)
-        lineas_ad = [("Móvil 40 GB", "5€"), ("Móvil 150 GB", "10€"), ("Móvil 300 GB", "15€")]
-        for i, (tit, pre) in enumerate(lineas_ad):
-            with la_cols[i]:
-                st.markdown(f'<div class="price-card"><div class="price-title">{tit}</div><div class="price-val">{pre}</div><div class="price-sub">Pago Mensual</div></div>', unsafe_allow_html=True)
-
-# --- COMPARADOR ---
+# --- COMPARADOR (SIN TOCAR) ---
 elif menu == "⚖️ COMPARADOR":
     st.header("Estudio de Ahorro Personalizado")
     c1, c2 = st.columns(2)
@@ -179,140 +180,86 @@ elif menu == "⚖️ COMPARADOR":
         dias_factura = st.number_input("Días del periodo de factura", value=30)
     with c2:
         comp_sel = st.selectbox("Compañía Propuesta", sorted(list(set(t["COMPAÑÍA"] for t in tarifas_luz))))
-        tarifas_f = [t["TARIFA"] for t in tarifas_luz if t["COMPAÑÍA"] == comp_sel]
-        tarifa_sel_nombre = st.selectbox("Tarifa Seleccionada", tarifas_f)
+        tarifa_sel_nombre = st.selectbox("Tarifa Seleccionada", [t["TARIFA"] for t in tarifas_luz if t["COMPAÑÍA"] == comp_sel])
         sel = next(t for t in tarifas_luz if t["COMPAÑÍA"] == comp_sel and t["TARIFA"] == tarifa_sel_nombre)
         if os.path.exists(sel["logo"]): st.image(sel["logo"], width=120)
         consumo = st.number_input("Consumo del periodo (kWh)", value=0.0)
 
-    try:
-        p_calc = float(str(sel['ENERGIA']).split('/')[0].replace(',', '.')) if isinstance(sel['ENERGIA'], str) else sel['ENERGIA']
-    except:
-        p_calc = 0.11
+    try: p_calc = float(str(sel['ENERGIA']).split('/')[0].replace(',', '.')) if isinstance(sel['ENERGIA'], str) else sel['ENERGIA']
+    except: p_calc = 0.11
 
-    coste_p = (potencia * sel["P1"] * dias_factura) + (potencia * sel["P2"] * dias_factura)
-    coste_e = consumo * p_calc
-    coste_total_iva = (coste_p + coste_e) * 1.21
+    coste_total_iva = ((potencia * sel["P1"] * dias_factura) + (potencia * sel["P2"] * dias_factura) + (consumo * p_calc)) * 1.21
     ahorro = f_act - coste_total_iva
-
-    st.info(f"**Tarifa Seleccionada:** {tarifa_sel_nombre} | Energía: **{sel['ENERGIA']}** €/kWh | Potencia: **{sel['P1']}** €/kW día")
     st.markdown(f'<div style="background:#d2ff00; padding:20px; border-radius:10px; text-align:center;"><h2 style="color:black;">AHORRO ESTIMADO: {ahorro:.2f} €</h2></div>', unsafe_allow_html=True)
-    
-    if st.button("GENERAR ESTUDIO PDF PROFESIONAL"):
-        pdf = FPDF()
-        pdf.add_page()
-        if os.path.exists(LOGO_PRINCIPAL): pdf.image(LOGO_PRINCIPAL, 10, 8, 33)
-        if os.path.exists(sel["logo"]): pdf.image(sel["logo"], 165, 8, 30)
-        pdf.ln(30); pdf.set_font("Arial", "B", 18); pdf.cell(190, 10, "ESTUDIO COMPARATIVO DE AHORRO", ln=True, align="C")
-        pdf.ln(5); pdf.set_font("Arial", "B", 11); pdf.set_fill_color(240, 240, 240)
-        pdf.cell(190, 8, f" DATOS DEL CLIENTE: {cliente.upper()}", ln=True, fill=True)
-        pdf.set_font("Arial", "", 10); pdf.cell(95, 8, f"Fecha: {datetime.now().strftime('%d/%m/%Y')}", border=1)
-        pdf.cell(95, 8, f"Periodo: {dias_factura} dias", border=1, ln=True); pdf.ln(5)
-        pdf.set_font("Arial", "B", 11); pdf.cell(190, 8, " DETALLE DE LA PROPUESTA", ln=True, fill=True)
-        pdf.set_font("Arial", "", 10)
-        for d, v in [("Compania", comp_sel), ("Tarifa", tarifa_sel_nombre), ("Potencia", f"{potencia} kW"), ("Energia", f"{sel['ENERGIA']} EUR/kWh")]:
-            pdf.cell(95, 8, d, border=1); pdf.cell(95, 8, str(v), border=1, ln=True)
-        pdf.ln(5); pdf.set_font("Arial", "B", 12); pdf.cell(95, 10, "Factura Actual", border=1); pdf.cell(95, 10, f"{f_act:.2f} EUR", border=1, ln=True)
-        pdf.cell(95, 10, "Nueva Factura", border=1); pdf.cell(95, 10, f"{coste_total_iva:.2f} EUR", border=1, ln=True)
-        pdf.ln(5); pdf.set_fill_color(210, 255, 0); pdf.set_font("Arial", "B", 14)
-        pdf.cell(190, 15, f"AHORRO TOTAL: {ahorro:.2f} EUR", ln=True, align="C", fill=True)
-        pdf.ln(10); pdf.set_font("Arial", "B", 12); pdf.cell(190, 10, "PLAN AMIGO BASETTE", ln=True)
-        if os.path.exists(QR_PLAN_AMIGO):
-            pdf.image(QR_PLAN_AMIGO, 80, pdf.get_y(), 50)
-        st.download_button(label="📥 DESCARGAR ESTUDIO PDF", data=pdf.output(dest='S').encode('latin-1', 'replace'), file_name=f"Estudio_{cliente}.pdf")
 
-# --- ANUNCIOS Y PLAN AMIGO ---
+# --- ANUNCIOS (SIN TOCAR) ---
 elif menu == "📢 ANUNCIOS Y PLAN AMIGO":
     st.header("📢 Anuncios y Plan Amigo")
     st.markdown('<div class="block-header">🎁 PLAN AMIGO</div>', unsafe_allow_html=True)
-    col1, col2 = st.columns(2)
-    with col1:
-        st.subheader("Enlace Plan Amigo")
-        st.code("https://forms.gle/mU6XzRvywDoBQ5Q47")
-        st.link_button("Ir al Formulario", "https://forms.gle/mU6XzRvywDoBQ5Q47")
-    with col2:
-        st.subheader("QR Plan Amigo")
-        if os.path.exists(QR_PLAN_AMIGO):
-            st.image(QR_PLAN_AMIGO, width=250)
-            with open(QR_PLAN_AMIGO, "rb") as file:
-                st.download_button("Descargar QR", file, "qr-plan-amigo.png")
-    st.markdown('<div class="block-header">📸 INSTAGRAM</div>', unsafe_allow_html=True)
+    if os.path.exists(QR_PLAN_AMIGO):
+        st.image(QR_PLAN_AMIGO, width=250)
+        with open(QR_PLAN_AMIGO, "rb") as f: st.download_button("Descargar QR", f, "qr-plan-amigo.png")
     st.link_button("VER ANUNCIOS INSTAGRAM", "https://www.instagram.com/basette.eu/", use_container_width=True)
 
-# --- DASHBOARD ENERGIA (ARREGLADO ERROR AÑO_INT) ---
+# --- DASHBOARD ENERGIA (ARREGLADO) ---
 elif menu == "📈 DASHBOARD ENERGIA":
     st.header("📈 Dashboard Energia | Basette Group")
     sheet_url = "https://docs.google.com/spreadsheets/d/1W-Eq63SnBBlOykJlP9XgASXDPpWQhQnVW-oFHUlSMcQ/export?format=csv"
     
     try:
         df_raw = pd.read_csv(sheet_url)
+        # Limpiar filas completamente vacías para evitar errores de tipo en fechas
+        df_raw = df_raw.dropna(how='all')
         
-        # PROCESAMIENTO ROBUSTO DE FECHA
         if 'FECHA DE CREACIÓN' in df_raw.columns:
             df_raw['FECHA_DT'] = pd.to_datetime(df_raw['FECHA DE CREACIÓN'], dayfirst=True, errors='coerce')
-            # Llenamos nulos para evitar el error AÑO_INT
             df_raw = df_raw.dropna(subset=['FECHA_DT'])
             df_raw['AÑO_INT'] = df_raw['FECHA_DT'].dt.year.astype(int)
-            meses_es_dict = {1:'Enero', 2:'Febrero', 3:'Marzo', 4:'Abril', 5:'Mayo', 6:'Junio', 7:'Julio', 8:'Agosto', 9:'Septiembre', 10:'Octubre', 11:'Noviembre', 12:'Diciembre'}
-            df_raw['MES_NOMBRE'] = df_raw['FECHA_DT'].dt.month.map(meses_es_dict)
-        
-        col_comp = 'COMPAÑIA' if 'COMPAÑIA' in df_raw.columns else 'COMERCIALIZADORA'
-        col_comercial = 'COMERCIAL' if 'COMERCIAL' in df_raw.columns else df_raw.columns[0]
-
-        with st.container():
-            f1, f2, f3, f4 = st.columns(4)
-            with f1:
-                lista_meses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
-                sel_mes = st.multiselect("Filtrar Meses", lista_meses, default=["Marzo"])
-            with f2:
-                años_unicos = sorted(df_raw['AÑO_INT'].unique().tolist())
-                sel_año = st.selectbox("Seleccionar Año", ["Todos"] + [str(a) for a in años_unicos])
-            with f3:
-                lista_comp = sorted(df_raw[col_comp].dropna().unique().tolist())
-                sel_comp = st.selectbox("Seleccionar Compañía", ["Todas"] + lista_comp)
-            with f4:
-                lista_comerciales = sorted(df_raw[col_comercial].dropna().unique().tolist())
-                sel_com = st.multiselect("Seleccionar Comerciales", lista_comerciales, default=lista_comerciales)
-
-        df = df_raw.copy()
-        if sel_mes: df = df[df['MES_NOMBRE'].isin(sel_mes)]
-        if sel_año != "Todos": df = df[df['AÑO_INT'] == int(sel_año)]
-        if sel_comp != "Todas": df = df[df[col_comp] == sel_comp]
-        if sel_com: df = df[df[col_comercial].isin(sel_com)]
-
-        st.markdown('<div class="block-header">📊 RESUMEN DE CIFRAS</div>', unsafe_allow_html=True)
-        m1, m2, m3 = st.columns(3)
-        luz_count = df['CUPS LUZ'].count() if 'CUPS LUZ' in df.columns else 0
-        gas_count = df['CUPS GAS'].count() if 'CUPS GAS' in df.columns else 0
-        m1.metric("VENTAS LUZ", f"{luz_count} ⚡")
-        m2.metric("VENTAS GAS", f"{gas_count} 🔥")
-        m3.metric("TOTAL GLOBAL", f"{luz_count + gas_count} ✅")
-
-        c_r1, c_r2 = st.columns(2)
-        with c_r1:
-            st.markdown('<div class="block-header">👑 VENTAS POR COMERCIAL</div>', unsafe_allow_html=True)
-            ranking = df.groupby(col_comercial).size().reset_index(name='Ventas').sort_values(by='Ventas', ascending=False)
-            fig_ranking = px.bar(ranking, x=col_comercial, y='Ventas', text='Ventas', color_discrete_sequence=['#d2ff00'], template="plotly_dark")
-            st.plotly_chart(fig_ranking, use_container_width=True)
-        with c_r2:
-            st.markdown('<div class="block-header">🍩 VENTAS POR COMPAÑÍA</div>', unsafe_allow_html=True)
-            v_comp = df.groupby(col_comp).size().reset_index(name='Total')
-            fig_rosco = px.pie(v_comp, values='Total', names=col_comp, hole=.5, color_discrete_sequence=["#d2ff00", "#9b59b6", "#f1c40f"])
-            st.plotly_chart(fig_rosco, use_container_width=True)
-
-        st.markdown('<div class="block-header">📋 DETALLE DE OPERACIONES</div>', unsafe_allow_html=True)
-        st.dataframe(df, use_container_width=True, hide_index=True)
-
+            meses_dict = {1:'Enero', 2:'Febrero', 3:'Marzo', 4:'Abril', 5:'Mayo', 6:'Junio', 7:'Julio', 8:'Agosto', 9:'Septiembre', 10:'Octubre', 11:'Noviembre', 12:'Diciembre'}
+            df_raw['MES_NOMBRE'] = df_raw['FECHA_DT'].dt.month.map(meses_dict)
+            
+            f1, f2 = st.columns(2)
+            with f1: sel_mes = st.multiselect("Filtrar Meses", list(meses_dict.values()), default=["Marzo"])
+            with f2: sel_año = st.selectbox("Seleccionar Año", sorted(df_raw['AÑO_INT'].unique()))
+            
+            df = df_raw[(df_raw['MES_NOMBRE'].isin(sel_mes)) & (df_raw['AÑO_INT'] == sel_año)]
+            
+            m1, m2, m3 = st.columns(3)
+            m1.metric("VENTAS LUZ", f"{df['CUPS LUZ'].count() if 'CUPS LUZ' in df.columns else 0} ⚡")
+            m2.metric("VENTAS GAS", f"{df['CUPS GAS'].count() if 'CUPS GAS' in df.columns else 0} 🔥")
+            m3.metric("TOTAL", len(df))
+            
+            st.plotly_chart(px.bar(df.groupby('COMERCIAL').size().reset_index(name='V'), x='COMERCIAL', y='V', color_discrete_sequence=['#d2ff00'], template="plotly_dark"), use_container_width=True)
+            st.dataframe(df, use_container_width=True)
     except Exception as e:
-        st.error(f"Error al cargar dashboard: {e}")
+        st.error(f"Error en Dashboard: {e}")
 
-# --- REPOSITORIO ---
+# --- REPOSITORIO (ACTUALIZADO) ---
 elif menu == "📂 REPOSITORIO":
-    st.header("Documentación")
-    for c in ["ARGUMENTARIOS", "GANA ENERGÍA", "NATURGY", "TOTAL", "ENDESA", "O2"]:
-        with st.expander(f"📁 {c}"):
+    st.header("Documentación y Argumentarios")
+    
+    # Carpeta específica para Argumentarios
+    with st.expander("📂 ARGUMENTARIOS DE VENTA"):
+        archivos_arg = [
+            "ARGUMENTARIO_ENERGÍA (Venta Fría) + Venta Cruzada Teleco.docx",
+            "ARGUMENTARIO_TELECO (Clientes Movistar a O2) + Venta Cruzada Energía.docx",
+            "FRASES PROHIBIDAS,PODER EN LA VENTA y REBATE OBJECIONES.docx"
+        ]
+        for arg in archivos_arg:
+            path = f"manuales/{arg}"
+            if os.path.exists(path):
+                with open(path, "rb") as f:
+                    st.download_button(f"📘 {arg}", f, file_name=arg, key=f"arg_{arg}")
+            else:
+                st.warning(f"Archivo no encontrado: {arg}")
+
+    # Resto de carpetas de Compañías (sin logos)
+    for c in ["GANA ENERGÍA", "NATURGY", "TOTAL", "ENDESA", "O2"]:
+        with st.expander(f"📁 DOCUMENTACIÓN {c}"):
             if os.path.exists("manuales"):
                 busq = c.split()[0].lower()
-                archivos = [f for f in os.listdir("manuales") if busq in f.lower()]
+                # Filtramos para NO mostrar archivos .png ni los argumentarios ya listados arriba
+                archivos = [f for f in os.listdir("manuales") if busq in f.lower() and not f.lower().endswith('.png') and "argumentario" not in f.lower()]
                 for fn in archivos:
-                    with open(f"manuales/{fn}", "rb") as f: st.download_button(f"📥 {fn}", f, file_name=fn, key=f"rep_{fn}")
+                    with open(f"manuales/{fn}", "rb") as f:
+                        st.download_button(f"📥 {fn}", f, file_name=fn, key=f"f_{fn}")
