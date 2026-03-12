@@ -136,9 +136,8 @@ elif menu == "📊 PRECIOS":
         ])
         st.dataframe(df_gas, use_container_width=True, hide_index=True)
     with t3:
-        st.markdown('<div class="block-header">📡 SOLO FIBRA (ZONA LIBRE)</div>', unsafe_allow_html=True)
+        st.markdown('<div class="block-header">📡 SOLO FIBRA</div>', unsafe_allow_html=True)
         f_cols = st.columns(3)
-        # Basado en la imagen de solo fibra
         solo_fibra = [("300 Mb", "23€"), ("600 Mb", "27€"), ("1 Gb", "31€")]
         for i, (vel, pre) in enumerate(solo_fibra):
             with f_cols[i]:
@@ -146,19 +145,16 @@ elif menu == "📊 PRECIOS":
         
         st.markdown('<div class="block-header">🌐 FIBRA Y MÓVIL</div>', unsafe_allow_html=True)
         fm_cols = st.columns(3)
-        # Basado en la imagen de combinados (incluye los de 1Gb y 600Mb)
         fibra_movil = [
             ("300 Mb", "40 GB", "30€", "1 LÍNEA"),
             ("600 Mb", "60 GB", "35€", "1 LÍNEA"),
-            ("600 Mb", "100 GB (50+50)", "35€", "2 LÍNEAS"),
+            ("600 Mb", "100 GB", "35€", "2 LÍNEAS (50GB c/u)"),
             ("1 Gb", "120 GB", "38€", "1 LÍNEA"),
-            ("1 Gb", "200 GB (100+100)", "43€", "2 LÍNEAS")
+            ("1 Gb", "200 GB", "43€", "2 LÍNEAS (100GB c/u)")
         ]
-        
-        # Mostrar en filas de 3 para que se vea ordenado
         for i, (vel, gb, pre, lin) in enumerate(fibra_movil):
             with fm_cols[i % 3]:
-                st.markdown(f'<div class="price-card"><div class="price-title">{vel} + {lin}</div><div class="price-val">{pre}</div><div class="price-sub">{gb} de Datos</div></div>', unsafe_allow_html=True)
+                st.markdown(f'<div class="price-card"><div class="price-title">{vel} + {lin}</div><div class="price-val">{pre}</div><div class="price-sub">{gb} de Datos Totales</div></div>', unsafe_allow_html=True)
 
 # --- COMPARADOR ---
 elif menu == "⚖️ COMPARADOR":
@@ -247,7 +243,6 @@ elif menu == "📈 DASHBOARD ENERGIA":
     try:
         df_raw = pd.read_csv(sheet_url)
         
-        # Procesamiento de Fecha sacada de FECHA DE CREACIÓN
         if 'FECHA DE CREACIÓN' in df_raw.columns:
             df_raw['FECHA_DT'] = pd.to_datetime(df_raw['FECHA DE CREACIÓN'], dayfirst=True, errors='coerce')
             df_raw['AÑO_INT'] = df_raw['FECHA_DT'].dt.year
@@ -255,11 +250,9 @@ elif menu == "📈 DASHBOARD ENERGIA":
                              7:'Julio', 8:'Agosto', 9:'Septiembre', 10:'Octubre', 11:'Noviembre', 12:'Diciembre'}
             df_raw['MES_NOMBRE'] = df_raw['FECHA_DT'].dt.month.map(meses_es_dict)
         
-        # Mapeo de columnas solicitado
         col_comp = 'COMPAÑIA' if 'COMPAÑIA' in df_raw.columns else 'COMERCIALIZADORA'
         col_comercial = 'COMERCIAL' if 'COMERCIAL' in df_raw.columns else df_raw.columns[0]
 
-        # --- FILTROS PULIDOS ---
         with st.container():
             f1, f2, f3, f4 = st.columns(4)
             with f1:
@@ -275,14 +268,12 @@ elif menu == "📈 DASHBOARD ENERGIA":
                 lista_comerciales = sorted(df_raw[col_comercial].dropna().unique().tolist())
                 sel_com = st.multiselect("Seleccionar Comerciales", lista_comerciales, default=lista_comerciales)
 
-        # Aplicar Lógica de Filtros
         df = df_raw.copy()
         if sel_mes: df = df[df['MES_NOMBRE'].isin(sel_mes)]
         if sel_año != "Todos": df = df[df['AÑO_INT'] == int(sel_año)]
         if sel_comp != "Todas": df = df[df[col_comp] == sel_comp]
         if sel_com: df = df[df[col_comercial].isin(sel_com)]
 
-        # --- MÉTRICAS ---
         st.markdown('<div class="block-header">📊 RESUMEN DE CIFRAS</div>', unsafe_allow_html=True)
         m1, m2, m3 = st.columns(3)
         luz_count = df['CUPS LUZ'].count() if 'CUPS LUZ' in df.columns else 0
@@ -291,7 +282,6 @@ elif menu == "📈 DASHBOARD ENERGIA":
         m2.metric("VENTAS GAS", f"{gas_count} 🔥")
         m3.metric("TOTAL GLOBAL", f"{luz_count + gas_count} ✅")
 
-        # --- ROSCO Y RANKING ---
         c_r1, c_r2 = st.columns(2)
         with c_r1:
             st.markdown('<div class="block-header">👑 VENTAS POR COMERCIAL</div>', unsafe_allow_html=True)
@@ -307,7 +297,6 @@ elif menu == "📈 DASHBOARD ENERGIA":
             fig_rosco.update_traces(textinfo='percent+label')
             st.plotly_chart(fig_rosco, use_container_width=True)
 
-        # --- TABLA ---
         st.markdown('<div class="block-header">📋 DETALLE DE OPERACIONES</div>', unsafe_allow_html=True)
         st.dataframe(df, use_container_width=True, hide_index=True)
 
