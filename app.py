@@ -12,26 +12,11 @@ st.set_page_config(
     initial_sidebar_state="expanded" 
 )
 
-# 2. CSS DE ALTA VISIBILIDAD (Corregido para que el menú superior sea visible)
+# 2. CSS DE ALTA VISIBILIDAD
 st.markdown("""
     <style>
     .stApp { background-color: #0d1117; color: #ffffff; }
     header { visibility: hidden; }
-    
-    /* ARREGLO MENÚ SUPERIOR (TABS) - Para que no salgan cuadros blancos */
-    button[data-baseweb="tab"] {
-        background-color: transparent !important;
-        border: 1px solid #30363d !important;
-        color: white !important;
-        border-radius: 5px 5px 0 0 !important;
-        margin-right: 5px !important;
-    }
-    button[aria-selected="true"] {
-        background-color: #d2ff00 !important;
-        color: black !important;
-        font-weight: bold !important;
-    }
-
     label[data-testid="stWidgetLabel"] p {
         color: #d2ff00 !important;
         font-weight: 900 !important;
@@ -53,6 +38,18 @@ st.markdown("""
         font-weight: bold; margin-bottom: 20px; margin-top: 25px; display: inline-block; font-size: 1.1rem;
     }
     
+    .winner-card { 
+        background: linear-gradient(90deg, #1e3a8a, #3b82f6); 
+        padding: 25px; 
+        border-radius: 15px; 
+        color: white !important; 
+        text-align: center; 
+        font-weight: bold; 
+        font-size: 28px; 
+        margin-bottom: 25px;
+        box-shadow: 0px 4px 15px rgba(0,0,0,0.5);
+    }
+
     .price-card {
         background-color: #161b22;
         border: 2px solid #30363d;
@@ -70,6 +67,20 @@ st.markdown("""
     .price-title { color: #d2ff00; font-size: 1.2rem; font-weight: bold; margin-bottom: 10px; }
     .price-val { color: white; font-size: 2rem; font-weight: 900; }
     .price-sub { color: #8b949e; font-size: 0.85rem; margin-bottom: 5px; }
+
+    span[data-baseweb="tag"] {
+        background-color: #d2ff00 !important;
+        border-radius: 5px !important;
+    }
+    span[data-baseweb="tag"] span {
+        color: black !important;
+        font-weight: bold !important;
+    }
+
+    .stSelectbox div[data-baseweb="select"], .stMultiSelect div[data-baseweb="select"] {
+        background-color: #161b22 !important;
+        color: white !important;
+    }
     </style>
     """, unsafe_allow_html=True)
 
@@ -113,12 +124,12 @@ def load_and_clean_ranking():
 def load_vacaciones():
     try:
         df = pd.read_csv(URL_VAC)
-        df['Fecha Inicio'] = pd.to_datetime(df['Fecha Inicio'], dayfirst=True, errors='coerce')
-        df['Fecha Fin'] = pd.to_datetime(df['Fecha Fin'], dayfirst=True, errors='coerce')
-        df = df.dropna(subset=['Fecha Inicio', 'Fecha Fin'])
-        # Aseguramos columnas necesarias
+        df['Fecha Inicio'] = pd.to_datetime(df['Fecha Inicio'], dayfirst=True)
+        df['Fecha Fin'] = pd.to_datetime(df['Fecha Fin'], dayfirst=True)
+        # Asegurar que las columnas existan para evitar KeyError
         for col in ["Comercial", "Fecha Inicio", "Fecha Fin", "Motivo", "Nº DE DIAS"]:
-            if col not in df.columns: df[col] = "N/A"
+            if col not in df.columns:
+                df[col] = ""
         return df
     except:
         return pd.DataFrame(columns=["Comercial", "Fecha Inicio", "Fecha Fin", "Motivo", "Nº DE DIAS"])
@@ -191,6 +202,7 @@ elif menu == "📊 PRECIOS":
         st.dataframe(df_gas, use_container_width=True, hide_index=True)
 
     with t_fibra:
+        # SECCIÓN 1: FIBRA Y MOVIL (Anteriormente Solo Fibra)
         st.markdown('<div class="block-header">📡 FIBRA Y MÓVIL</div>', unsafe_allow_html=True)
         f_cols = st.columns(3)
         solo_fibra = [("300 Mb", "23€"), ("600 Mb", "27€"), ("1 Gb", "31€")]
@@ -198,6 +210,7 @@ elif menu == "📊 PRECIOS":
             with f_cols[i]:
                 st.markdown(f'<div class="price-card"><div class="price-title">FIBRA {vel}</div><div class="price-val">{pre}</div><div class="price-sub">Precio Final / Mes</div></div>', unsafe_allow_html=True)
         
+        # LINEAS ADICIONALES PARA FIBRA Y MOVIL (image_7.png)
         st.markdown('<div class="block-header">➕ LÍNEAS ADICIONALES (FIBRA Y MÓVIL)</div>', unsafe_allow_html=True)
         ad_cols_f = st.columns(3)
         lineas_ad_f = [("300 Mb", "15€"), ("600 Mb", "20€"), ("1 Gb", "27€")]
@@ -205,13 +218,21 @@ elif menu == "📊 PRECIOS":
             with ad_cols_f[i]:
                 st.markdown(f'<div class="price-card"><div class="price-title">ADICIONAL {vel}</div><div class="price-val">{pre}</div><div class="price-sub">Precio / Mes</div></div>', unsafe_allow_html=True)
 
+        # SECCIÓN 2: FIBRA MÓVIL Y TV (image_7.png)
         st.markdown('<div class="block-header">📺 TELEVISIÓN Y PACKS TV</div>', unsafe_allow_html=True)
         tv_cols = st.columns(5)
-        packs_tv = [("SOLO TV", "9.99€", "M+ Suscripción"), ("600 Mb + TV", "38€", "35 GB"), ("600 Mb + TV", "45€", "60 GB"), ("1 Gb + TV", "50€", "350 GB"), ("1 Gb + TV", "56€", "375 GB")]
+        packs_tv = [
+            ("SOLO TV", "9.99€", "M+ Suscripción"),
+            ("600 Mb + TV", "38€", "35 GB"),
+            ("600 Mb + TV", "45€", "60 GB"),
+            ("1 Gb + TV", "50€", "350 GB"),
+            ("1 Gb + TV", "56€", "375 GB")
+        ]
         for i, (vel, pre, sub) in enumerate(packs_tv):
             with tv_cols[i]:
                 st.markdown(f'<div class="price-card"><div class="price-title">{vel}</div><div class="price-val">{pre}</div><div class="price-sub">{sub}</div></div>', unsafe_allow_html=True)
 
+        # LINEAS ADICIONALES PARA TV (image_7.png)
         st.markdown('<div class="block-header">➕ LÍNEAS ADICIONALES (MÓVILES TV)</div>', unsafe_allow_html=True)
         ad_cols_tv = st.columns(3)
         lineas_ad_tv = [("Móvil 40 GB", "5€"), ("Móvil 150 GB", "10€"), ("Móvil 300 GB", "15€")]
@@ -230,34 +251,6 @@ elif menu == "⚖️ COMPARADOR":
         sel = next(t for t in tarifas_luz if t["COMPAÑÍA"] == comp_sel)
     ahorro = f_act - (consumo * 0.12 * 1.21)
     st.markdown(f'<div style="background:#d2ff00; padding:20px; border-radius:10px; text-align:center;"><h2 style="color:black;">AHORRO: {ahorro:.2f} €</h2></div>', unsafe_allow_html=True)
-
-elif menu == "📢 ANUNCIOS Y PLAN AMIGO":
-    st.header("📢 Anuncios y Plan Amigo")
-    st.markdown('<div class="block-header">🎁 PLAN AMIGO</div>', unsafe_allow_html=True)
-    col1, col2 = st.columns(2)
-    with col1:
-        st.subheader("Enlace Plan Amigo")
-        st.code("https://forms.gle/mU6XzRvywDoBQ5Q47")
-        st.link_button("Ir al Formulario", "https://forms.gle/mU6XzRvywDoBQ5Q47")
-    with col2:
-        st.subheader("QR Plan Amigo")
-        if os.path.exists(QR_PLAN_AMIGO): st.image(QR_PLAN_AMIGO, width=250)
-
-    st.markdown('<div class="block-header">🖼️ ANUNCIOS BASETTE</div>', unsafe_allow_html=True)
-    # Mostramos las 3 imágenes de la carpeta en tamaño pequeño (cols)
-    dir_anu = "anunciosbasette"
-    if os.path.exists(dir_anu):
-        imgs = [f for f in os.listdir(dir_anu) if f.lower().endswith(('.png', '.jpg', '.jpeg')) and "qr" not in f.lower()]
-        if imgs:
-            cols_img = st.columns(4) # 4 columnas para que se vean pequeñas
-            for idx, img_file in enumerate(imgs[:3]): # Solo las 3 primeras
-                with cols_img[idx]:
-                    st.image(os.path.join(dir_anu, img_file), use_column_width=True)
-
-elif menu == "📈 DASHBOARD Y RANKING":
-    st.header("📈 Dashboard")
-    df_e, df_t = load_and_clean_ranking()
-    st.success("Panel de control actualizado.")
 
 elif menu == "🏖️ VACACIONES":
     st.header("🏖️ Gestión de Vacaciones")
@@ -279,33 +272,24 @@ elif menu == "🏖️ VACACIONES":
         df_v = load_vacaciones()
         if not df_v.empty:
             try:
-                # CORRECCIÓN DE ERROR VALUEERROR (image_0ff064.png)
-                # Convertimos fechas y filtramos valores nulos antes de graficar
-                df_v['Fecha Inicio'] = pd.to_datetime(df_v['Fecha Inicio'])
-                df_v['Fecha Fin'] = pd.to_datetime(df_v['Fecha Fin'])
-                
-                # Gráfico Gantt mucho más visual
-                fig = px.timeline(df_v, 
-                                 start="Fecha Inicio", 
-                                 end="Fecha Fin", 
-                                 y="Comercial", 
-                                 color="Comercial",
-                                 hover_data=["Motivo", "Nº DE DIAS"],
-                                 title="Cronograma de Ausencias")
-                fig.update_yaxes(autorange="reversed")
-                fig.update_layout(
-                    paper_bgcolor='rgba(0,0,0,0)', 
-                    plot_bgcolor='rgba(0,0,0,0)',
-                    font_color="white",
-                    showlegend=False,
-                    height=400
-                )
+                # CORRECCIÓN DE ERROR VALUERROR Y KEYERROR (image_8.png y image_10.png)
+                # Asegurar que el DataFrame no tenga valores nulos en fechas para el gráfico
+                df_plot = df_v.dropna(subset=['Fecha Inicio', 'Fecha Fin'])
+                fig = px.bar(df_plot, x="Fecha Fin", y="Comercial", base="Fecha Inicio", orientation="h",
+                             color="Comercial", title="Próximas Ausencias",
+                             hover_data=["Fecha Inicio", "Fecha Fin", "Motivo"])
+                fig.update_layout(xaxis_type='date', paper_bgcolor='rgba(0,0,0,0)', font_color="white")
                 st.plotly_chart(fig, use_container_width=True)
-                st.dataframe(df_v[["Comercial", "Fecha Inicio", "Fecha Fin", "Motivo"]], use_container_width=True, hide_index=True)
+                st.table(df_v[["Comercial", "Fecha Inicio", "Fecha Fin", "Motivo"]])
             except Exception as e:
-                st.error(f"Error al generar calendario: {e}")
+                st.error(f"Error al cargar calendario visual: {e}")
         else:
-            st.info("No hay vacaciones registradas.")
+            st.info("Sin registros.")
+
+elif menu == "📈 DASHBOARD Y RANKING":
+    st.header("📈 Dashboard")
+    df_e, df_t = load_and_clean_ranking()
+    st.write("Datos cargados correctamente.")
 
 elif menu == "📂 REPOSITORIO":
     st.header("📂 Documentación")
