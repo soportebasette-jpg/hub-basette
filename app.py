@@ -6,6 +6,7 @@ from datetime import datetime
 from fpdf import FPDF
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
+import json
 
 # 1. CONFIGURACIÓN
 st.set_page_config(
@@ -116,23 +117,19 @@ with st.sidebar:
 # --- LÓGICA DE SECCIONES ---
 if menu == "🚀 CRM":
     st.header("Portales de Gestión")
-    # (Aquí iría tu código de botones de CRM que ya tienes)
     st.info("Sección CRM cargada.")
 
 elif menu == "📅 AUSENCIAS":
     st.header("Gestión de Vacaciones")
     
-    # 1. MOSTRAR PRÓXIMAS (Corregido para evitar KeyError)
     try:
         df_v = pd.read_csv(URL_VACACIONES)
-        # Limpiar nombres de columnas por si acaso hay espacios
         df_v.columns = df_v.columns.str.strip()
         st.subheader("Próximas Salidas")
-        st.table(df_v.tail(5)) # Muestra las últimas 5 registradas
+        st.table(df_v.tail(5))
     except Exception as e:
         st.error(f"Error cargando el Excel: {e}")
 
-    # 2. FORMULARIO
     with st.form("vacas"):
         col1, col2 = st.columns(2)
         with col1:
@@ -142,23 +139,30 @@ elif menu == "📅 AUSENCIAS":
             mot = st.selectbox("Motivo", ["Vacaciones", "Baja", "Asuntos Propios"])
             f_fin = st.date_input("Fin")
         
-        # Calcular días
         dias = (f_fin - f_ini).days + 1
         st.write(f"Días totales: {dias}")
         
         btn = st.form_submit_button("REGISTRAR EN EXCEL")
         
         if btn:
-            if not os.path.exists("credentials.json"):
-                st.error("⚠️ Error: No se encuentra el archivo 'credentials.json' en la carpeta MI_INTRANET.")
+            # LÓGICA DE CONEXIÓN HÍBRIDA (BUSCA SECRETS O ARCHIVO)
+            scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+            creds = None
+            
+            if "gcp_service_account" in st.secrets:
+                # Usa los Secrets de la web
+                creds_dict = dict(st.secrets["gcp_service_account"])
+                creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
+            elif os.path.exists("credentials.json"):
+                # Usa el archivo local si existe
+                creds = ServiceAccountCredentials.from_json_keyfile_name("credentials.json", scope)
+
+            if creds is None:
+                st.error("⚠️ Error: No se han configurado las credenciales (Secrets o JSON).")
             else:
                 try:
-                    scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-                    creds = ServiceAccountCredentials.from_json_keyfile_name("credentials.json", scope)
                     client = gspread.authorize(creds)
-                    # Abrir por el nombre exacto
                     sheet = client.open("SOLICITUDES_VACACIONES_HUB").sheet1
-                    
                     fila = [datetime.now().strftime("%d/%m/%Y"), nom, f_ini.strftime("%d/%m/%Y"), f_fin.strftime("%d/%m/%Y"), mot, dias]
                     sheet.append_row(fila)
                     st.success("✅ ¡Registrado con éxito!")
@@ -169,10 +173,8 @@ elif menu == "📈 DASHBOARD":
     st.header("Ranking de Ventas")
     try:
         df_e, df_t = load_and_clean_ranking()
-        # Aquí van tus pestañas de Ranking, Energía y Telco
         t1, t2, t3 = st.tabs(["🏆 RANKING", "⚡ ENERGÍA", "📱 TELCO"])
         with t1:
             st.write("Cargando Ranking...")
-            # Lógica de ranking...
     except Exception as e:
         st.error(f"Error en Dashboard: {e}")
