@@ -4,4 +4,3 @@ plotly
 fpdf
 gspread
 oauth2client
-requests
