@@ -143,6 +143,13 @@ elif menu == "📊 PRECIOS":
             with f_cols[i]:
                 st.markdown(f'<div class="price-card"><div class="price-title">FIBRA {vel}</div><div class="price-val">{pre}</div><div class="price-sub">Precio Final / Mes</div></div>', unsafe_allow_html=True)
         
+        st.markdown('<div class="block-header">➕ LÍNEAS ADICIONALES</div>', unsafe_allow_html=True)
+        ad_cols = st.columns(3)
+        lineas_ad = [("300 Mb", "15€"), ("600 Mb", "20€"), ("1 Gb", "27€")]
+        for i, (vel, pre) in enumerate(lineas_ad):
+            with ad_cols[i]:
+                st.markdown(f'<div class="price-card"><div class="price-title">ADICIONAL {vel}</div><div class="price-val">{pre}</div><div class="price-sub">Precio / Mes</div></div>', unsafe_allow_html=True)
+
         st.markdown('<div class="block-header">🌐 FIBRA Y MÓVIL</div>', unsafe_allow_html=True)
         fm_cols = st.columns(3)
         fibra_movil = [
@@ -155,6 +162,24 @@ elif menu == "📊 PRECIOS":
         for i, (vel, gb, pre, lin) in enumerate(fibra_movil):
             with fm_cols[i % 3]:
                 st.markdown(f'<div class="price-card"><div class="price-title">{vel} + {lin}</div><div class="price-val">{pre}</div><div class="price-sub">{gb} de Datos Totales</div></div>', unsafe_allow_html=True)
+
+        st.markdown('<div class="block-header">📺 FIBRA, MÓVIL Y TV</div>', unsafe_allow_html=True)
+        tv_cols = st.columns(3)
+        planes_tv = [
+            ("SOLO TV", "9.99€", "Streaming", "O2 TV"),
+            ("600 Mb + TV", "38€", "100 GB", "1 LÍNEA"),
+            ("1 Gb + TV", "43€", "200 GB", "1 LÍNEA")
+        ]
+        for i, (vel, pre, gb, lin) in enumerate(planes_tv):
+            with tv_cols[i]:
+                st.markdown(f'<div class="price-card"><div class="price-title">{vel}</div><div class="price-val">{pre}</div><div class="price-sub">{gb} | {lin}</div></div>', unsafe_allow_html=True)
+
+        st.markdown('<div class="block-header">➕ LÍNEAS ADICIONALES (TV)</div>', unsafe_allow_html=True)
+        ad_tv_cols = st.columns(3)
+        lineas_ad_tv = [("40 GB", "5€"), ("150 GB", "10€"), ("300 GB", "15€")]
+        for i, (gb, pre) in enumerate(lineas_ad_tv):
+            with ad_tv_cols[i]:
+                st.markdown(f'<div class="price-card"><div class="price-title">ADICIONAL {gb}</div><div class="price-val">{pre}</div><div class="price-sub">Precio / Mes</div></div>', unsafe_allow_html=True)
 
 # --- COMPARADOR ---
 elif menu == "⚖️ COMPARADOR":
