@@ -12,7 +12,7 @@ st.set_page_config(
     initial_sidebar_state="expanded" 
 )
 
-# 2. CSS DE ALTA VISIBILIDAD
+# 2. CSS DE ALTA VISIBILIDAD (ACTUALIZADO CON ESTILOS DE RANKING)
 st.markdown("""
     <style>
     .stApp { background-color: #0d1117; color: #ffffff; }
@@ -30,12 +30,28 @@ st.markdown("""
         background-color: #ffffff !important; 
         border: 2px solid #d2ff00 !important; 
     }
+    /* Estilos de Tabla del Ranking */
     .stTable { background-color: white !important; border-radius: 10px; }
     .stTable td, .stTable th { color: #000000 !important; text-align: center !important; }
+    
     .block-header {
         background-color: #d2ff00; color: black; padding: 8px 20px; border-radius: 5px;
         font-weight: bold; margin-bottom: 20px; margin-top: 25px; display: inline-block; font-size: 1.1rem;
     }
+    
+    /* Banner del Ganador */
+    .winner-card { 
+        background: linear-gradient(90deg, #1e3a8a, #3b82f6); 
+        padding: 25px; 
+        border-radius: 15px; 
+        color: white !important; 
+        text-align: center; 
+        font-weight: bold; 
+        font-size: 28px; 
+        margin-bottom: 25px;
+        box-shadow: 0px 4px 15px rgba(0,0,0,0.5);
+    }
+
     .price-card {
         background-color: #161b22;
         border: 2px solid #30363d;
@@ -54,12 +70,58 @@ st.markdown("""
     .price-val { color: white; font-size: 2rem; font-weight: 900; }
     .price-sub { color: #8b949e; font-size: 0.85rem; margin-bottom: 5px; }
 
+    /* Chips de Multiselect personalizados */
+    span[data-baseweb="tag"] {
+        background-color: #d2ff00 !important;
+        border-radius: 5px !important;
+    }
+    span[data-baseweb="tag"] span {
+        color: black !important;
+        font-weight: bold !important;
+    }
+
     .stSelectbox div[data-baseweb="select"], .stMultiSelect div[data-baseweb="select"] {
         background-color: #161b22 !important;
         color: white !important;
     }
     </style>
     """, unsafe_allow_html=True)
+
+# --- FUNCIONES DE DATOS DASHBOARD ---
+def get_csv_url(url):
+    return url.replace('/edit?usp=sharing', '/export?format=csv').split('&ouid=')[0].split('?')[0] + '/export?format=csv'
+
+URL_ENE = get_csv_url("https://docs.google.com/spreadsheets/d/1W-Eq63SnBBlOykJlP9XgASXDPpWQhQnVW-oFHUlSMcQ/edit?usp=sharing")
+URL_TEL = get_csv_url("https://docs.google.com/spreadsheets/d/1HkI37_hUTZbsm_DwLjbi2kMTKcC23QsV/edit?usp=sharing")
+
+@st.cache_data(ttl=60)
+def load_and_clean_ranking():
+    # Energía
+    df_e = pd.read_csv(URL_ENE)
+    df_e['Fecha Creación'] = pd.to_datetime(df_e['Fecha Creación'], dayfirst=True, errors='coerce')
+    df_e = df_e.dropna(subset=['Comercial', 'Fecha Creación'])
+    df_e['Año'] = df_e['Fecha Creación'].dt.year.astype(str)
+    df_e['Mes'] = df_e['Fecha Creación'].dt.strftime('%m - %B')
+    df_e['V_Luz'] = df_e['CUPS Luz'].apply(lambda x: 1 if pd.notnull(x) and str(x).strip() != "" else 0)
+    df_e['V_Gas'] = df_e['CUPS Gas'].apply(lambda x: 1 if pd.notnull(x) and str(x).strip() != "" else 0)
+    df_e['Total_Ene'] = df_e['V_Luz'] + df_e['V_Gas']
+    # Telco
+    df_t = pd.read_csv(URL_TEL)
+    df_t['Fecha Creación'] = pd.to_datetime(df_t['Fecha Creación'], dayfirst=True, errors='coerce')
+    df_t = df_t.dropna(subset=['Comercial', 'Fecha Creación'])
+    df_t['Año'] = df_t['Fecha Creación'].dt.year.astype(str)
+    df_t['Mes'] = df_t['Fecha Creación'].dt.strftime('%m - %B')
+    def count_t(row):
+        f, m = 0, 0
+        t = str(row['Tipo Tarifa']).lower()
+        if 'fibramovil' in t or ('fibra' in t and 'movil' in t): f, m = 1, 1
+        elif 'fibra' in t: f = 1
+        elif 'movil' in t: m = 1
+        for col in ['Línea 2', 'Línea 3', 'Línea 4', 'Línea 5']:
+            if col in row and pd.notnull(row[col]) and str(row[col]).strip() != "": m += 1
+        return pd.Series([f, m, f + m])
+    df_t[['V_Fibra', 'V_Móvil', 'Total_Tel']] = df_t.apply(count_t, axis=1)
+    return df_e, df_t
 
 # 3. BASE DE DATOS LUZ
 tarifas_luz = [
@@ -94,7 +156,7 @@ if not st.session_state["password_correct"]:
 with st.sidebar:
     if os.path.exists(LOGO_PRINCIPAL): st.image(LOGO_PRINCIPAL)
     st.markdown("---")
-    menu = st.radio("Secciones:", ["🚀 CRM", "📊 PRECIOS", "⚖️ COMPARADOR", "📢 ANUNCIOS Y PLAN AMIGO", "📈 DASHBOARD ENERGIA", "📂 REPOSITORIO"], label_visibility="collapsed")
+    menu = st.radio("Secciones:", ["🚀 CRM", "📊 PRECIOS", "⚖️ COMPARADOR", "📢 ANUNCIOS Y PLAN AMIGO", "📈 DASHBOARD Y RANKING", "📂 REPOSITORIO"], label_visibility="collapsed")
 
 # --- CRM ---
 if menu == "🚀 CRM":
@@ -260,10 +322,80 @@ elif menu == "📢 ANUNCIOS Y PLAN AMIGO":
     st.info("Sigue nuestros anuncios en Instagram para estar al día de las últimas campañas.")
     st.link_button("VER ANUNCIOS INSTAGRAM", "https://www.instagram.com/basette.eu/", use_container_width=True)
 
-# --- DASHBOARD ENERGIA ---
-elif menu == "📈 DASHBOARD ENERGIA":
-    st.header("📈 Dashboard Energia | Basette Group")
-    # Sección reservada para construcción manual del usuario.
+# --- DASHBOARD Y RANKING (INTEGRACIÓN TOTAL) ---
+elif menu == "📈 DASHBOARD Y RANKING":
+    st.header("📊 Dashboard de Rendimiento y Ranking")
+    
+    try:
+        df_e, df_t = load_and_clean_ranking()
+
+        # --- FILTROS ESPECÍFICOS DE DASHBOARD ---
+        c_filt_1, c_filt_2, c_filt_3 = st.columns(3)
+        
+        anos = sorted(list(set(df_e['Año']) | set(df_t['Año'])))
+        meses = sorted(list(set(df_e['Mes']) | set(df_t['Mes'])))
+        comerciales_lista = sorted(list(set(df_e['Comercial']) | set(df_t['Comercial'])))
+        
+        with c_filt_1:
+            f_ano = st.selectbox("📅 Año", anos, index=len(anos)-1)
+        with c_filt_2:
+            f_mes = st.selectbox("📆 Mes", meses, index=len(meses)-1)
+        with c_filt_3:
+            f_com = st.multiselect("👤 Comerciales", options=comerciales_lista, default=comerciales_lista)
+
+        # Aplicar filtros
+        de = df_e[(df_e['Año'] == f_ano) & (df_e['Mes'] == f_mes) & (df_e['Comercial'].isin(f_com))]
+        dt = df_t[(df_t['Año'] == f_ano) & (df_t['Mes'] == f_mes) & (df_t['Comercial'].isin(f_com))]
+
+        # Pestañas de Visualización
+        tab_r, tab_e, tab_t = st.tabs(["🏆 RANKING", "⚡ ENERGÍA", "📱 TELCO"])
+
+        with tab_r:
+            re = de.groupby('Comercial')[['V_Luz', 'V_Gas']].sum()
+            rt = dt.groupby('Comercial')[['V_Fibra', 'V_Móvil']].sum()
+            rank = pd.concat([re, rt], axis=1).fillna(0)
+            rank['TOTAL'] = rank.sum(axis=1)
+            rank = rank.sort_values('TOTAL', ascending=False)
+
+            if not rank.empty:
+                ganador = rank.index[0]
+                total_ganador = int(rank.iloc[0]['TOTAL'])
+                st.markdown(f"""<div class="winner-card">👑 EL NÚMERO 1: {ganador.upper()} ({total_ganador} VENTAS) 👑</div>""", unsafe_allow_html=True)
+                
+                def asignar_medalla(n):
+                    if n == 0: return "🥇 Oro"
+                    elif n == 1: return "🥈 Plata"
+                    elif n == 2: return "🥉 Bronce"
+                    else: return "⭐"
+                
+                rank_visual = rank.reset_index()
+                rank_visual.insert(0, 'Puesto', [asignar_medalla(i) for i in range(len(rank_visual))])
+                st.table(rank_visual.style.format(precision=0))
+            else:
+                st.warning("No hay datos para esta selección.")
+
+        with tab_e:
+            col_e1, col_e2 = st.columns([1, 1.2])
+            with col_e1:
+                fig_e = px.pie(de, values='Total_Ene', names='Comercializadora', hole=0.5, title="Cuota de Energía")
+                fig_e.update_traces(textposition='outside', textinfo='label+percent')
+                st.plotly_chart(fig_e, use_container_width=True)
+            with col_e2:
+                fig_eb = px.bar(de.groupby('Comercial')['Total_Ene'].sum().reset_index().sort_values('Total_Ene'), x='Total_Ene', y='Comercial', orientation='h', text_auto=True, title="Ventas por Comercial (Energía)")
+                st.plotly_chart(fig_eb, use_container_width=True)
+
+        with tab_t:
+            col_t1, col_t2 = st.columns([1, 1.2])
+            with col_t1:
+                fig_t = px.pie(dt, values='Total_Tel', names='Operadora', hole=0.5, title="Cuota de Telco")
+                fig_t.update_traces(textposition='outside', textinfo='label+percent')
+                st.plotly_chart(fig_t, use_container_width=True)
+            with col_t2:
+                fig_tb = px.bar(dt.groupby('Comercial')[['V_Fibra', 'V_Móvil']].sum().reset_index(), x='Comercial', y=['V_Fibra', 'V_Móvil'], barmode='group', title="Mix de Telco")
+                st.plotly_chart(fig_tb, use_container_width=True)
+
+    except Exception as e:
+        st.error(f"Error cargando el Dashboard: {e}")
 
 # --- REPOSITORIO ---
 elif menu == "📂 REPOSITORIO":
