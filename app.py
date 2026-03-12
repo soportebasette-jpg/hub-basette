@@ -153,22 +153,22 @@ elif menu == "📊 PRECIOS":
         st.markdown('<div class="block-header">🌐 FIBRA Y MÓVIL</div>', unsafe_allow_html=True)
         fm_cols = st.columns(3)
         fibra_movil = [
-            ("600 Mb", "60 GB", "35€", "1 LÍNEA (10GB + 50GB)"),
-            ("600 Mb", "100 GB", "35€", "2 LÍNEAS (50GB c/u)"),
-            ("1 Gb", "120 GB", "38€", "1 LÍNEA (20GB + 100GB)")
+            ("600 Mb", "60 GB", "35€", "1 LÍNEA MÓVIL (60GB)"),
+            ("600 Mb", "100 GB", "35€", "2 LÍNEAS (10GB + 40GB)"),
+            ("1 Gb", "120 GB", "38€", "1 LÍNEA MÓVIL (120GB)")
         ]
         for i, (vel, gb, pre, lin) in enumerate(fibra_movil):
             with fm_cols[i % 3]:
-                st.markdown(f'<div class="price-card"><div class="price-title">{vel} + {lin}</div><div class="price-val">{pre}</div><div class="price-sub">{gb} de Datos</div></div>', unsafe_allow_html=True)
+                st.markdown(f'<div class="price-card"><div class="price-title">{vel} + {lin}</div><div class="price-val">{pre}</div><div class="price-sub">{gb} de Datos Totales</div></div>', unsafe_allow_html=True)
 
         st.markdown('<div class="block-header">📺 FIBRA, MÓVIL Y TV</div>', unsafe_allow_html=True)
         tv_cols = st.columns(3)
         planes_tv = [
             ("SOLO TV", "9.99€", "Streaming", "O2 TV"),
-            ("600 Mb + TV M+", "38€", "100 GB (50+50)", "1 LÍNEA"),
-            ("600 Mb + TV M+ + NETFLIX", "45€", "60 GB (10+50)", "1 LÍNEA"),
-            ("1 Gb + TV M+", "50€", "350 GB (150+200)", "1 LÍNEA"),
-            ("1 Gb + TV M+ + NETFLIX", "56€", "375 GB (175+200)", "1 LÍNEA")
+            ("600 Mb + TV M+", "38€", "100 GB (10GB+40GB)", "1 LÍNEA"),
+            ("600 Mb + TV M+ + NETFLIX", "45€", "60 GB (10GB+50GB)", "1 LÍNEA"),
+            ("1 Gb + TV M+", "50€", "350 GB (150GB+200GB)", "1 LÍNEA"),
+            ("1 Gb + TV M+ + NETFLIX", "56€", "375 GB (175GB+200GB)", "1 LÍNEA")
         ]
         for i, (vel, pre, gb, lin) in enumerate(planes_tv):
             with tv_cols[i % 3]:
@@ -263,70 +263,7 @@ elif menu == "📢 ANUNCIOS Y PLAN AMIGO":
 # --- DASHBOARD ENERGIA ---
 elif menu == "📈 DASHBOARD ENERGIA":
     st.header("📈 Dashboard Energia | Basette Group")
-    sheet_url = "https://docs.google.com/spreadsheets/d/1W-Eq63SnBBlOykJlP9XgASXDPpWQhQnVW-oFHUlSMcQ/export?format=csv"
-    
-    try:
-        df_raw = pd.read_csv(sheet_url)
-        
-        if 'FECHA DE CREACIÓN' in df_raw.columns:
-            df_raw['FECHA_DT'] = pd.to_datetime(df_raw['FECHA DE CREACIÓN'], dayfirst=True, errors='coerce')
-            df_raw['AÑO_INT'] = df_raw['FECHA_DT'].dt.year
-            meses_es_dict = {1:'Enero', 2:'Febrero', 3:'Marzo', 4:'Abril', 5:'Mayo', 6:'Junio', 
-                             7:'Julio', 8:'Agosto', 9:'Septiembre', 10:'Octubre', 11:'Noviembre', 12:'Diciembre'}
-            df_raw['MES_NOMBRE'] = df_raw['FECHA_DT'].dt.month.map(meses_es_dict)
-        
-        col_comp = 'COMPAÑIA' if 'COMPAÑIA' in df_raw.columns else 'COMERCIALIZADORA'
-        col_comercial = 'COMERCIAL' if 'COMERCIAL' in df_raw.columns else df_raw.columns[0]
-
-        with st.container():
-            f1, f2, f3, f4 = st.columns(4)
-            with f1:
-                lista_meses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
-                sel_mes = st.multiselect("Filtrar Meses", lista_meses, default=lista_meses)
-            with f2:
-                años_unicos = sorted(df_raw['AÑO_INT'].dropna().unique().astype(int).tolist())
-                sel_año = st.selectbox("Seleccionar Año", ["Todos"] + [str(a) for a in años_unicos])
-            with f3:
-                lista_comp = sorted(df_raw[col_comp].dropna().unique().tolist())
-                sel_comp = st.selectbox("Seleccionar Compañía", ["Todas"] + lista_comp)
-            with f4:
-                lista_comerciales = sorted(df_raw[col_comercial].dropna().unique().tolist())
-                sel_com = st.multiselect("Seleccionar Comerciales", lista_comerciales, default=lista_comerciales)
-
-        df = df_raw.copy()
-        if sel_mes: df = df[df['MES_NOMBRE'].isin(sel_mes)]
-        if sel_año != "Todos": df = df[df['AÑO_INT'] == int(sel_año)]
-        if sel_comp != "Todas": df = df[df[col_comp] == sel_comp]
-        if sel_com: df = df[df[col_comercial].isin(sel_com)]
-
-        st.markdown('<div class="block-header">📊 RESUMEN DE CIFRAS</div>', unsafe_allow_html=True)
-        m1, m2, m3 = st.columns(3)
-        luz_count = df['CUPS LUZ'].count() if 'CUPS LUZ' in df.columns else 0
-        gas_count = df['CUPS GAS'].count() if 'CUPS GAS' in df.columns else 0
-        m1.metric("VENTAS LUZ", f"{luz_count} ⚡")
-        m2.metric("VENTAS GAS", f"{gas_count} 🔥")
-        m3.metric("TOTAL GLOBAL", f"{luz_count + gas_count} ✅")
-
-        c_r1, c_r2 = st.columns(2)
-        with c_r1:
-            st.markdown('<div class="block-header">👑 VENTAS POR COMERCIAL</div>', unsafe_allow_html=True)
-            ranking = df.groupby(col_comercial).size().reset_index(name='Ventas').sort_values(by='Ventas', ascending=False)
-            fig_ranking = px.bar(ranking, x=col_comercial, y='Ventas', text='Ventas', color_discrete_sequence=['#d2ff00'], template="plotly_dark")
-            st.plotly_chart(fig_ranking, use_container_width=True)
-        
-        with c_r2:
-            st.markdown('<div class="block-header">🍩 VENTAS POR COMPAÑÍA</div>', unsafe_allow_html=True)
-            v_comp = df.groupby(col_comp).size().reset_index(name='Total')
-            fig_rosco = px.pie(v_comp, values='Total', names=col_comp, hole=.5, 
-                               color_discrete_sequence=["#d2ff00", "#9b59b6", "#f1c40f", "#e67e22", "#3498db"])
-            fig_rosco.update_traces(textinfo='percent+label')
-            st.plotly_chart(fig_rosco, use_container_width=True)
-
-        st.markdown('<div class="block-header">📋 DETALLE DE OPERACIONES</div>', unsafe_allow_html=True)
-        st.dataframe(df, use_container_width=True, hide_index=True)
-
-    except Exception as e:
-        st.error(f"Error al cargar dashboard: {e}")
+    # El contenido ha sido eliminado para construcción manual por el usuario.
 
 # --- REPOSITORIO ---
 elif menu == "📂 REPOSITORIO":
