@@ -153,25 +153,25 @@ elif menu == "📊 PRECIOS":
         st.markdown('<div class="block-header">🌐 FIBRA Y MÓVIL</div>', unsafe_allow_html=True)
         fm_cols = st.columns(3)
         fibra_movil = [
-            ("300 Mb", "40 GB", "30€", "1 LÍNEA"),
-            ("600 Mb", "60 GB", "35€", "1 LÍNEA"),
+            ("600 Mb", "60 GB", "35€", "1 LÍNEA (10GB + 50GB)"),
             ("600 Mb", "100 GB", "35€", "2 LÍNEAS (50GB c/u)"),
-            ("1 Gb", "120 GB", "38€", "1 LÍNEA"),
-            ("1 Gb", "200 GB", "43€", "2 LÍNEAS (100GB c/u)")
+            ("1 Gb", "120 GB", "38€", "1 LÍNEA (20GB + 100GB)")
         ]
         for i, (vel, gb, pre, lin) in enumerate(fibra_movil):
             with fm_cols[i % 3]:
-                st.markdown(f'<div class="price-card"><div class="price-title">{vel} + {lin}</div><div class="price-val">{pre}</div><div class="price-sub">{gb} de Datos Totales</div></div>', unsafe_allow_html=True)
+                st.markdown(f'<div class="price-card"><div class="price-title">{vel} + {lin}</div><div class="price-val">{pre}</div><div class="price-sub">{gb} de Datos</div></div>', unsafe_allow_html=True)
 
         st.markdown('<div class="block-header">📺 FIBRA, MÓVIL Y TV</div>', unsafe_allow_html=True)
         tv_cols = st.columns(3)
         planes_tv = [
             ("SOLO TV", "9.99€", "Streaming", "O2 TV"),
-            ("600 Mb + TV", "38€", "100 GB", "1 LÍNEA"),
-            ("1 Gb + TV", "43€", "200 GB", "1 LÍNEA")
+            ("600 Mb + TV M+", "38€", "100 GB (50+50)", "1 LÍNEA"),
+            ("600 Mb + TV M+ + NETFLIX", "45€", "60 GB (10+50)", "1 LÍNEA"),
+            ("1 Gb + TV M+", "50€", "350 GB (150+200)", "1 LÍNEA"),
+            ("1 Gb + TV M+ + NETFLIX", "56€", "375 GB (175+200)", "1 LÍNEA")
         ]
         for i, (vel, pre, gb, lin) in enumerate(planes_tv):
-            with tv_cols[i]:
+            with tv_cols[i % 3]:
                 st.markdown(f'<div class="price-card"><div class="price-title">{vel}</div><div class="price-val">{pre}</div><div class="price-sub">{gb} | {lin}</div></div>', unsafe_allow_html=True)
 
         st.markdown('<div class="block-header">➕ LÍNEAS ADICIONALES (TV)</div>', unsafe_allow_html=True)
