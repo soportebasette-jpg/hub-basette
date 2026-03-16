@@ -93,6 +93,7 @@ URL_TEL = get_csv_url("https://docs.google.com/spreadsheets/d/1HkI37_hUTZbsm_DwL
 
 @st.cache_data(ttl=60)
 def load_and_clean_ranking():
+    # Energía
     df_e = pd.read_csv(URL_ENE)
     df_e['Fecha Creación'] = pd.to_datetime(df_e['Fecha Creación'], dayfirst=True, errors='coerce')
     df_e = df_e.dropna(subset=['Comercial', 'Fecha Creación'])
@@ -102,13 +103,15 @@ def load_and_clean_ranking():
     df_e['V_Gas'] = df_e['CUPS Gas'].apply(lambda x: 1 if pd.notnull(x) and str(x).strip() != "" else 0)
     df_e['Total_Ene'] = df_e['V_Luz'] + df_e['V_Gas']
     
+    # Telefonía
     df_t = pd.read_csv(URL_TEL)
     df_t['Fecha Creación'] = pd.to_datetime(df_t['Fecha Creación'], dayfirst=True, errors='coerce')
     df_t = df_t.dropna(subset=['Comercial', 'Fecha Creación'])
     df_t['Año'] = df_t['Fecha Creación'].dt.year.astype(str)
     df_t['Mes'] = df_t['Fecha Creación'].dt.strftime('%m - %B')
     
-    def count_t(row):
+    # Procesamiento robusto de métricas Telco
+    def get_telco_metrics(row):
         f, m = 0, 0
         t = str(row.get('Tipo Tarifa', '')).lower()
         if 'fibramovil' in t or ('fibra' in t and 'movil' in t): f, m = 1, 1
@@ -116,13 +119,13 @@ def load_and_clean_ranking():
         elif 'movil' in t: m = 1
         for col in ['Línea 2', 'Línea 3', 'Línea 4', 'Línea 5']:
             if col in row and pd.notnull(row[col]) and str(row[col]).strip() != "": m += 1
-        return pd.Series([f, m, f + m])
-    
-    # CORRECCIÓN DEFINITIVA: Evitar duplicados de etiquetas en el eje
-    metrics = df_t.apply(count_t, axis=1)
-    df_t['V_Fibra'] = metrics[0]
-    df_t['V_Móvil'] = metrics[1]
-    df_t['Total_Tel'] = metrics[2]
+        return f, m, (f + m)
+
+    # Creamos las columnas directamente para evitar errores de índice o duplicados
+    res = df_t.apply(get_telco_metrics, axis=1)
+    df_t['V_Fibra'] = res.apply(lambda x: x[0])
+    df_t['V_Móvil'] = res.apply(lambda x: x[1])
+    df_t['Total_Tel'] = res.apply(lambda x: x[2])
     
     return df_e, df_t
 
@@ -353,8 +356,8 @@ elif menu == "📈 DASHBOARD Y RANKING":
     st.header("📊 Dashboard de Rendimiento y Ranking")
     try:
         df_e, df_t = load_and_clean_ranking()
-        c_filt_1, c_filt_2, c_filt_3 = st.columns(3)
         
+        c_filt_1, c_filt_2, c_filt_3 = st.columns(3)
         anos = sorted(list(set(df_e['Año']) | set(df_t['Año'])))
         meses = sorted(list(set(df_e['Mes']) | set(df_t['Mes'])))
         comerciales_lista = sorted(list(set(df_e['Comercial']) | set(df_t['Comercial'])))
@@ -374,9 +377,10 @@ elif menu == "📈 DASHBOARD Y RANKING":
         with tab_r:
             re = de.groupby('Comercial')[['V_Luz', 'V_Gas']].sum()
             rt = dt.groupby('Comercial')[['V_Fibra', 'V_Móvil']].sum()
-            # Unimos asegurando que no haya conflictos de etiquetas duplicadas
+            
+            # Combinación de datos para el ranking
             rank = pd.concat([re, rt], axis=1).fillna(0)
-            rank['TOTAL'] = rank.sum(axis=1)
+            rank['TOTAL'] = rank['V_Luz'] + rank['V_Gas'] + rank['V_Fibra'] + rank['V_Móvil']
             rank = rank.sort_values('TOTAL', ascending=False)
 
             if not rank.empty:
@@ -399,22 +403,28 @@ elif menu == "📈 DASHBOARD Y RANKING":
         with tab_e:
             col_e1, col_e2 = st.columns([1, 1.2])
             with col_e1:
-                fig_e = px.pie(de, values='Total_Ene', names='Comercializadora', hole=0.5, title="Cuota de Energía")
-                fig_e.update_traces(textposition='outside', textinfo='label+percent')
-                st.plotly_chart(fig_e, use_container_width=True)
+                if not de.empty:
+                    fig_e = px.pie(de, values='Total_Ene', names='Comercializadora', hole=0.5, title="Cuota de Energía")
+                    fig_e.update_traces(textposition='outside', textinfo='label+percent')
+                    st.plotly_chart(fig_e, use_container_width=True)
+                else: st.info("Sin datos de energía.")
             with col_e2:
-                fig_eb = px.bar(de.groupby('Comercial')['Total_Ene'].sum().reset_index().sort_values('Total_Ene'), x='Total_Ene', y='Comercial', orientation='h', text_auto=True, title="Ventas Energía")
-                st.plotly_chart(fig_eb, use_container_width=True)
+                if not de.empty:
+                    fig_eb = px.bar(de.groupby('Comercial')['Total_Ene'].sum().reset_index().sort_values('Total_Ene'), x='Total_Ene', y='Comercial', orientation='h', text_auto=True, title="Ventas Energía")
+                    st.plotly_chart(fig_eb, use_container_width=True)
 
         with tab_t:
             col_t1, col_t2 = st.columns([1, 1.2])
             with col_t1:
-                fig_t = px.pie(dt, values='Total_Tel', names='Operadora', hole=0.5, title="Cuota de Telco")
-                fig_t.update_traces(textposition='outside', textinfo='label+percent')
-                st.plotly_chart(fig_t, use_container_width=True)
+                if not dt.empty:
+                    fig_t = px.pie(dt, values='Total_Tel', names='Operadora', hole=0.5, title="Cuota de Telco")
+                    fig_t.update_traces(textposition='outside', textinfo='label+percent')
+                    st.plotly_chart(fig_t, use_container_width=True)
+                else: st.info("Sin datos de telefonía.")
             with col_t2:
-                fig_tb = px.bar(dt.groupby('Comercial')[['V_Fibra', 'V_Móvil']].sum().reset_index(), x='Comercial', y=['V_Fibra', 'V_Móvil'], barmode='group', title="Mix de Telco")
-                st.plotly_chart(fig_tb, use_container_width=True)
+                if not dt.empty:
+                    fig_tb = px.bar(dt.groupby('Comercial')[['V_Fibra', 'V_Móvil']].sum().reset_index(), x='Comercial', y=['V_Fibra', 'V_Móvil'], barmode='group', title="Mix de Telco")
+                    st.plotly_chart(fig_tb, use_container_width=True)
 
     except Exception as e:
         st.error(f"Error cargando el Dashboard: {e}")
