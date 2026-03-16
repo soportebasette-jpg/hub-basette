@@ -116,11 +116,13 @@ def load_and_clean_ranking():
         elif 'movil' in t: m = 1
         for col in ['Línea 2', 'Línea 3', 'Línea 4', 'Línea 5']:
             if col in row and pd.notnull(row[col]) and str(row[col]).strip() != "": m += 1
-        return pd.Series({'V_Fibra': f, 'V_Móvil': m, 'Total_Tel': f + m})
+        return pd.Series([f, m, f + m])
     
-    # CORRECCIÓN AQUÍ: Aplicamos y concatenamos las nuevas columnas explícitamente
-    metrics_df = df_t.apply(count_t, axis=1)
-    df_t = pd.concat([df_t, metrics_df], axis=1)
+    # CORRECCIÓN DEFINITIVA: Evitar duplicados de etiquetas en el eje
+    metrics = df_t.apply(count_t, axis=1)
+    df_t['V_Fibra'] = metrics[0]
+    df_t['V_Móvil'] = metrics[1]
+    df_t['Total_Tel'] = metrics[2]
     
     return df_e, df_t
 
@@ -372,6 +374,7 @@ elif menu == "📈 DASHBOARD Y RANKING":
         with tab_r:
             re = de.groupby('Comercial')[['V_Luz', 'V_Gas']].sum()
             rt = dt.groupby('Comercial')[['V_Fibra', 'V_Móvil']].sum()
+            # Unimos asegurando que no haya conflictos de etiquetas duplicadas
             rank = pd.concat([re, rt], axis=1).fillna(0)
             rank['TOTAL'] = rank.sum(axis=1)
             rank = rank.sort_values('TOTAL', ascending=False)
