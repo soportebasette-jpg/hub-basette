@@ -110,15 +110,20 @@ def load_and_clean_ranking():
     
     def count_t(row):
         f, m = 0, 0
-        t = str(row['Tipo Tarifa']).lower()
+        t = str(row.get('Tipo Tarifa', '')).lower()
         if 'fibramovil' in t or ('fibra' in t and 'movil' in t): f, m = 1, 1
         elif 'fibra' in t: f = 1
         elif 'movil' in t: m = 1
         for col in ['Línea 2', 'Línea 3', 'Línea 4', 'Línea 5']:
             if col in row and pd.notnull(row[col]) and str(row[col]).strip() != "": m += 1
-        return pd.Series([f, m, f + m])
+        return pd.Series([f, m, f + m], index=['V_Fibra', 'V_Móvil', 'Total_Tel'])
     
-    df_t[['V_Fibra', 'V_Móvil', 'Total_Tel']] = df_t.apply(count_t, axis=1)
+    # CORRECCIÓN AQUÍ: Se asegura el despliegue correcto de las series
+    res_t = df_t.apply(count_t, axis=1)
+    df_t['V_Fibra'] = res_t['V_Fibra']
+    df_t['V_Móvil'] = res_t['V_Móvil']
+    df_t['Total_Tel'] = res_t['Total_Tel']
+    
     return df_e, df_t
 
 # 3. BASE DE DATOS LUZ
