@@ -167,6 +167,12 @@ with st.sidebar:
 # --- CRM ---
 if menu == "🚀 CRM":
     st.header("Portales de Gestión")
+    
+    # AÑADIDO: CONTROL LABORAL
+    st.markdown('<div class="block-header">🕒 CONTROL LABORAL</div>', unsafe_allow_html=True)
+    st.markdown(f'''<div style="background:#161b22; padding:15px; border-radius:10px; border:2px solid #d2ff00; text-align:center; margin-bottom:10px;"><h4 style="color:white; margin:0;">REGISTRO DE JORNADA</h4></div>''', unsafe_allow_html=True)
+    st.link_button(f"ENTRAR A CLOCKIFY", "https://app.clockify.me/kiosk/69b84b902ad912a05f4581bb/basette", use_container_width=True)
+
     st.markdown('<div class="block-header">⭐ MARCADOR</div>', unsafe_allow_html=True)
     st.markdown(f'''<div style="background:#161b22; padding:15px; border-radius:10px; border:2px solid #d2ff00; text-align:center; margin-bottom:10px;"><h4 style="color:white; margin:0;">MARCADOR PRINCIPAL</h4></div>''', unsafe_allow_html=True)
     st.link_button(f"ENTRAR AL MARCADOR", "https://grupobasette.vozipcenter.com/", use_container_width=True)
