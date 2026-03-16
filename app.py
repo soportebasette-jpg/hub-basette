@@ -116,13 +116,11 @@ def load_and_clean_ranking():
         elif 'movil' in t: m = 1
         for col in ['Línea 2', 'Línea 3', 'Línea 4', 'Línea 5']:
             if col in row and pd.notnull(row[col]) and str(row[col]).strip() != "": m += 1
-        return pd.Series([f, m, f + m])
+        return pd.Series({'V_Fibra': f, 'V_Móvil': m, 'Total_Tel': f + m})
     
-    # CORRECCIÓN PARA EVITAR EL ERROR DE LONGITUD DE COLUMNAS
-    tel_metrics = df_t.apply(count_t, axis=1)
-    df_t['V_Fibra'] = tel_metrics[0]
-    df_t['V_Móvil'] = tel_metrics[1]
-    df_t['Total_Tel'] = tel_metrics[2]
+    # CORRECCIÓN AQUÍ: Aplicamos y concatenamos las nuevas columnas explícitamente
+    metrics_df = df_t.apply(count_t, axis=1)
+    df_t = pd.concat([df_t, metrics_df], axis=1)
     
     return df_e, df_t
 
