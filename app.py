@@ -168,7 +168,7 @@ with st.sidebar:
 if menu == "🚀 CRM":
     st.header("Portales de Gestión")
     
-    # CONTROL LABORAL (URL ACTUALIZADA)
+    # CONTROL LABORAL
     st.markdown('<div class="block-header">🕒 CONTROL LABORAL</div>', unsafe_allow_html=True)
     st.markdown(f'''<div style="background:#161b22; padding:15px; border-radius:10px; border:2px solid #d2ff00; text-align:center; margin-bottom:10px;"><h4 style="color:white; margin:0;">REGISTRO DE JORNADA</h4></div>''', unsafe_allow_html=True)
     st.link_button(f"ENTRAR AL FORMULARIO", "https://forms.gle/icG7jFPoyGmFD6vC8", use_container_width=True)
@@ -185,6 +185,7 @@ if menu == "🚀 CRM":
             st.markdown(f'''<div style="background:#161b22; padding:15px; border-radius:10px; border:1px solid #30363d; text-align:center; margin-bottom:10px;"><h4 style="color:white; margin:0;">{p["n"]}</h4></div>''', unsafe_allow_html=True)
             st.link_button(f"ENTRAR", p["u"], use_container_width=True)
     st.markdown("---")
+    
     col_izq, col_der = st.columns(2)
     with col_izq:
         st.markdown('<div class="block-header">🛡️ 🚨 ALARMAS</div>', unsafe_allow_html=True)
@@ -192,8 +193,14 @@ if menu == "🚀 CRM":
         st.link_button("ENTRAR", "https://partners.segurma.com/", use_container_width=True)
     with col_der:
         st.markdown('<div class="block-header">📶 📱 TELECOMUNICACIONES</div>', unsafe_allow_html=True)
-        st.markdown('<div style="background:#161b22; padding:15px; border-radius:10px; border:1px solid #30363d; text-align:center; margin-bottom:10px;"><h4 style="color:white; margin:0;">O2</h4></div>', unsafe_allow_html=True)
-        st.link_button("ENTRAR", "https://o2online.es/auth/login/", use_container_width=True)
+        # Bloque Telecomunicaciones con O2 y Lowi
+        c_t1, c_t2 = st.columns(2)
+        with c_t1:
+            st.markdown('<div style="background:#161b22; padding:15px; border-radius:10px; border:1px solid #30363d; text-align:center; margin-bottom:10px;"><h4 style="color:white; margin:0;">O2</h4></div>', unsafe_allow_html=True)
+            st.link_button("ENTRAR O2", "https://o2online.es/auth/login/", use_container_width=True)
+        with c_t2:
+            st.markdown('<div style="background:#161b22; padding:15px; border-radius:10px; border:1px solid #30363d; text-align:center; margin-bottom:10px;"><h4 style="color:white; margin:0;">LOWI</h4></div>', unsafe_allow_html=True)
+            st.link_button("ENTRAR LOWI", "https://vodafone.topgestion.es/login", use_container_width=True)
 
 # --- PRECIOS ---
 elif menu == "📊 PRECIOS":
@@ -445,6 +452,16 @@ elif menu == "📂 REPOSITORIO":
                 st.download_button("📖 DESCARGAR MANUAL", f, file_name="Manual_Marcador.pdf")
     
     st.markdown("---")
+    
+    # DOCUMENTACIÓN LOWI (SOLICITADO)
+    with st.expander("📁 DOCUMENTACIÓN LOWI"):
+        archivo_lowi = "manuales/TARIFAS_LOWI_MARZO2026.pdf"
+        if os.path.exists(archivo_lowi):
+            with open(archivo_lowi, "rb") as f:
+                st.download_button("📥 DESCARGAR TARIFAS LOWI MARZO 2026", f, file_name="TARIFAS_LOWI_MARZO2026.pdf")
+        else:
+            st.warning("Archivo TARIFAS_LOWI_MARZO2026.pdf no encontrado en la carpeta manuales.")
+
     for c in ["GANA ENERGÍA", "NATURGY", "TOTAL", "ENDESA", "O2"]:
         with st.expander(f"📁 DOCUMENTACIÓN {c}"):
             if os.path.exists("manuales"):
