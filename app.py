@@ -110,7 +110,6 @@ def load_and_clean_ranking():
     df_t['Año'] = df_t['Fecha Creación'].dt.year.astype(str)
     df_t['Mes'] = df_t['Fecha Creación'].dt.strftime('%m - %B')
     
-    # Procesamiento robusto de métricas Telco
     def get_telco_metrics(row):
         f, m = 0, 0
         t = str(row.get('Tipo Tarifa', '')).lower()
@@ -121,7 +120,6 @@ def load_and_clean_ranking():
             if col in row and pd.notnull(row[col]) and str(row[col]).strip() != "": m += 1
         return f, m, (f + m)
 
-    # Creamos las columnas directamente para evitar errores de índice o duplicados
     res = df_t.apply(get_telco_metrics, axis=1)
     df_t['V_Fibra'] = res.apply(lambda x: x[0])
     df_t['V_Móvil'] = res.apply(lambda x: x[1])
@@ -167,8 +165,6 @@ with st.sidebar:
 # --- CRM ---
 if menu == "🚀 CRM":
     st.header("Portales de Gestión")
-    
-    # CONTROL LABORAL
     st.markdown('<div class="block-header">🕒 CONTROL LABORAL</div>', unsafe_allow_html=True)
     st.markdown(f'''<div style="background:#161b22; padding:15px; border-radius:10px; border:2px solid #d2ff00; text-align:center; margin-bottom:10px;"><h4 style="color:white; margin:0;">REGISTRO DE JORNADA</h4></div>''', unsafe_allow_html=True)
     st.link_button(f"ENTRAR AL FORMULARIO", "https://forms.gle/icG7jFPoyGmFD6vC8", use_container_width=True)
@@ -193,7 +189,6 @@ if menu == "🚀 CRM":
         st.link_button("ENTRAR", "https://partners.segurma.com/", use_container_width=True)
     with col_der:
         st.markdown('<div class="block-header">📶 📱 TELECOMUNICACIONES</div>', unsafe_allow_html=True)
-        # Bloque Telecomunicaciones con O2 y Lowi
         c_t1, c_t2 = st.columns(2)
         with c_t1:
             st.markdown('<div style="background:#161b22; padding:15px; border-radius:10px; border:1px solid #30363d; text-align:center; margin-bottom:10px;"><h4 style="color:white; margin:0;">O2</h4></div>', unsafe_allow_html=True)
@@ -390,8 +385,6 @@ elif menu == "📈 DASHBOARD Y RANKING":
         with tab_r:
             re = de.groupby('Comercial')[['V_Luz', 'V_Gas']].sum()
             rt = dt.groupby('Comercial')[['V_Fibra', 'V_Móvil']].sum()
-            
-            # Combinación de datos para el ranking
             rank = pd.concat([re, rt], axis=1).fillna(0)
             rank['TOTAL'] = rank['V_Luz'] + rank['V_Gas'] + rank['V_Fibra'] + rank['V_Móvil']
             rank = rank.sort_values('TOTAL', ascending=False)
@@ -453,7 +446,7 @@ elif menu == "📂 REPOSITORIO":
     
     st.markdown("---")
     
-    # DOCUMENTACIÓN LOWI (SOLICITADO)
+    # DOCUMENTACIÓN LOWI
     with st.expander("📁 DOCUMENTACIÓN LOWI"):
         archivo_lowi = "manuales/TARIFAS_LOWI_MARZO2026.pdf"
         if os.path.exists(archivo_lowi):
@@ -462,11 +455,33 @@ elif menu == "📂 REPOSITORIO":
         else:
             st.warning("Archivo TARIFAS_LOWI_MARZO2026.pdf no encontrado en la carpeta manuales.")
 
+    # CAPTURAS O2 PARA ENVIAR A CLIENTES (SOLICITADO)
+    with st.expander("📁 CAPTURAS O2 PARA ENVIAR A CLIENTES"):
+        st.write("Visualiza y descarga las tarifas actuales de O2 para enviar:")
+        capturas = [
+            {"f": "600Mb_35Gb y TV.png", "n": "Fibra 600Mb + 35GB + TV"},
+            {"f": "600Mb_60Gb y TV.png", "n": "Fibra 600Mb + 60GB + TV"},
+            {"f": "1Gb_30Gb y TV.png", "n": "Fibra 1Gb + 350GB + TV"},
+            {"f": "1Gb_375Gb y TV.png", "n": "Fibra 1Gb + 375GB + TV"},
+            {"f": "LINEAS MOVILES ADICIONALES.png", "n": "Lineas Moviles Adicionales"}
+        ]
+        
+        cap_cols = st.columns(2)
+        for i, cap in enumerate(capturas):
+            with cap_cols[i % 2]:
+                path_cap = f"manuales/{cap['f']}"
+                if os.path.exists(path_cap):
+                    st.image(path_cap, caption=cap['n'], use_column_width=True)
+                    with open(path_cap, "rb") as f_cap:
+                        st.download_button(f"📥 Descargar {cap['f']}", f_cap, file_name=cap['f'], key=f"btn_{cap['f']}")
+                else:
+                    st.error(f"No encontrado: {cap['f']}")
+
     for c in ["GANA ENERGÍA", "NATURGY", "TOTAL", "ENDESA", "O2"]:
         with st.expander(f"📁 DOCUMENTACIÓN {c}"):
             if os.path.exists("manuales"):
                 busq = "total" if c == "TOTAL" else c.split()[0].lower()
-                archivos = [f for f in os.listdir("manuales") if busq in f.lower() and not f.lower().endswith('.png')]
+                archivos = [f for f in os.listdir("manuales") if busq in f.lower() and not f.lower().endswith(('.png', '.jpg'))]
                 for fn in archivos:
                     with open(f"manuales/{fn}", "rb") as f:
                         st.download_button(f"📥 {fn}", f, file_name=fn, key=f"b_{fn}")
