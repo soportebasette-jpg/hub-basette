@@ -17,23 +17,19 @@ st.markdown("""
     <style>
     .stApp { background-color: #0d1117; color: #ffffff; }
     header { visibility: hidden; }
-    
     label[data-testid="stWidgetLabel"] p {
         color: #d2ff00 !important;
         font-weight: 900 !important;
         font-size: 1.25rem !important;
     }
-    
     button p, .stDownloadButton button p, .stButton button p { 
         color: #000000 !important; 
         font-weight: 900 !important; 
     }
-    
     button, .stDownloadButton button, .stButton button { 
         background-color: #ffffff !important; 
         border: 2px solid #d2ff00 !important; 
     }
-    
     .stTable { background-color: white !important; border-radius: 10px; }
     .stTable td, .stTable th { color: #000000 !important; text-align: center !important; }
     
@@ -85,21 +81,90 @@ st.markdown("""
         background-color: #161b22 !important;
         color: white !important;
     }
+
+    /* Estilo para el logo flotante abajo a la derecha */
+    .fixed-logo {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        z-index: 100;
+    }
     </style>
     """, unsafe_allow_html=True)
 
-# --- CABECERA CON LOGO ---
-# Usamos columnas para que el título y el logo compartan la misma línea
-col_tit, col_log = st.columns([3, 1])
+# --- LOGO SUPERIOR DERECHA ---
+col_main, col_logo_top = st.columns([10, 2])
+with col_logo_top:
+    if os.path.exists("tecomparotodo_logo.jpg"):
+        st.image("tecomparotodo_logo.jpg", use_container_width=True)
 
-with col_tit:
-    st.title("Portales de Gestión")
+# --- LOGO INFERIOR DERECHA (FLOTANTE) ---
+if os.path.exists("tecomparotodo_logo.jpg"):
+    st.markdown(f'''
+        <div class="fixed-logo">
+            <img src="data:image/jpeg;base64,{st.image("tecomparotodo_logo.jpg", width=120) if False else ""}" 
+            style="width:120px; border-radius:10px; border: 1px solid #d2ff00;">
+        </div>
+    ''', unsafe_allow_html=True)
+    # Nota: Para evitar interferir con el renderizado, usamos st.image en un contenedor abajo
+    with st.container():
+        _, col_bot_logo = st.columns([8, 1])
+        with col_bot_logo:
+             st.image("tecomparotodo_logo.jpg", width=100)
 
-with col_log:
-    # Verificamos la extensión .jpeg que es la que tienes en tu carpeta
-    logo_path = "tecomparotodo_logo.jpeg"
-    if os.path.exists(logo_path):
-        st.image(logo_path, width=150)
+# --- FUNCIONES DE DATOS DASHBOARD ---
+def get_csv_url(url):
+    return url.replace('/edit?usp=sharing', '/export?format=csv').split('&ouid=')[0].split('?')[0] + '/export?format=csv'
+
+URL_ENE = get_csv_url("https://docs.google.com/spreadsheets/d/1W-Eq63SnBBlOykJlP9XgASXDPpWQhQnVW-oFHUlSMcQ/edit?usp=sharing")
+URL_TEL = get_csv_url("https://docs.google.com/spreadsheets/d/1HkI37_hUTZbsm_DwLjbi2kMTKcC23QsV/edit?usp=sharing")
+
+@st.cache_data(ttl=60)
+def load_and_clean_ranking():
+    df_e = pd.read_csv(URL_ENE)
+    df_e['Fecha Creación'] = pd.to_datetime(df_e['Fecha Creación'], dayfirst=True, errors='coerce')
+    df_e = df_e.dropna(subset=['Comercial', 'Fecha Creación'])
+    df_e['Año'] = df_e['Fecha Creación'].dt.year.astype(str)
+    df_e['Mes'] = df_e['Fecha Creación'].dt.strftime('%m - %B')
+    df_e['V_Luz'] = df_e['CUPS Luz'].apply(lambda x: 1 if pd.notnull(x) and str(x).strip() != "" else 0)
+    df_e['V_Gas'] = df_e['CUPS Gas'].apply(lambda x: 1 if pd.notnull(x) and str(x).strip() != "" else 0)
+    df_e['Total_Ene'] = df_e['V_Luz'] + df_e['V_Gas']
+    
+    df_t = pd.read_csv(URL_TEL)
+    df_t['Fecha Creación'] = pd.to_datetime(df_t['Fecha Creación'], dayfirst=True, errors='coerce')
+    df_t = df_t.dropna(subset=['Comercial', 'Fecha Creación'])
+    df_t['Año'] = df_t['Fecha Creación'].dt.year.astype(str)
+    df_t['Mes'] = df_t['Fecha Creación'].dt.strftime('%m - %B')
+    
+    def get_telco_metrics(row):
+        f, m = 0, 0
+        t = str(row.get('Tipo Tarifa', '')).lower()
+        if 'fibramovil' in t or ('fibra' in t and 'movil' in t): f, m = 1, 1
+        elif 'fibra' in t: f = 1
+        elif 'movil' in t: m = 1
+        for col in ['Línea 2', 'Línea 3', 'Línea 4', 'Línea 5']:
+            if col in row and pd.notnull(row[col]) and str(row[col]).strip() != "": m += 1
+        return f, m, (f + m)
+
+    res = df_t.apply(get_telco_metrics, axis=1)
+    df_t['V_Fibra'] = res.apply(lambda x: x[0])
+    df_t['V_Móvil'] = res.apply(lambda x: x[1])
+    df_t['Total_Tel'] = res.apply(lambda x: x[2])
+    
+    return df_e, df_t
+
+# 3. BASE DE DATOS LUZ (CON IBERDROLA)
+tarifas_luz = [
+    {"PRIORIDAD": 1, "COMPAÑÍA": "GANA ENERGÍA", "TARIFA": "24H", "P1": 0.089, "P2": 0.089, "ENERGIA": 0.129, "EXCEDENTE": 0.05, "DTO": "0%", "BATERIA": "SI_GRATIS", "logo": "manuales/logo_gana.png"},
+    {"PRIORIDAD": 1, "COMPAÑÍA": "GANA ENERGÍA", "TARIFA": "3T", "P1": 0.089, "P2": 0.089, "ENERGIA": "0,181/0,114/0,090", "EXCEDENTE": 0.05, "DTO": "0%", "BATERIA": "SI_GRATIS", "logo": "manuales/logo_gana.png"},
+    {"PRIORIDAD": 2, "COMPAÑÍA": "NATURGY", "TARIFA": "24H (POR USO)", "P1": 0.123, "P2": 0.037, "ENERGIA": 0.109, "EXCEDENTE": 0.06, "DTO": "0%", "BATERIA": "SI_GRATIS", "logo": "manuales/logo_naturgy.png"},
+    {"PRIORIDAD": 2, "COMPAÑÍA": "NATURGY", "TARIFA": "3T (TARIF NOCHE)", "P1": 0.123, "P2": 0.037, "ENERGIA": "0,180/0,107/0,718", "EXCEDENTE": 0.06, "DTO": "0%", "BATERIA": "SI_GRATIS", "logo": "manuales/logo_naturgy.png"},
+    {"PRIORIDAD": 3, "COMPAÑÍA": "IBERDROLA", "TARIFA": "PLAN ONLINE", "P1": 0.101, "P2": 0.041, "ENERGIA": 0.112, "EXCEDENTE": 0.05, "DTO": "0%", "BATERIA": "SI", "logo": "manuales/logo_iberdrola.png"},
+    {"PRIORIDAD": 3, "COMPAÑÍA": "TOTAL LUZ", "TARIFA": "24H (A TU AIRE)", "P1": 0.081, "P2": 0.081, "ENERGIA": 0.114, "EXCEDENTE": 0.07, "DTO": "0%", "BATERIA": "NO", "logo": "manuales/logo_total.png"},
+    {"PRIORIDAD": 4, "COMPAÑÍA": "ENDESA", "TARIFA": "SOLAR", "P1": 0.093, "P2": 0.093, "ENERGIA": 0.138, "EXCEDENTE": 0.06, "DTO": "-7%", "BATERIA": "SI_2€", "logo": "manuales/logo_endesa.png"},
+    {"PRIORIDAD": 4, "COMPAÑÍA": "ENDESA", "TARIFA": "24H", "P1": 0.093, "P2": 0.093, "ENERGIA": 0.119, "EXCEDENTE": "NO TIENE", "DTO": "0%", "BATERIA": "NO", "logo": "manuales/logo_endesa.png"},
+    {"PRIORIDAD": 4, "COMPAÑÍA": "ENDESA", "TARIFA": "TU CASA 50", "P1": 0.093, "P2": 0.093, "ENERGIA": "HPROMO:0,076 RESTO:0,152", "EXCEDENTE": "NO TIENE", "DTO": "0%", "BATERIA": "NO", "logo": "manuales/logo_endesa.png"}
+]
 
 # 4. LOGIN
 LOGO_PRINCIPAL = "1000233813.jpg"
@@ -126,6 +191,7 @@ with st.sidebar:
 
 # --- SECCIONES ---
 if menu == "🚀 CRM":
+    st.header("Portales de Gestión")
     st.markdown('<div class="block-header">🕒 CONTROL LABORAL</div>', unsafe_allow_html=True)
     st.markdown(f'''<div style="background:#161b22; padding:15px; border-radius:10px; border:2px solid #d2ff00; text-align:center; margin-bottom:10px;"><h4 style="color:white; margin:0;">REGISTRO DE JORNADA</h4></div>''', unsafe_allow_html=True)
     st.link_button(f"ENTRAR AL FORMULARIO", "https://forms.gle/icG7jFPoyGmFD6vC8", use_container_width=True)
@@ -188,5 +254,130 @@ elif menu == "📊 PRECIOS":
             with fm_cols[i % 3]:
                 st.markdown(f'<div class="price-card"><div class="price-title">{vel} + {lin}</div><div class="price-val">{pre}</div><div class="price-sub">Conexión de Alta Velocidad</div></div>', unsafe_allow_html=True)
 
-# Nota: El resto de secciones (COMPARADOR, DASHBOARD, etc.) siguen igual. 
-# Solo asegúrate de copiar el resto de tu código original aquí debajo.
+elif menu == "⚖️ COMPARADOR":
+    st.header("Estudio de Ahorro Personalizado")
+    c1, c2 = st.columns(2)
+    with c1:
+        cliente = st.text_input("Nombre del cliente", "Nombre Apellidos")
+        f_act = st.number_input("Factura actual con IVA (EUR)", value=0.0)
+        potencia = st.number_input("Potencia contratada (kW)", value=4.6)
+        dias_factura = st.number_input("Días del periodo de factura", value=30)
+    with c2:
+        comp_sel = st.selectbox("Compañía Propuesta", sorted(list(set(t["COMPAÑÍA"] for t in tarifas_luz))))
+        tarifas_f = [t["TARIFA"] for t in tarifas_luz if t["COMPAÑÍA"] == comp_sel]
+        tarifa_sel_nombre = st.selectbox("Tarifa Seleccionada", tarifas_f)
+        sel = next(t for t in tarifas_luz if t["COMPAÑÍA"] == comp_sel and t["TARIFA"] == tarifa_sel_nombre)
+        if os.path.exists(sel["logo"]): st.image(sel["logo"], width=120)
+        consumo = st.number_input("Consumo del periodo (kWh)", value=0.0)
+
+    p_calc = float(str(sel['ENERGIA']).split('/')[0].replace(',', '.')) if isinstance(sel['ENERGIA'], str) else sel['ENERGIA']
+    coste_p = (potencia * sel["P1"] * dias_factura) + (potencia * sel["P2"] * dias_factura)
+    coste_e = consumo * p_calc
+    coste_total_iva = (coste_p + coste_e) * 1.21
+    ahorro = f_act - coste_total_iva
+
+    st.info(f"**Tarifa:** {tarifa_sel_nombre} | Energía: **{sel['ENERGIA']}** €/kWh")
+    st.markdown(f'<div style="background:#d2ff00; padding:20px; border-radius:10px; text-align:center;"><h2 style="color:black;">AHORRO ESTIMADO: {ahorro:.2f} €</h2></div>', unsafe_allow_html=True)
+    
+    if st.button("GENERAR ESTUDIO PDF PROFESIONAL"):
+        pdf = FPDF()
+        pdf.add_page()
+        if os.path.exists(LOGO_PRINCIPAL): pdf.image(LOGO_PRINCIPAL, 10, 8, 33)
+        pdf.ln(30); pdf.set_font("Arial", "B", 18); pdf.cell(190, 10, "ESTUDIO COMPARATIVO DE AHORRO", ln=True, align="C")
+        pdf.ln(5); pdf.set_font("Arial", "B", 11); pdf.cell(190, 8, f" CLIENTE: {cliente.upper()}", ln=True, fill=True)
+        pdf.set_font("Arial", "", 10); pdf.cell(95, 8, f"Fecha: {datetime.now().strftime('%d/%m/%Y')}", border=1)
+        pdf.cell(95, 8, f"Periodo: {dias_factura} dias", border=1, ln=True)
+        pdf.cell(95, 10, "Factura Actual", border=1); pdf.cell(95, 10, f"{f_act:.2f} EUR", border=1, ln=True)
+        pdf.cell(95, 10, "Nueva Factura", border=1); pdf.cell(95, 10, f"{coste_total_iva:.2f} EUR", border=1, ln=True)
+        pdf.ln(5); pdf.set_fill_color(210, 255, 0); pdf.set_font("Arial", "B", 14)
+        pdf.cell(190, 15, f"AHORRO TOTAL: {ahorro:.2f} EUR", ln=True, align="C", fill=True)
+        st.download_button(label="📥 DESCARGAR ESTUDIO PDF", data=pdf.output(dest='S').encode('latin-1'), file_name=f"Estudio_{cliente}.pdf")
+
+elif menu == "📢 ANUNCIOS Y PLAN AMIGO":
+    st.header("📢 Anuncios y Plan Amigo")
+    st.markdown('<div class="block-header">🎁 PLAN AMIGO</div>', unsafe_allow_html=True)
+    col1, col2 = st.columns(2)
+    with col1:
+        st.subheader("Enlace Plan Amigo")
+        st.code("https://forms.gle/mU6XzRvywDoBQ5Q47")
+        st.link_button("Ir al Formulario", "https://forms.gle/mU6XzRvywDoBQ5Q47")
+    with col2:
+        if os.path.exists(QR_PLAN_AMIGO):
+            st.image(QR_PLAN_AMIGO, width=250)
+            with open(QR_PLAN_AMIGO, "rb") as file:
+                st.download_button("Descargar QR", file, "qr-plan-amigo.png")
+
+    st.markdown('<div class="block-header">🖼️ MATERIAL PUBLICITARIO</div>', unsafe_allow_html=True)
+    path_anuncios = "anunciosbasette/"
+    # LISTA ACTUALIZADA CON LOS NUEVOS ARCHIVOS DE anunciosbasette
+    lista_anuncios = [
+        {"file": "Anuncio1_qr.png", "name": "Anuncio 1 QR"},
+        {"file": "Anuncio2_qr.png", "name": "Anuncio 2 QR"},
+        {"file": "PUBLI3.jpg", "name": "Publicidad 3"},
+        {"file": "tarifas_energia.png", "name": "Tarifas Energía 2026"},
+        {"file": "promo_fibra.png", "name": "Promo Fibra Basette"}
+    ]
+    
+    cols_an = st.columns(3)
+    for idx, item in enumerate(lista_anuncios):
+        with cols_an[idx % 3]:
+            full_path = f"{path_anuncios}{item['file']}"
+            if os.path.exists(full_path):
+                st.image(full_path, use_container_width=True)
+                with open(full_path, "rb") as file:
+                    st.download_button(label=f"Descargar {item['name']}", data=file, file_name=item['file'], key=f"dl_{idx}")
+
+elif menu == "📈 DASHBOARD Y RANKING":
+    st.header("📊 Dashboard de Rendimiento y Ranking")
+    try:
+        df_e, df_t = load_and_clean_ranking()
+        c_filt_1, c_filt_2, c_filt_3 = st.columns(3)
+        anos = sorted(list(set(df_e['Año']) | set(df_t['Año'])))
+        meses = sorted(list(set(df_e['Mes']) | set(df_t['Mes'])))
+        comerciales_lista = sorted(list(set(df_e['Comercial']) | set(df_t['Comercial'])))
+        with c_filt_1: f_ano = st.selectbox("📅 Año", anos, index=len(anos)-1)
+        with c_filt_2: f_mes = st.selectbox("📆 Mes", meses, index=len(meses)-1)
+        with c_filt_3: f_com = st.multiselect("👤 Comerciales", options=comerciales_lista, default=comerciales_lista)
+        de = df_e[(df_e['Año'] == f_ano) & (df_e['Mes'] == f_mes) & (df_e['Comercial'].isin(f_com))]
+        dt = df_t[(df_t['Año'] == f_ano) & (df_t['Mes'] == f_mes) & (df_t['Comercial'].isin(f_com))]
+        tab_r, tab_e, tab_t = st.tabs(["🏆 RANKING", "⚡ ENERGÍA", "📱 TELCO"])
+        with tab_r:
+            re = de.groupby('Comercial')[['V_Luz', 'V_Gas']].sum()
+            rt = dt.groupby('Comercial')[['V_Fibra', 'V_Móvil']].sum()
+            rank = pd.concat([re, rt], axis=1).fillna(0)
+            rank['TOTAL'] = rank['V_Luz'] + rank['V_Gas'] + rank['V_Fibra'] + rank['V_Móvil']
+            rank = rank.sort_values('TOTAL', ascending=False)
+            if not rank.empty:
+                st.markdown(f'<div class="winner-card">👑 NÚMERO 1: {rank.index[0].upper()} ({int(rank.iloc[0]["TOTAL"])} VENTAS)</div>', unsafe_allow_html=True)
+                st.table(rank.style.format(precision=0))
+        with tab_e:
+            if not de.empty: st.plotly_chart(px.pie(de, values='Total_Ene', names='Comercializadora', title="Cuota Energía"), use_container_width=True)
+        with tab_t:
+            if not dt.empty: st.plotly_chart(px.bar(dt.groupby('Comercial')[['V_Fibra', 'V_Móvil']].sum().reset_index(), x='Comercial', y=['V_Fibra', 'V_Móvil'], barmode='group'), use_container_width=True)
+    except Exception as e: st.error(f"Error: {e}")
+
+elif menu == "📂 REPOSITORIO":
+    st.header("Documentación")
+    st.markdown("---")
+    # SECCIÓN IBERDROLA AÑADIDA
+    with st.expander("📁 DOCUMENTACIÓN IBERDROLA"):
+        file_ib = "manuales/IBERDROLA_PRECIOS_2026.pdf"
+        if os.path.exists(file_ib):
+            with open(file_ib, "rb") as f:
+                st.download_button("📥 DESCARGAR PRECIOS IBERDROLA 2026", f, file_name="Precios_Iberdrola.pdf")
+        else: st.warning("Archivo de Iberdrola no encontrado en manuales.")
+        
+    with st.expander("📁 DOCUMENTACIÓN LOWI"):
+        archivo_lowi = "manuales/TARIFAS_LOWI_MARZO2026.pdf"
+        if os.path.exists(archivo_lowi):
+            with open(archivo_lowi, "rb") as f:
+                st.download_button("📥 DESCARGAR TARIFAS LOWI 2026", f, file_name="Tarifas_Lowi.pdf")
+
+    for c in ["GANA ENERGÍA", "NATURGY", "TOTAL", "ENDESA", "O2"]:
+        with st.expander(f"📁 DOCUMENTACIÓN {c}"):
+            if os.path.exists("manuales"):
+                busq = "total" if c == "TOTAL" else c.split()[0].lower()
+                archivos = [f for f in os.listdir("manuales") if busq in f.lower() and not f.lower().endswith('.png')]
+                for fn in archivos:
+                    with open(f"manuales/{fn}", "rb") as f:
+                        st.download_button(f"📥 {fn}", f, file_name=fn, key=f"b_{fn}")
