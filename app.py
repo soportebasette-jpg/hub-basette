@@ -93,7 +93,6 @@ URL_TEL = get_csv_url("https://docs.google.com/spreadsheets/d/1HkI37_hUTZbsm_DwL
 
 @st.cache_data(ttl=60)
 def load_and_clean_ranking():
-    # Energía
     df_e = pd.read_csv(URL_ENE)
     df_e['Fecha Creación'] = pd.to_datetime(df_e['Fecha Creación'], dayfirst=True, errors='coerce')
     df_e = df_e.dropna(subset=['Comercial', 'Fecha Creación'])
@@ -103,14 +102,12 @@ def load_and_clean_ranking():
     df_e['V_Gas'] = df_e['CUPS Gas'].apply(lambda x: 1 if pd.notnull(x) and str(x).strip() != "" else 0)
     df_e['Total_Ene'] = df_e['V_Luz'] + df_e['V_Gas']
     
-    # Telefonía
     df_t = pd.read_csv(URL_TEL)
     df_t['Fecha Creación'] = pd.to_datetime(df_t['Fecha Creación'], dayfirst=True, errors='coerce')
     df_t = df_t.dropna(subset=['Comercial', 'Fecha Creación'])
     df_t['Año'] = df_t['Fecha Creación'].dt.year.astype(str)
     df_t['Mes'] = df_t['Fecha Creación'].dt.strftime('%m - %B')
     
-    # Procesamiento robusto de métricas Telco
     def get_telco_metrics(row):
         f, m = 0, 0
         t = str(row.get('Tipo Tarifa', '')).lower()
@@ -121,7 +118,6 @@ def load_and_clean_ranking():
             if col in row and pd.notnull(row[col]) and str(row[col]).strip() != "": m += 1
         return f, m, (f + m)
 
-    # Creamos las columnas directamente para evitar errores de índice o duplicados
     res = df_t.apply(get_telco_metrics, axis=1)
     df_t['V_Fibra'] = res.apply(lambda x: x[0])
     df_t['V_Móvil'] = res.apply(lambda x: x[1])
@@ -166,7 +162,12 @@ with st.sidebar:
 
 # --- CRM ---
 if menu == "🚀 CRM":
-    st.header("Portales de Gestión")
+    col_izq, col_der = st.columns([4, 1])
+    with col_izq:
+        st.header("Portales de Gestión")
+    with col_der:
+        if os.path.exists("tecomparotodo_logo.jpg"):
+            st.image("tecomparotodo_logo.jpg", width=150)
     
     # CONTROL LABORAL
     st.markdown('<div class="block-header">🕒 CONTROL LABORAL</div>', unsafe_allow_html=True)
@@ -186,14 +187,13 @@ if menu == "🚀 CRM":
             st.link_button(f"ENTRAR", p["u"], use_container_width=True)
     st.markdown("---")
     
-    col_izq, col_der = st.columns(2)
-    with col_izq:
+    col_izq_p, col_der_p = st.columns(2)
+    with col_izq_p:
         st.markdown('<div class="block-header">🛡️ 🚨 ALARMAS</div>', unsafe_allow_html=True)
         st.markdown('<div style="background:#161b22; padding:15px; border-radius:10px; border:1px solid #30363d; text-align:center; margin-bottom:10px;"><h4 style="color:white; margin:0;">SEGURMA</h4></div>', unsafe_allow_html=True)
         st.link_button("ENTRAR", "https://partners.segurma.com/", use_container_width=True)
-    with col_der:
+    with col_der_p:
         st.markdown('<div class="block-header">📶 📱 TELECOMUNICACIONES</div>', unsafe_allow_html=True)
-        # Bloque Telecomunicaciones con O2 y Lowi
         c_t1, c_t2 = st.columns(2)
         with c_t1:
             st.markdown('<div style="background:#161b22; padding:15px; border-radius:10px; border:1px solid #30363d; text-align:center; margin-bottom:10px;"><h4 style="color:white; margin:0;">O2</h4></div>', unsafe_allow_html=True)
@@ -342,14 +342,18 @@ elif menu == "📢 ANUNCIOS Y PLAN AMIGO":
     lista_anuncios = [
         {"file": "Anuncio1_qr.png", "name": "Anuncio 1 QR"},
         {"file": "Anuncio2_qr.png", "name": "Anuncio 2 QR"},
-        {"file": "PUBLI3.jpg", "name": "Publicidad 3"}
+        {"file": "PUBLI3.jpg", "name": "Publicidad 3"},
+        {"file": "600Mb_35Gb y TV.png", "name": "600Mb + 35Gb + TV"},
+        {"file": "600Mb_60Gb y TV.png", "name": "600Mb + 60Gb + TV"},
+        {"file": "1Gb_30Gb y TV.png", "name": "1Gb + 30Gb + TV"},
+        {"file": "1Gb_375Gb y TV.png", "name": "1Gb + 375Gb + TV"},
+        {"file": "LINEAS MOVILES ADICIONALES.png", "name": "Líneas Móviles Adicionales"}
     ]
     
-    col_img1, col_img2, col_img3 = st.columns(3)
-    columnas_anuncios = [col_img1, col_img2, col_img3]
-
+    # Grid de 3 columnas para los anuncios
+    cols_anuncios = st.columns(3)
     for idx, item in enumerate(lista_anuncios):
-        with columnas_anuncios[idx]:
+        with cols_anuncios[idx % 3]:
             full_path = f"{path_anuncios}{item['file']}"
             if os.path.exists(full_path):
                 st.image(full_path, use_column_width=True)
@@ -369,7 +373,6 @@ elif menu == "📈 DASHBOARD Y RANKING":
     st.header("📊 Dashboard de Rendimiento y Ranking")
     try:
         df_e, df_t = load_and_clean_ranking()
-        
         c_filt_1, c_filt_2, c_filt_3 = st.columns(3)
         anos = sorted(list(set(df_e['Año']) | set(df_t['Año'])))
         meses = sorted(list(set(df_e['Mes']) | set(df_t['Mes'])))
@@ -390,8 +393,6 @@ elif menu == "📈 DASHBOARD Y RANKING":
         with tab_r:
             re = de.groupby('Comercial')[['V_Luz', 'V_Gas']].sum()
             rt = dt.groupby('Comercial')[['V_Fibra', 'V_Móvil']].sum()
-            
-            # Combinación de datos para el ranking
             rank = pd.concat([re, rt], axis=1).fillna(0)
             rank['TOTAL'] = rank['V_Luz'] + rank['V_Gas'] + rank['V_Fibra'] + rank['V_Móvil']
             rank = rank.sort_values('TOTAL', ascending=False)
@@ -410,8 +411,7 @@ elif menu == "📈 DASHBOARD Y RANKING":
                 rank_visual = rank.reset_index()
                 rank_visual.insert(0, 'Puesto', [asignar_medalla(i) for i in range(len(rank_visual))])
                 st.table(rank_visual.style.format(precision=0))
-            else:
-                st.warning("No hay datos para esta selección.")
+            else: st.warning("No hay datos para esta selección.")
 
         with tab_e:
             col_e1, col_e2 = st.columns([1, 1.2])
@@ -453,20 +453,29 @@ elif menu == "📂 REPOSITORIO":
     
     st.markdown("---")
     
-    # DOCUMENTACIÓN LOWI (SOLICITADO)
+    # DOCUMENTACIÓN LOWI
     with st.expander("📁 DOCUMENTACIÓN LOWI"):
         archivo_lowi = "manuales/TARIFAS_LOWI_MARZO2026.pdf"
         if os.path.exists(archivo_lowi):
             with open(archivo_lowi, "rb") as f:
                 st.download_button("📥 DESCARGAR TARIFAS LOWI MARZO 2026", f, file_name="TARIFAS_LOWI_MARZO2026.pdf")
         else:
-            st.warning("Archivo TARIFAS_LOWI_MARZO2026.pdf no encontrado en la carpeta manuales.")
+            st.warning("Archivo TARIFAS_LOWI_MARZO2026.pdf no encontrado.")
+
+    # DOCUMENTACIÓN IBERDROLA (NUEVO)
+    with st.expander("📁 DOCUMENTACIÓN IBERDROLA"):
+        archivo_iberdrola = "manuales/PRECIOS_IBERDROLA_31032026.pdf"
+        if os.path.exists(archivo_iberdrola):
+            with open(archivo_iberdrola, "rb") as f:
+                st.download_button("📥 DESCARGAR PRECIOS IBERDROLA 31/03/2026", f, file_name="PRECIOS_IBERDROLA_31032026.pdf")
+        else:
+            st.warning("Archivo PRECIOS_IBERDROLA_31032026.pdf no encontrado.")
 
     for c in ["GANA ENERGÍA", "NATURGY", "TOTAL", "ENDESA", "O2"]:
         with st.expander(f"📁 DOCUMENTACIÓN {c}"):
             if os.path.exists("manuales"):
                 busq = "total" if c == "TOTAL" else c.split()[0].lower()
-                archivos = [f for f in os.listdir("manuales") if busq in f.lower() and not f.lower().endswith('.png')]
+                archivos = [f for f in os.listdir("manuales") if busq in f.lower() and not f.lower().endswith(('.png', '.jpg', '.jpeg'))]
                 for fn in archivos:
                     with open(f"manuales/{fn}", "rb") as f:
                         st.download_button(f"📥 {fn}", f, file_name=fn, key=f"b_{fn}")
