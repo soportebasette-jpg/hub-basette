@@ -312,19 +312,14 @@ elif menu == "📢 ANUNCIOS Y PLAN AMIGO":
     st.markdown('<div class="block-header">🖼️ MATERIAL PUBLICITARIO</div>', unsafe_allow_html=True)
     path_anuncios = "anunciosbasette/"
     
-    # LISTA ACTUALIZADA CON LOS 11 ANUNCIOS DE LAS IMÁGENES
+    # LISTA CORREGIDA: SOLO LOS 6 QUE SOLICITASTE
     lista_anuncios = [
-        {"file": "600Mb_35Gb y TV.png", "name": "600Mb + 35GB + TV"},
-        {"file": "600Mb_60Gb y TV.png", "name": "600Mb + 60GB + TV"},
-        {"file": "1Gb_30Gb y TV.png", "name": "1Gb + 30GB + TV"},
-        {"file": "1Gb_375Gb y TV.png", "name": "1Gb + 375GB + TV"},
-        {"file": "LINEAS MOVILES ADICIONALES.png", "name": "Líneas Móviles Adicionales"},
-        {"file": "O2_SOLO_TV.png", "name": "O2 Solo TV 9,99€"},
-        {"file": "O2_ADICIONALES_TV.png", "name": "Adicionales O2 TV"},
-        {"file": "anuncio_alarma1.png", "name": "Alarma Segurma"},
-        {"file": "anuncio1.png", "name": "Anuncio QR 1"},
-        {"file": "anuncio2.png", "name": "Anuncio QR 2"},
-        {"file": "Anuncio1_qr.png", "name": "Anuncio QR con Marco"}
+        {"file": "anuncio_alarma1.png", "name": "Alarma 1"},
+        {"file": "anuncio1.png", "name": "Anuncio 1"},
+        {"file": "Anuncio1_qr.png", "name": "Anuncio 1 QR"},
+        {"file": "anuncio2.png", "name": "Anuncio 2"},
+        {"file": "Anuncio2_qr.png", "name": "Anuncio 2 QR"},
+        {"file": "PUBLI3.png", "name": "Publicidad 3"}
     ]
     
     cols_anuncios = st.columns(3)
@@ -336,7 +331,7 @@ elif menu == "📢 ANUNCIOS Y PLAN AMIGO":
                 with open(full_path, "rb") as file:
                     st.download_button(label=f"Descargar {item['name']}", data=file, file_name=item['file'], key=f"dl_{idx}")
             else:
-                st.error(f"Falta archivo: {item['file']}")
+                st.error(f"Falta: {item['file']}")
 
 # --- DASHBOARD Y RANKING ---
 elif menu == "📈 DASHBOARD Y RANKING":
