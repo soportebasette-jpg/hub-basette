@@ -4,6 +4,7 @@ import pandas as pd
 import plotly.express as px
 from datetime import datetime
 from fpdf import FPDF
+import base64
 
 # 1. CONFIGURACIÓN
 st.set_page_config(
@@ -12,33 +13,58 @@ st.set_page_config(
     initial_sidebar_state="expanded" 
 )
 
-# 2. CSS DE ALTA VISIBILIDAD
-st.markdown("""
+# Función para convertir imagen a base64 (necesario para posicionamiento CSS)
+def get_base64(bin_file):
+    with open(bin_file, 'rb') as f:
+        data = f.read()
+    return base64.b64encode(data).decode()
+
+# 2. CSS DE ALTA VISIBILIDAD Y LOGOS SOLICITADOS
+logo_file = "tecomparotodo_logo.jpeg"
+logo_html = ""
+if os.path.exists(logo_file):
+    img_base64 = get_base64(logo_file)
+    logo_html = f"""
     <style>
-    .stApp { background-color: #0d1117; color: #ffffff; }
-    header { visibility: hidden; }
-    label[data-testid="stWidgetLabel"] p {
+    /* Logo Superior Derecha */
+    .logo-top-right {{
+        position: fixed;
+        top: 10px;
+        right: 20px;
+        width: 120px;
+        z-index: 999999;
+    }}
+    </style>
+    <img src="data:image/jpeg;base64,{img_base64}" class="logo-top-right">
+    """
+
+st.markdown(f"""
+    {logo_html}
+    <style>
+    .stApp {{ background-color: #0d1117; color: #ffffff; }}
+    header {{ visibility: hidden; }}
+    label[data-testid="stWidgetLabel"] p {{
         color: #d2ff00 !important;
         font-weight: 900 !important;
         font-size: 1.25rem !important;
-    }
-    button p, .stDownloadButton button p, .stButton button p { 
+    }}
+    button p, .stDownloadButton button p, .stButton button p {{ 
         color: #000000 !important; 
         font-weight: 900 !important; 
-    }
-    button, .stDownloadButton button, .stButton button { 
+    }}
+    button, .stDownloadButton button, .stButton button {{ 
         background-color: #ffffff !important; 
         border: 2px solid #d2ff00 !important; 
-    }
-    .stTable { background-color: white !important; border-radius: 10px; }
-    .stTable td, .stTable th { color: #000000 !important; text-align: center !important; }
+    }}
+    .stTable {{ background-color: white !important; border-radius: 10px; }}
+    .stTable td, .stTable th {{ color: #000000 !important; text-align: center !important; }}
     
-    .block-header {
+    .block-header {{
         background-color: #d2ff00; color: black; padding: 8px 20px; border-radius: 5px;
         font-weight: bold; margin-bottom: 20px; margin-top: 25px; display: inline-block; font-size: 1.1rem;
-    }
+    }}
     
-    .winner-card { 
+    .winner-card {{ 
         background: linear-gradient(90deg, #1e3a8a, #3b82f6); 
         padding: 25px; 
         border-radius: 15px; 
@@ -48,9 +74,9 @@ st.markdown("""
         font-size: 28px; 
         margin-bottom: 25px;
         box-shadow: 0px 4px 15px rgba(0,0,0,0.5);
-    }
+    }}
 
-    .price-card {
+    .price-card {{
         background-color: #161b22;
         border: 2px solid #30363d;
         border-radius: 15px;
@@ -59,58 +85,30 @@ st.markdown("""
         margin-bottom: 15px;
         transition: transform 0.3s;
         height: 100%;
-    }
-    .price-card:hover {
+    }}
+    .price-card:hover {{
         border-color: #d2ff00;
         transform: translateY(-5px);
-    }
-    .price-title { color: #d2ff00; font-size: 1.2rem; font-weight: bold; margin-bottom: 10px; }
-    .price-val { color: white; font-size: 2rem; font-weight: 900; }
-    .price-sub { color: #8b949e; font-size: 0.85rem; margin-bottom: 5px; }
+    }}
+    .price-title {{ color: #d2ff00; font-size: 1.2rem; font-weight: bold; margin-bottom: 10px; }}
+    .price-val {{ color: white; font-size: 2rem; font-weight: 900; }}
+    .price-sub {{ color: #8b949e; font-size: 0.85rem; margin-bottom: 5px; }}
 
-    span[data-baseweb="tag"] {
+    span[data-baseweb="tag"] {{
         background-color: #d2ff00 !important;
         border-radius: 5px !important;
-    }
-    span[data-baseweb="tag"] span {
+    }}
+    span[data-baseweb="tag"] span {{
         color: black !important;
         font-weight: bold !important;
-    }
+    }}
 
-    .stSelectbox div[data-baseweb="select"], .stMultiSelect div[data-baseweb="select"] {
+    .stSelectbox div[data-baseweb="select"], .stMultiSelect div[data-baseweb="select"] {{
         background-color: #161b22 !important;
         color: white !important;
-    }
-
-    /* Estilo para el logo flotante abajo a la derecha */
-    .fixed-logo {
-        position: fixed;
-        bottom: 20px;
-        right: 20px;
-        z-index: 100;
-    }
+    }}
     </style>
     """, unsafe_allow_html=True)
-
-# --- LOGO SUPERIOR DERECHA ---
-col_main, col_logo_top = st.columns([10, 2])
-with col_logo_top:
-    if os.path.exists("tecomparotodo_logo.jpg"):
-        st.image("tecomparotodo_logo.jpg", use_container_width=True)
-
-# --- LOGO INFERIOR DERECHA (FLOTANTE) ---
-if os.path.exists("tecomparotodo_logo.jpg"):
-    st.markdown(f'''
-        <div class="fixed-logo">
-            <img src="data:image/jpeg;base64,{st.image("tecomparotodo_logo.jpg", width=120) if False else ""}" 
-            style="width:120px; border-radius:10px; border: 1px solid #d2ff00;">
-        </div>
-    ''', unsafe_allow_html=True)
-    # Nota: Para evitar interferir con el renderizado, usamos st.image en un contenedor abajo
-    with st.container():
-        _, col_bot_logo = st.columns([8, 1])
-        with col_bot_logo:
-             st.image("tecomparotodo_logo.jpg", width=100)
 
 # --- FUNCIONES DE DATOS DASHBOARD ---
 def get_csv_url(url):
@@ -153,7 +151,7 @@ def load_and_clean_ranking():
     
     return df_e, df_t
 
-# 3. BASE DE DATOS LUZ (CON IBERDROLA)
+# 3. BASE DE DATOS LUZ
 tarifas_luz = [
     {"PRIORIDAD": 1, "COMPAÑÍA": "GANA ENERGÍA", "TARIFA": "24H", "P1": 0.089, "P2": 0.089, "ENERGIA": 0.129, "EXCEDENTE": 0.05, "DTO": "0%", "BATERIA": "SI_GRATIS", "logo": "manuales/logo_gana.png"},
     {"PRIORIDAD": 1, "COMPAÑÍA": "GANA ENERGÍA", "TARIFA": "3T", "P1": 0.089, "P2": 0.089, "ENERGIA": "0,181/0,114/0,090", "EXCEDENTE": 0.05, "DTO": "0%", "BATERIA": "SI_GRATIS", "logo": "manuales/logo_gana.png"},
@@ -188,6 +186,11 @@ with st.sidebar:
     if os.path.exists(LOGO_PRINCIPAL): st.image(LOGO_PRINCIPAL)
     st.markdown("---")
     menu = st.radio("Secciones:", ["🚀 CRM", "📊 PRECIOS", "⚖️ COMPARADOR", "📢 ANUNCIOS Y PLAN AMIGO", "📈 DASHBOARD Y RANKING", "📂 REPOSITORIO"], label_visibility="collapsed")
+    
+    # LOGO INFERIOR IZQUIERDO EN EL MENÚ
+    st.sidebar.markdown("---")
+    if os.path.exists(logo_file):
+        st.sidebar.image(logo_file, width=100)
 
 # --- SECCIONES ---
 if menu == "🚀 CRM":
@@ -309,23 +312,19 @@ elif menu == "📢 ANUNCIOS Y PLAN AMIGO":
 
     st.markdown('<div class="block-header">🖼️ MATERIAL PUBLICITARIO</div>', unsafe_allow_html=True)
     path_anuncios = "anunciosbasette/"
-    # LISTA ACTUALIZADA CON LOS NUEVOS ARCHIVOS DE anunciosbasette
-    lista_anuncios = [
-        {"file": "Anuncio1_qr.png", "name": "Anuncio 1 QR"},
-        {"file": "Anuncio2_qr.png", "name": "Anuncio 2 QR"},
-        {"file": "PUBLI3.jpg", "name": "Publicidad 3"},
-        {"file": "tarifas_energia.png", "name": "Tarifas Energía 2026"},
-        {"file": "promo_fibra.png", "name": "Promo Fibra Basette"}
-    ]
-    
-    cols_an = st.columns(3)
-    for idx, item in enumerate(lista_anuncios):
-        with cols_an[idx % 3]:
-            full_path = f"{path_anuncios}{item['file']}"
-            if os.path.exists(full_path):
-                st.image(full_path, use_container_width=True)
-                with open(full_path, "rb") as file:
-                    st.download_button(label=f"Descargar {item['name']}", data=file, file_name=item['file'], key=f"dl_{idx}")
+    if os.path.exists(path_anuncios):
+        # Lectura automática de todos los archivos en la carpeta
+        archivos_anuncios = [f for f in os.listdir(path_anuncios) if f.lower().endswith(('.png', '.jpg', '.jpeg'))]
+        if archivos_anuncios:
+            cols_an = st.columns(3)
+            for idx, file_name in enumerate(archivos_anuncios):
+                with cols_an[idx % 3]:
+                    full_path = os.path.join(path_anuncios, file_name)
+                    st.image(full_path, use_container_width=True)
+                    with open(full_path, "rb") as file:
+                        st.download_button(label=f"Descargar {file_name}", data=file, file_name=file_name, key=f"dl_an_{idx}")
+        else:
+            st.info("No se encontraron anuncios en la carpeta.")
 
 elif menu == "📈 DASHBOARD Y RANKING":
     st.header("📊 Dashboard de Rendimiento y Ranking")
@@ -359,13 +358,15 @@ elif menu == "📈 DASHBOARD Y RANKING":
 elif menu == "📂 REPOSITORIO":
     st.header("Documentación")
     st.markdown("---")
-    # SECCIÓN IBERDROLA AÑADIDA
-    with st.expander("📁 DOCUMENTACIÓN IBERDROLA"):
-        file_ib = "manuales/IBERDROLA_PRECIOS_2026.pdf"
+    
+    # SECCIÓN IBERDROLA - ARCHIVO ACTUALIZADO
+    with st.expander("📁 DOCUMENTACIÓN IBERDROLA", expanded=True):
+        file_ib = "manuales/PRECIOS_IBERDROLA_31032026.pdf"
         if os.path.exists(file_ib):
             with open(file_ib, "rb") as f:
-                st.download_button("📥 DESCARGAR PRECIOS IBERDROLA 2026", f, file_name="Precios_Iberdrola.pdf")
-        else: st.warning("Archivo de Iberdrola no encontrado en manuales.")
+                st.download_button("📥 DESCARGAR PRECIOS IBERDROLA 31/03/2026", f, file_name="PRECIOS_IBERDROLA_31032026.pdf")
+        else:
+            st.warning("El PDF PRECIOS_IBERDROLA_31032026.pdf no se encuentra en la carpeta manuales.")
         
     with st.expander("📁 DOCUMENTACIÓN LOWI"):
         archivo_lowi = "manuales/TARIFAS_LOWI_MARZO2026.pdf"
@@ -377,7 +378,7 @@ elif menu == "📂 REPOSITORIO":
         with st.expander(f"📁 DOCUMENTACIÓN {c}"):
             if os.path.exists("manuales"):
                 busq = "total" if c == "TOTAL" else c.split()[0].lower()
-                archivos = [f for f in os.listdir("manuales") if busq in f.lower() and not f.lower().endswith('.png')]
+                archivos = [f for f in os.listdir("manuales") if busq in f.lower() and f.lower().endswith('.pdf')]
                 for fn in archivos:
                     with open(f"manuales/{fn}", "rb") as f:
-                        st.download_button(f"📥 {fn}", f, file_name=fn, key=f"b_{fn}")
+                        st.download_button(f"📥 {fn}", f, file_name=fn, key=f"rep_{fn}")
