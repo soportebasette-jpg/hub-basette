@@ -312,14 +312,14 @@ elif menu == "📢 ANUNCIOS Y PLAN AMIGO":
     st.markdown('<div class="block-header">🖼️ MATERIAL PUBLICITARIO</div>', unsafe_allow_html=True)
     path_anuncios = "anunciosbasette/"
     
-    # LISTA CORREGIDA: SOLO LOS 6 QUE SOLICITASTE
+    # LISTA CORREGIDA CON LOS NOMBRES Y EXTENSIONES PRECISOS
     lista_anuncios = [
-        {"file": "anuncio_alarma1.png", "name": "Alarma 1"},
+        {"file": "anuncio alarma1.png", "name": "Alarma Segurma"},
         {"file": "anuncio1.png", "name": "Anuncio 1"},
         {"file": "Anuncio1_qr.png", "name": "Anuncio 1 QR"},
         {"file": "anuncio2.png", "name": "Anuncio 2"},
         {"file": "Anuncio2_qr.png", "name": "Anuncio 2 QR"},
-        {"file": "PUBLI3.png", "name": "Publicidad 3"}
+        {"file": "PUBLI3.jpg", "name": "Publicidad 3"}
     ]
     
     cols_anuncios = st.columns(3)
