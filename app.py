@@ -375,6 +375,14 @@ elif menu == "📂 REPOSITORIO":
         manual_path = "manuales/Manual_Premiumnumber_Agente.pdf"
         if os.path.exists(manual_path):
             with open(manual_path, "rb") as f: st.download_button("📖 DESCARGAR MANUAL", f, file_name="Manual_Marcador.pdf")
+    
+    with st.expander("📁 SEGURMA ALARMAS"):
+        archivo_segurma = "manuales/SEGURMA_MARZO.pdf"
+        if os.path.exists(archivo_segurma):
+            with open(archivo_segurma, "rb") as f: st.download_button("📥 DESCARGAR MANUAL SEGURMA MARZO", f, file_name="SEGURMA_MARZO.pdf")
+        else:
+            st.warning("El archivo SEGURMA_MARZO.pdf no se encuentra en la carpeta manuales.")
+
     with st.expander("📁 DOCUMENTACIÓN LOWI"):
         archivo_lowi = "manuales/TARIFAS_LOWI_MARZO2026.pdf"
         if os.path.exists(archivo_lowi):
