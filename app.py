@@ -240,7 +240,6 @@ elif menu == "📊 PRECIOS":
         
         st.markdown('<div class="block-header">🌐 FIBRA Y MÓVIL (O2)</div>', unsafe_allow_html=True)
         fm_cols = st.columns(3)
-        # Datos extraídos de la imagen tarifaria O2
         fibra_movil_o2 = [
             ("300 Mb", "30€", "1 LÍNEA (10GB)"),
             ("600 Mb", "35€", "1 LÍNEA (60GB)"),
@@ -251,18 +250,6 @@ elif menu == "📊 PRECIOS":
         for i, (vel, pre, lin) in enumerate(fibra_movil_o2):
             with fm_cols[i % 3]:
                 st.markdown(f'<div class="price-card"><div class="price-title">{vel} + {lin}</div><div class="price-val">{pre}</div><div class="price-sub">O2 Digital</div></div>', unsafe_allow_html=True)
-
-        st.markdown('<div class="block-header">📺 FIBRA, MÓVIL Y TV (MOVISTAR+)</div>', unsafe_allow_html=True)
-        tv_cols = st.columns(3)
-        planes_tv_o2 = [
-            ("600 Mb + TV", "38€", "35GB Móvil"),
-            ("600 Mb + TV + NETFLIX", "45€", "60GB Móvil"),
-            ("1 Gb + TV", "50€", "350GB Móvil"),
-            ("1 Gb + TV + NETFLIX", "56€", "375GB Móvil")
-        ]
-        for i, (vel, pre, gb) in enumerate(planes_tv_o2):
-            with tv_cols[i % 3]:
-                st.markdown(f'<div class="price-card"><div class="price-title">{vel}</div><div class="price-val">{pre}</div><div class="price-sub">{gb} Incluidos</div></div>', unsafe_allow_html=True)
 
         st.markdown('<div class="block-header">➕ LÍNEAS ADICIONALES</div>', unsafe_allow_html=True)
         ad_cols = st.columns(4)
@@ -341,14 +328,7 @@ elif menu == "📢 ANUNCIOS Y PLAN AMIGO":
     
     st.markdown('<div class="block-header">🖼️ MATERIAL PUBLICITARIO</div>', unsafe_allow_html=True)
     path_anuncios = "anunciosbasette/"
-    lista_anuncios = [
-        {"file": "anuncio alarma1.png", "name": "Alarma Segurma"},
-        {"file": "anuncio1.png", "name": "Anuncio 1"},
-        {"file": "Anuncio1_qr.png", "name": "Anuncio 1 QR"},
-        {"file": "anuncio2.png", "name": "Anuncio 2"},
-        {"file": "Anuncio2_qr.png", "name": "Anuncio 2 QR"},
-        {"file": "PUBLI3.jpg", "name": "Publicidad 3"}
-    ]
+    lista_anuncios = [{"file": "anuncio alarma1.png", "name": "Alarma Segurma"}, {"file": "anuncio1.png", "name": "Anuncio 1"}, {"file": "Anuncio1_qr.png", "name": "Anuncio 1 QR"}, {"file": "anuncio2.png", "name": "Anuncio 2"}, {"file": "Anuncio2_qr.png", "name": "Anuncio 2 QR"}, {"file": "PUBLI3.jpg", "name": "Publicidad 3"}]
     cols_anuncios = st.columns(3)
     for idx, item in enumerate(lista_anuncios):
         with cols_anuncios[idx % 3]:
@@ -357,7 +337,6 @@ elif menu == "📢 ANUNCIOS Y PLAN AMIGO":
                 st.image(full_path, use_column_width=True)
                 with open(full_path, "rb") as file:
                     st.download_button(label=f"Descargar {item['name']}", data=file, file_name=item['file'], key=f"dl_{idx}")
-            else: st.error(f"Falta: {item['file']}")
 
 # --- DASHBOARD Y RANKING ---
 elif menu == "📈 DASHBOARD Y RANKING":
@@ -365,7 +344,6 @@ elif menu == "📈 DASHBOARD Y RANKING":
     try:
         df_e, df_t, df_a, df_obj = load_and_clean_ranking()
         
-        # Filtros
         anos = sorted(list(set(df_e['Año']) | set(df_t['Año']) | set(df_a['Año'])))
         meses = sorted(list(set(df_e['Mes']) | set(df_t['Mes']) | set(df_a['Mes'])))
         comerciales_lista = sorted(list(set(df_e['Comercial']) | set(df_t['Comercial']) | set(df_a['Comercial'])))
@@ -385,19 +363,15 @@ elif menu == "📈 DASHBOARD Y RANKING":
             re = de.groupby('Comercial')[['V_Luz', 'V_Gas']].sum()
             rt = dt.groupby('Comercial')[['V_Fibra', 'V_Móvil']].sum()
             ra = da.groupby('Comercial')[['V_Alarma']].sum()
-            
             rank = pd.concat([re, rt, ra], axis=1).fillna(0)
-            rank['TOTAL'] = rank['V_Luz'] + rank['V_Gas'] + rank['V_Fibra'] + rank['V_Móvil'] + rank['V_Alarma']
-            rank = rank.sort_values('TOTAL', ascending=False)
-            
+            rank['TOTAL'] = rank.sum(axis=1)
+            rank = rank.sort_values('TOTAL', ascending=False).astype(int)
             if not rank.empty:
                 ganador = rank.index[0]
-                total_ganador = int(rank.iloc[0]['TOTAL'])
-                st.markdown(f"""<div class="winner-card">👑 EL NÚMERO 1: {ganador.upper()} ({total_ganador} VENTAS) 👑</div>""", unsafe_allow_html=True)
-                st.table(rank.reset_index().style.format(precision=0))
+                st.markdown(f"""<div class="winner-card">👑 EL NÚMERO 1: {ganador.upper()} ({int(rank.iloc[0]['TOTAL'])} VENTAS) 👑</div>""", unsafe_allow_html=True)
+                st.table(rank.reset_index())
 
         with tab_obj:
-            # Ventas sin móviles
             v_luz_gas = de.groupby('Comercial')[['V_Luz', 'V_Gas']].sum()
             v_fibra = dt.groupby('Comercial')[['V_Fibra']].sum()
             v_alarma = da.groupby('Comercial')[['V_Alarma']].sum()
@@ -405,22 +379,28 @@ elif menu == "📈 DASHBOARD Y RANKING":
             ventas_actuales = pd.concat([v_luz_gas, v_fibra, v_alarma], axis=1).fillna(0).sum(axis=1).reset_index()
             ventas_actuales.columns = ['COMERCIAL', 'VENTAS_ACTUALES']
             
-            # Limpiar nombre de mes del filtro para cruzar con el Excel de objetivos
             mes_texto = f_mes.split('-')[-1].strip().upper()
             df_obj_mes = df_obj[df_obj['MES'].astype(str).str.upper() == mes_texto]
             
-            # Unimos las ventas actuales con los objetivos reales del excel
             res_obj = pd.merge(ventas_actuales, df_obj_mes, on='COMERCIAL', how='left').fillna(0)
-            
-            # Lógica de cálculo
             res_obj['RESTANTE'] = res_obj['OBJETIVO/FIRMAS'] - res_obj['VENTAS_ACTUALES']
             res_obj.loc[res_obj['RESTANTE'] < 0, 'RESTANTE'] = 0
             res_obj['% LOGRADO'] = (res_obj['VENTAS_ACTUALES'] / res_obj['OBJETIVO/FIRMAS'].replace(0, 1) * 100).round(1)
+            
+            # Formatear a enteros
+            res_obj['VENTAS_ACTUALES'] = res_obj['VENTAS_ACTUALES'].astype(int)
+            res_obj['OBJETIVO/FIRMAS'] = res_obj['OBJETIVO/FIRMAS'].astype(int)
+            res_obj['RESTANTE'] = res_obj['RESTANTE'].astype(int)
 
             def highlight_obj(row):
-                # Verde si llega o supera, Rojo si no llega
-                color = 'background-color: #28a745; color: white' if row['VENTAS_ACTUALES'] >= row['OBJETIVO/FIRMAS'] and row['OBJETIVO/FIRMAS'] > 0 else 'background-color: #ff4b4b; color: white'
-                return [color] * len(row)
+                # Si llega al objetivo, toda la fila en verde
+                if row['VENTAS_ACTUALES'] >= row['OBJETIVO/FIRMAS'] and row['OBJETIVO/FIRMAS'] > 0:
+                    return ['background-color: #28a745; color: white'] * len(row)
+                else:
+                    # Si no llega, ponemos la columna RESTANTE en rojo
+                    styles = [''] * len(row)
+                    styles[3] = 'background-color: #ff4b4b; color: white' # Columna RESTANTE (indice 3)
+                    return styles
 
             if not res_obj.empty:
                 st.table(res_obj[['COMERCIAL', 'VENTAS_ACTUALES', 'OBJETIVO/FIRMAS', 'RESTANTE', '% LOGRADO']].style.apply(highlight_obj, axis=1).format({'% LOGRADO': '{:.1f}%'}))
@@ -429,41 +409,26 @@ elif menu == "📈 DASHBOARD Y RANKING":
             if not de.empty:
                 fig_e = px.pie(de, values='Total_Ene', names='Comercializadora', hole=0.5, title="Cuota de Energía")
                 st.plotly_chart(fig_e, use_container_width=True)
-        
         with tab_t:
             if not dt.empty:
                 fig_t = px.bar(dt.groupby('Comercial')[['V_Fibra', 'V_Móvil']].sum().reset_index(), x='Comercial', y=['V_Fibra', 'V_Móvil'], barmode='group', title="Mix de Telco")
                 st.plotly_chart(fig_t, use_container_width=True)
-
         with tab_a:
             if not da.empty:
                 fig_a = px.bar(da.groupby('Comercial')[['V_Alarma']].sum().reset_index(), x='Comercial', y='V_Alarma', title="Ventas Alarmas", color_discrete_sequence=['#d2ff00'])
                 st.plotly_chart(fig_a, use_container_width=True)
 
-    except Exception as e: st.error(f"Error en Dashboard: {e}")
+    except Exception as e: st.error(f"Error: {e}")
 
 # --- REPOSITORIO ---
 elif menu == "📂 REPOSITORIO":
     st.header("Documentación")
     with st.expander("📂 MANUAL DEL MARCADOR"):
-        manual_path = "manuales/Manual_Premiumnumber_Agente.pdf"
-        if os.path.exists(manual_path):
-            with open(manual_path, "rb") as f: st.download_button("📖 DESCARGAR MANUAL", f, file_name="Manual_Marcador.pdf")
-    
+        if os.path.exists("manuales/Manual_Premiumnumber_Agente.pdf"):
+            with open("manuales/Manual_Premiumnumber_Agente.pdf", "rb") as f: st.download_button("📖 DESCARGAR MANUAL", f, file_name="Manual_Marcador.pdf")
     with st.expander("📁 SEGURMA ALARMAS"):
-        archivo_segurma = "manuales/SEGURMA_MARZO.pdf"
-        if os.path.exists(archivo_segurma):
-            with open(archivo_segurma, "rb") as f: st.download_button("📥 DESCARGAR MANUAL SEGURMA MARZO", f, file_name="SEGURMA_MARZO.pdf")
-    
+        if os.path.exists("manuales/SEGURMA_MARZO.pdf"):
+            with open("manuales/SEGURMA_MARZO.pdf", "rb") as f: st.download_button("📥 DESCARGAR MANUAL SEGURMA", f, file_name="SEGURMA_MARZO.pdf")
     with st.expander("📁 DOCUMENTACIÓN LOWI"):
-        archivo_lowi = "manuales/TARIFAS_LOWI_MARZO2026.pdf"
-        if os.path.exists(archivo_lowi):
-            with open(archivo_lowi, "rb") as f: st.download_button("📥 DESCARGAR TARIFAS LOWI MARZO 2026", f, file_name="TARIFAS_LOWI_MARZO2026.pdf")
-            
-    for c in ["GANA ENERGÍA", "NATURGY", "TOTAL", "ENDESA", "O2"]:
-        with st.expander(f"📁 DOCUMENTACIÓN {c}"):
-            if os.path.exists("manuales"):
-                busq = "total" if c == "TOTAL" else c.split()[0].lower()
-                archivos = [f for f in os.listdir("manuales") if busq in f.lower() and not f.lower().endswith(('.png', '.jpg', '.jpeg'))]
-                for fn in archivos:
-                    with open(f"manuales/{fn}", "rb") as f: st.download_button(f"📥 {fn}", f, file_name=fn, key=f"b_{fn}")
+        if os.path.exists("manuales/TARIFAS_LOWI_MARZO2026.pdf"):
+            with open("manuales/TARIFAS_LOWI_MARZO2026.pdf", "rb") as f: st.download_button("📥 DESCARGAR TARIFAS LOWI", f, file_name="TARIFAS_LOWI_MARZO2026.pdf")
