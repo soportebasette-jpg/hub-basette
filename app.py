@@ -448,10 +448,11 @@ elif menu == "📈 DASHBOARD Y RANKING":
                 ]
                 rank_visual = rank_visual[cols_finales]
 
+                # CORRECCIÓN AQUÍ: Se usa .map() en lugar de .applymap() para compatibilidad
                 st.write(
                     rank_visual.style
-                    .applymap(style_faltan, subset=['FALTAN'])
-                    .applymap(style_ref, subset=['TOTAL REF'])
+                    .map(style_faltan, subset=['FALTAN'])
+                    .map(style_ref, subset=['TOTAL REF'])
                     .format(subset=['V_Luz', 'V_Gas', 'V_Fibra', 'V_Móvil', 'V_Alarma', 'VENTAS TOTALES SIN MOVIL', 'TOTAL CON MOVIL', 'OBJETIVO', 'FALTAN', 'TOTAL REF', 'OBJETIVO REF'], precision=0)
                     .to_html(escape=False, index=False), 
                     unsafe_allow_html=True
