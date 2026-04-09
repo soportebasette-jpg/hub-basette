@@ -94,6 +94,7 @@ URL_ALA = get_csv_url("https://docs.google.com/spreadsheets/d/17o4HSJ4DZBwMgp9AA
 
 @st.cache_data(ttl=60)
 def load_and_clean_ranking():
+    # ENERGÍA
     df_e = pd.read_csv(URL_ENE)
     df_e['Fecha Creación'] = pd.to_datetime(df_e['Fecha Creación'], dayfirst=True, errors='coerce')
     df_e = df_e.dropna(subset=['Comercial', 'Fecha Creación'])
@@ -102,12 +103,15 @@ def load_and_clean_ranking():
     df_e['V_Luz'] = df_e['CUPS Luz'].apply(lambda x: 1 if pd.notnull(x) and str(x).strip() != "" else 0)
     df_e['V_Gas'] = df_e['CUPS Gas'].apply(lambda x: 1 if pd.notnull(x) and str(x).strip() != "" else 0)
     df_e['Total_Ene'] = df_e['V_Luz'] + df_e['V_Gas']
+    df_e['REF_Ene'] = df_e['Canal'].apply(lambda x: 1 if str(x).strip().upper() == "REF" else 0)
     
+    # TELCO
     df_t = pd.read_csv(URL_TEL)
     df_t['Fecha Creación'] = pd.to_datetime(df_t['Fecha Creación'], dayfirst=True, errors='coerce')
     df_t = df_t.dropna(subset=['Comercial', 'Fecha Creación'])
     df_t['Año'] = df_t['Fecha Creación'].dt.year.astype(str)
     df_t['Mes'] = df_t['Fecha Creación'].dt.strftime('%m - %B')
+    df_t['REF_Tel'] = df_t['Canal'].apply(lambda x: 1 if str(x).strip().upper() == "REF" else 0)
     
     def get_telco_metrics(row):
         f, m = 0, 0
@@ -124,12 +128,14 @@ def load_and_clean_ranking():
     df_t['V_Móvil'] = res.apply(lambda x: x[1])
     df_t['Total_Tel'] = res.apply(lambda x: x[2])
 
+    # ALARMAS
     df_a = pd.read_csv(URL_ALA)
     df_a['Fecha Creación'] = pd.to_datetime(df_a['Fecha Creación'], dayfirst=True, errors='coerce')
     df_a = df_a.dropna(subset=['Comercial', 'Fecha Creación'])
     df_a['Año'] = df_a['Fecha Creación'].dt.year.astype(str)
     df_a['Mes'] = df_a['Fecha Creación'].dt.strftime('%m - %B')
     df_a['V_Alarma'] = 1 
+    df_a['REF_Ala'] = df_a['Canal'].apply(lambda x: 1 if str(x).strip().upper() == "REF" else 0)
     
     return df_e, df_t, df_a
 
@@ -379,25 +385,29 @@ elif menu == "📈 DASHBOARD Y RANKING":
         tab_r, tab_e, tab_t, tab_a = st.tabs(["🏆 RANKING", "⚡ ENERGÍA", "📱 TELCO", "🛡️ ALARMAS"])
 
         with tab_r:
-            re = de.groupby('Comercial')[['V_Luz', 'V_Gas']].sum()
-            rt = dt.groupby('Comercial')[['V_Fibra', 'V_Móvil']].sum()
-            ra = da.groupby('Comercial')[['V_Alarma']].sum()
+            re = de.groupby('Comercial')[['V_Luz', 'V_Gas', 'REF_Ene']].sum()
+            rt = dt.groupby('Comercial')[['V_Fibra', 'V_Móvil', 'REF_Tel']].sum()
+            ra = da.groupby('Comercial')[['V_Alarma', 'REF_Ala']].sum()
             
             rank = pd.concat([re, rt, ra], axis=1).fillna(0)
             
-            # 1. Totales
+            # 1. Totales Ventas
             rank['VENTAS TOTALES SIN MOVIL'] = rank['V_Luz'] + rank['V_Gas'] + rank['V_Fibra'] + rank['V_Alarma']
             rank['TOTAL CON MOVIL'] = rank['VENTAS TOTALES SIN MOVIL'] + rank['V_Móvil']
             
-            # 2. Objetivo y Faltan
+            # 2. Referidos y Objetivos Ref
+            rank['TOTAL REF'] = rank['REF_Ene'] + rank['REF_Tel'] + rank['REF_Ala']
+            rank['OBJETIVO REF'] = 8
+            
+            # 3. Objetivo General y Faltan
             rank['OBJETIVO'] = 25
             rank['FALTAN'] = rank['OBJETIVO'] - rank['VENTAS TOTALES SIN MOVIL']
             rank['FALTAN'] = rank['FALTAN'].apply(lambda x: x if x > 0 else 0)
             
-            # 3. % Sin decimales
+            # 4. % Sin decimales
             rank['% CONSECUCION'] = ((rank['VENTAS TOTALES SIN MOVIL'] / rank['OBJETIVO']) * 100).fillna(0).astype(int).astype(str) + "%"
 
-            # 4. Frase motivadora con colores HTML
+            # 5. Frase motivadora con colores HTML
             def get_motivacion_html(row):
                 perc = (row['VENTAS TOTALES SIN MOVIL'] / row['OBJETIVO']) * 100
                 if perc >= 100: return '<b style="color: #00ff00;">🔥 ¡NIVEL DIOS! Imparable.</b>'
@@ -421,20 +431,37 @@ elif menu == "📈 DASHBOARD Y RANKING":
                     elif n == 2: return "🥉 Bronce"
                     else: return "⭐"
                 
-                # Función para colorear la columna Faltan (Semáforo)
+                # Función para colorear la columna Faltan (Semáforo Ventas)
                 def style_faltan(val):
                     if val == 0: color = '#90EE90' # Verde (Cumplido)
                     elif val <= 5: color = '#FFFFE0' # Amarillo claro (Cerca)
                     else: color = '#FFCCCB' # Rojo claro (Lejos)
                     return f'background-color: {color}'
 
+                # Función para colorear la columna Referidos (Semáforo REF)
+                def style_ref(val):
+                    if val >= 8: color = '#90EE90' # Verde (Objetivo cumplido)
+                    elif val >= 4: color = '#FFFFE0' # Amarillo (Camino al éxito)
+                    else: color = '#FFCCCB' # Rojo (Por debajo)
+                    return f'background-color: {color}'
+
                 rank_visual = rank.reset_index()
                 rank_visual.insert(0, 'Puesto', [asignar_medalla(i) for i in range(len(rank_visual))])
                 
+                # Seleccionar y reordenar columnas para visualización
+                cols_finales = [
+                    'Puesto', 'Comercial', 'V_Luz', 'V_Gas', 'V_Fibra', 'V_Móvil', 'V_Alarma', 
+                    'VENTAS TOTALES SIN MOVIL', 'TOTAL CON MOVIL', 'OBJETIVO', 'FALTAN', 
+                    'TOTAL REF', 'OBJETIVO REF', '% CONSECUCION', 'MOTIVACIÓN'
+                ]
+                rank_visual = rank_visual[cols_finales]
+
                 # Renderizado de la tabla con estilos
                 st.write(
-                    rank_visual.style.applymap(style_faltan, subset=['FALTAN'])
-                    .format(subset=['V_Luz', 'V_Gas', 'V_Fibra', 'V_Móvil', 'V_Alarma', 'VENTAS TOTALES SIN MOVIL', 'TOTAL CON MOVIL', 'OBJETIVO', 'FALTAN'], precision=0)
+                    rank_visual.style
+                    .applymap(style_faltan, subset=['FALTAN'])
+                    .applymap(style_ref, subset=['TOTAL REF'])
+                    .format(subset=['V_Luz', 'V_Gas', 'V_Fibra', 'V_Móvil', 'V_Alarma', 'VENTAS TOTALES SIN MOVIL', 'TOTAL CON MOVIL', 'OBJETIVO', 'FALTAN', 'TOTAL REF', 'OBJETIVO REF'], precision=0)
                     .to_html(escape=False, index=False), 
                     unsafe_allow_html=True
                 )
