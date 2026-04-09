@@ -86,9 +86,7 @@ st.markdown("""
 
 # --- FUNCIONES DE DATOS DASHBOARD ---
 def get_csv_url(url):
-    if '/edit' in url:
-        return url.split('/edit')[0] + '/export?format=csv'
-    return url
+    return url.replace('/edit?usp=sharing', '/export?format=csv').split('&ouid=')[0].split('?')[0] + '/export?format=csv'
 
 URL_ENE = get_csv_url("https://docs.google.com/spreadsheets/d/1W-Eq63SnBBlOykJlP9XgASXDPpWQhQnVW-oFHUlSMcQ/edit?usp=sharing")
 URL_TEL = get_csv_url("https://docs.google.com/spreadsheets/d/1HkI37_hUTZbsm_DwLjbi2kMTKcC23QsV/edit?usp=sharing")
@@ -106,7 +104,7 @@ def load_and_clean_ranking():
     df_e['V_Luz'] = df_e['CUPS Luz'].apply(lambda x: 1 if pd.notnull(x) and str(x).strip() != "" else 0)
     df_e['V_Gas'] = df_e['CUPS Gas'].apply(lambda x: 1 if pd.notnull(x) and str(x).strip() != "" else 0)
     df_e['Total_Ene'] = df_e['V_Luz'] + df_e['V_Gas']
-    df_e['REF_Ene'] = df_e['Canal'].apply(lambda x: 1 if pd.notnull(x) and str(x).strip().upper() == "REF" else 0) if 'Canal' in df_e.columns else 0
+    df_e['REF_Ene'] = df_e['Canal'].apply(lambda x: 1 if pd.notnull(x) and "REF" in str(x).upper() else 0) if 'Canal' in df_e.columns else 0
     
     # TELCO
     df_t = pd.read_csv(URL_TEL)
@@ -115,7 +113,7 @@ def load_and_clean_ranking():
     df_t = df_t.dropna(subset=['Comercial', 'Fecha Creación'])
     df_t['Año'] = df_t['Fecha Creación'].dt.year.astype(str)
     df_t['Mes'] = df_t['Fecha Creación'].dt.strftime('%m - %B')
-    df_t['REF_Tel'] = df_t['Canal'].apply(lambda x: 1 if pd.notnull(x) and str(x).strip().upper() == "REF" else 0) if 'Canal' in df_t.columns else 0
+    df_t['REF_Tel'] = df_t['Canal'].apply(lambda x: 1 if pd.notnull(x) and "REF" in str(x).upper() else 0) if 'Canal' in df_t.columns else 0
     
     def get_telco_metrics(row):
         f, m = 0, 0
@@ -140,7 +138,7 @@ def load_and_clean_ranking():
     df_a['Año'] = df_a['Fecha Creación'].dt.year.astype(str)
     df_a['Mes'] = df_a['Fecha Creación'].dt.strftime('%m - %B')
     df_a['V_Alarma'] = 1 
-    df_a['REF_Ala'] = df_a['Canal'].apply(lambda x: 1 if pd.notnull(x) and str(x).strip().upper() == "REF" else 0) if 'Canal' in df_a.columns else 0
+    df_a['REF_Ala'] = df_a['Canal'].apply(lambda x: 1 if pd.notnull(x) and "REF" in str(x).upper() else 0) if 'Canal' in df_a.columns else 0
     
     return df_e, df_t, df_a
 
@@ -161,7 +159,6 @@ LOGO_PRINCIPAL = "1000233813.jpg"
 QR_PLAN_AMIGO = "anunciosbasette/qr-plan amigo.png"
 
 if "password_correct" not in st.session_state: st.session_state["password_correct"] = False
-
 if not st.session_state["password_correct"]:
     _, col_auth, _ = st.columns([1, 1.2, 1])
     with col_auth:
@@ -261,6 +258,12 @@ elif menu == "📊 PRECIOS":
         for i, (vel, pre, gb, lin) in enumerate(planes_tv):
             with tv_cols[i % 3]:
                 st.markdown(f'<div class="price-card"><div class="price-title">{vel}</div><div class="price-val">{pre}</div><div class="price-sub">{gb} | {lin}</div></div>', unsafe_allow_html=True)
+        st.markdown('<div class="block-header">➕ LÍNEAS ADICIONALES (TV)</div>', unsafe_allow_html=True)
+        ad_tv_cols = st.columns(3)
+        lineas_ad_tv = [("40 GB", "5€"), ("150 GB", "10€"), ("300 GB", "15€")]
+        for i, (gb, pre) in enumerate(lineas_ad_tv):
+            with ad_tv_cols[i]:
+                st.markdown(f'<div class="price-card"><div class="price-title">ADICIONAL {gb}</div><div class="price-val">{pre}</div><div class="price-sub">Precio / Mes</div></div>', unsafe_allow_html=True)
 
 # --- COMPARADOR ---
 elif menu == "⚖️ COMPARADOR":
@@ -278,20 +281,16 @@ elif menu == "⚖️ COMPARADOR":
         sel = next(t for t in tarifas_luz if t["COMPAÑÍA"] == comp_sel and t["TARIFA"] == tarifa_sel_nombre)
         if os.path.exists(sel["logo"]): st.image(sel["logo"], width=120)
         consumo = st.number_input("Consumo del periodo (kWh)", value=0.0)
-    
     try:
         p_calc = float(str(sel['ENERGIA']).split('/')[0].replace(',', '.')) if isinstance(sel['ENERGIA'], str) else sel['ENERGIA']
     except:
         p_calc = 0.11
-        
     coste_p = (potencia * sel["P1"] * dias_factura) + (potencia * sel["P2"] * dias_factura)
     coste_e = consumo * p_calc
     coste_total_iva = (coste_p + coste_e) * 1.21
     ahorro = f_act - coste_total_iva
-    
     st.info(f"**Tarifa Seleccionada:** {tarifa_sel_nombre} | Energía: **{sel['ENERGIA']}** €/kWh | Potencia: **{sel['P1']}** €/kW día")
     st.markdown(f'<div style="background:#d2ff00; padding:20px; border-radius:10px; text-align:center;"><h2 style="color:black;">AHORRO ESTIMADO: {ahorro:.2f} €</h2></div>', unsafe_allow_html=True)
-    
     if st.button("GENERAR ESTUDIO PDF PROFESIONAL"):
         pdf = FPDF()
         pdf.add_page()
@@ -310,6 +309,9 @@ elif menu == "⚖️ COMPARADOR":
         pdf.cell(95, 10, "Nueva Factura", border=1); pdf.cell(95, 10, f"{coste_total_iva:.2f} EUR", border=1, ln=True)
         pdf.ln(5); pdf.set_fill_color(210, 255, 0); pdf.set_font("Arial", "B", 14)
         pdf.cell(190, 15, f"AHORRO TOTAL: {ahorro:.2f} EUR", ln=True, align="C", fill=True)
+        pdf.ln(10); pdf.set_font("Arial", "B", 12); pdf.cell(190, 10, "PLAN AMIGO BASETTE", ln=True)
+        if os.path.exists(QR_PLAN_AMIGO):
+            pdf.image(QR_PLAN_AMIGO, 80, pdf.get_y(), 50)
         st.download_button(label="📥 DESCARGAR ESTUDIO PDF", data=pdf.output(dest='S').encode('latin-1', 'replace'), file_name=f"Estudio_{cliente}.pdf")
 
 # --- ANUNCIOS Y PLAN AMIGO ---
@@ -329,6 +331,37 @@ elif menu == "📢 ANUNCIOS Y PLAN AMIGO":
                 st.download_button("Descargar QR", file, "qr-plan-amigo.png")
         else:
             st.error("Archivo QR no encontrado.")
+
+    st.markdown('<div class="block-header">🖼️ MATERIAL PUBLICITARIO</div>', unsafe_allow_html=True)
+    st.write("Visualiza y descarga los últimos anuncios:")
+    
+    path_anuncios = "anunciosbasette/"
+    lista_anuncios = [
+        {"file": "Anuncio1_qr.png", "name": "Anuncio 1 QR"},
+        {"file": "Anuncio2_qr.png", "name": "Anuncio 2 QR"},
+        {"file": "PUBLI3.jpg", "name": "Publicidad 3"},
+        {"file": "anuncio alarma1.png", "name": "Anuncio Alarma 1"},
+        {"file": "anuncio1.png", "name": "Anuncio 1"},
+        {"file": "anuncio2.png", "name": "Anuncio 2"}
+    ]
+    
+    cols_anuncios = st.columns(3)
+    for idx, item in enumerate(lista_anuncios):
+        with cols_anuncios[idx % 3]:
+            full_path = f"{path_anuncios}{item['file']}"
+            if os.path.exists(full_path):
+                st.image(full_path, use_container_width=True)
+                with open(full_path, "rb") as f_anuncio:
+                    data_anuncio = f_anuncio.read()
+                    st.download_button(
+                        label=f"Descargar {item['name']}",
+                        data=data_anuncio,
+                        file_name=item['file'],
+                        mime="image/png" if item['file'].lower().endswith('.png') else "image/jpeg",
+                        key=f"btn_anuncio_{idx}"
+                    )
+            else:
+                st.error(f"Falta: {item['file']}")
 
 # --- DASHBOARD Y RANKING ---
 elif menu == "📈 DASHBOARD Y RANKING":
@@ -366,15 +399,18 @@ elif menu == "📈 DASHBOARD Y RANKING":
             rank['TOTAL REF'] = rank['REF_Ene'] + rank['REF_Tel'] + rank['REF_Ala']
             rank['OBJETIVO REF'] = 8
             rank['OBJETIVO'] = 25
-            rank['FALTAN'] = (rank['OBJETIVO'] - rank['VENTAS TOTALES SIN MOVIL']).clip(lower=0)
+            rank['FALTAN'] = rank['OBJETIVO'] - rank['VENTAS TOTALES SIN MOVIL']
+            rank['FALTAN'] = rank['FALTAN'].apply(lambda x: x if x > 0 else 0)
             rank['% CONSECUCION'] = ((rank['VENTAS TOTALES SIN MOVIL'] / rank['OBJETIVO']) * 100).fillna(0).astype(int).astype(str) + "%"
 
             def get_motivacion_html(row):
                 perc = (row['VENTAS TOTALES SIN MOVIL'] / row['OBJETIVO']) * 100
-                if perc >= 100: return '<b style="color: #00ff00;">🔥 ¡NIVEL DIOS!</b>'
-                elif perc >= 80: return '<b style="color: #7FFF00;">🚀 Éxito total</b>'
-                elif perc >= 50: return '<b style="color: #FFD700;">💪 Buen camino</b>'
-                else: return '<b style="color: #FF4500;">🎯 ¡Dale gas!</b>'
+                if perc >= 100: return '<b style="color: #00ff00;">🔥 ¡NIVEL DIOS! Imparable.</b>'
+                elif perc >= 80: return '<b style="color: #7FFF00;">🚀 ¡Huele a éxito total!</b>'
+                elif perc >= 60: return '<b style="color: #FFD700;">💪 ¡A un paso de la gloria!</b>'
+                elif perc >= 40: return '<b style="color: #FFA500;">📈 ¡Vas por buen camino!</b>'
+                elif perc >= 20: return '<b style="color: #FF8C00;">⚡ ¡Dale gas, tú puedes!</b>'
+                else: return '<b style="color: #FF4500;">🎯 ¡A por todas, crack!</b>'
             
             rank['MOTIVACIÓN'] = rank.apply(get_motivacion_html, axis=1)
             rank = rank.sort_values('VENTAS TOTALES SIN MOVIL', ascending=False)
@@ -382,34 +418,96 @@ elif menu == "📈 DASHBOARD Y RANKING":
             if not rank.empty:
                 ganador = rank.index[0]
                 total_ganador = int(rank.iloc[0]['VENTAS TOTALES SIN MOVIL'])
-                st.markdown(f"""<div class="winner-card">👑 EL NÚMERO 1: {ganador.upper()} ({total_ganador} VENTAS)</div>""", unsafe_allow_html=True)
+                st.markdown(f"""<div class="winner-card">👑 EL NÚMERO 1: {ganador.upper()} ({total_ganador} VENTAS SIN MÓVIL) 👑</div>""", unsafe_allow_html=True)
                 
+                def asignar_medalla(n):
+                    if n == 0: return "🥇 Oro"
+                    elif n == 1: return "🥈 Plata"
+                    elif n == 2: return "🥉 Bronce"
+                    else: return "⭐"
+                
+                def style_faltan(val):
+                    if val == 0: color = '#90EE90'
+                    elif val <= 5: color = '#FFFFE0'
+                    else: color = '#FFCCCB'
+                    return f'background-color: {color}'
+
+                def style_ref(val):
+                    if val >= 8: color = '#90EE90'
+                    elif val >= 4: color = '#FFFFE0'
+                    else: color = '#FFCCCB'
+                    return f'background-color: {color}'
+
                 rank_visual = rank.reset_index()
-                rank_visual.insert(0, 'Puesto', [f"{i+1}º" for i in range(len(rank_visual))])
+                rank_visual.insert(0, 'Puesto', [asignar_medalla(i) for i in range(len(rank_visual))])
                 
-                cols_finales = ['Puesto', 'Comercial', 'V_Luz', 'V_Gas', 'V_Fibra', 'V_Móvil', 'V_Alarma', 'VENTAS TOTALES SIN MOVIL', 'TOTAL CON MOVIL', 'FALTAN', 'TOTAL REF', '% CONSECUCION', 'MOTIVACIÓN']
-                
-                st.write(rank_visual[cols_finales].to_html(escape=False, index=False), unsafe_allow_html=True)
+                cols_finales = [
+                    'Puesto', 'Comercial', 'V_Luz', 'V_Gas', 'V_Fibra', 'V_Móvil', 'V_Alarma', 
+                    'VENTAS TOTALES SIN MOVIL', 'TOTAL CON MOVIL', 'OBJETIVO', 'FALTAN', 
+                    'TOTAL REF', 'OBJETIVO REF', '% CONSECUCION', 'MOTIVACIÓN'
+                ]
+                rank_visual = rank_visual[cols_finales]
+
+                st.write(
+                    rank_visual.style
+                    .applymap(style_faltan, subset=['FALTAN'])
+                    .applymap(style_ref, subset=['TOTAL REF'])
+                    .format(subset=['V_Luz', 'V_Gas', 'V_Fibra', 'V_Móvil', 'V_Alarma', 'VENTAS TOTALES SIN MOVIL', 'TOTAL CON MOVIL', 'OBJETIVO', 'FALTAN', 'TOTAL REF', 'OBJETIVO REF'], precision=0)
+                    .to_html(escape=False, index=False), 
+                    unsafe_allow_html=True
+                )
             else:
                 st.warning("No hay datos para esta selección.")
 
         with tab_e:
-            if not de.empty:
-                fig_eb = px.bar(de.groupby('Comercial')['Total_Ene'].sum().reset_index(), x='Total_Ene', y='Comercial', orientation='h', title="Ventas Energía")
-                st.plotly_chart(fig_eb, use_container_width=True)
-            else: st.info("Sin datos de energía.")
+            col_e1, col_e2 = st.columns([1, 1.2])
+            with col_e1:
+                if not de.empty and 'Comercializadora' in de.columns:
+                    fig_e = px.pie(de, values='Total_Ene', names='Comercializadora', hole=0.5, title="Cuota de Energía")
+                    fig_e.update_traces(textposition='outside', textinfo='label+percent')
+                    st.plotly_chart(fig_e, use_container_width=True)
+                elif not de.empty:
+                    st.info("Columna 'Comercializadora' no encontrada para el gráfico.")
+                else: st.info("Sin datos de energía.")
+            with col_e2:
+                if not de.empty:
+                    fig_eb = px.bar(de.groupby('Comercial')['Total_Ene'].sum().reset_index().sort_values('Total_Ene'), x='Total_Ene', y='Comercial', orientation='h', text_auto=True, title="Ventas Energía")
+                    st.plotly_chart(fig_eb, use_container_width=True)
 
         with tab_t:
-            if not dt.empty:
-                fig_tb = px.bar(dt.groupby('Comercial')[['V_Fibra', 'V_Móvil']].sum().reset_index(), x='Comercial', y=['V_Fibra', 'V_Móvil'], barmode='group', title="Mix de Telco")
-                st.plotly_chart(fig_tb, use_container_width=True)
-            else: st.info("Sin datos de telefonía.")
+            col_t1, col_t2 = st.columns([1, 1.2])
+            with col_t1:
+                if not dt.empty and 'Operadora' in dt.columns:
+                    fig_t = px.pie(dt, values='Total_Tel', names='Operadora', hole=0.5, title="Cuota de Telco")
+                    fig_t.update_traces(textposition='outside', textinfo='label+percent')
+                    st.plotly_chart(fig_t, use_container_width=True)
+                elif not dt.empty:
+                    st.info("Columna 'Operadora' no encontrada.")
+                else: st.info("Sin datos de telefonía.")
+            with col_t2:
+                if not dt.empty:
+                    fig_tb = px.bar(dt.groupby('Comercial')[['V_Fibra', 'V_Móvil']].sum().reset_index(), x='Comercial', y=['V_Fibra', 'V_Móvil'], barmode='group', title="Mix de Telco")
+                    st.plotly_chart(fig_tb, use_container_width=True)
 
         with tab_a:
-            if not da.empty:
-                fig_a_bar = px.bar(da.groupby('Comercial')['V_Alarma'].sum().reset_index(), x='V_Alarma', y='Comercial', orientation='h', title="Ventas de Alarmas")
-                st.plotly_chart(fig_a_bar, use_container_width=True)
-            else: st.info("Sin datos de alarmas.")
+            col_a1, col_a2 = st.columns([1, 1.2])
+            with col_a1:
+                if not da.empty:
+                    fig_a_pie = px.pie(da, values='V_Alarma', names='Comercial', hole=0.5, 
+                                     title="Cuota de Alarmas por Comercial",
+                                     color_discrete_sequence=px.colors.sequential.Blues_r)
+                    fig_a_pie.update_traces(textposition='outside', textinfo='label+percent')
+                    st.plotly_chart(fig_a_pie, use_container_width=True)
+                else: st.info("Sin datos de alarmas.")
+            with col_a2:
+                if not da.empty:
+                    fig_a_bar = px.bar(da.groupby('Comercial')['V_Alarma'].sum().reset_index().sort_values('V_Alarma'), 
+                                     x='V_Alarma', y='Comercial', orientation='h', text_auto=True, 
+                                     title="Ventas de Alarmas", 
+                                     color_discrete_sequence=['#0000FF']) 
+                    st.plotly_chart(fig_a_bar, use_container_width=True)
+                else:
+                    st.info("Sin datos de alarmas para este periodo.")
 
     except Exception as e:
         st.error(f"Error cargando el Dashboard: {e}")
@@ -417,11 +515,25 @@ elif menu == "📈 DASHBOARD Y RANKING":
 # --- REPOSITORIO ---
 elif menu == "📂 REPOSITORIO":
     st.header("Documentación")
-    for c in ["GANA ENERGÍA", "NATURGY", "TOTAL", "ENDESA", "O2", "SEGURMA", "LOWI"]:
+    with st.expander("📂 MANUAL DEL MARCADOR"):
+        manual_path = "manuales/Manual_Premiumnumber_Agente.pdf"
+        if os.path.exists(manual_path):
+            with open(manual_path, "rb") as f:
+                st.download_button("📖 DESCARGAR MANUAL", f, file_name="Manual_Marcador.pdf")
+    st.markdown("---")
+    with st.expander("📁 DOCUMENTACIÓN LOWI"):
+        archivo_lowi = "manuales/TARIFAS_LOWI_MARZO2026.pdf"
+        if os.path.exists(archivo_lowi):
+            with open(archivo_lowi, "rb") as f:
+                st.download_button("📥 DESCARGAR TARIFAS LOWI MARZO 2026", f, file_name="TARIFAS_LOWI_MARZO2026.pdf")
+        else:
+            st.warning("Archivo TARIFAS_LOWI_MARZO2026.pdf no encontrado en la carpeta manuales.")
+
+    for c in ["GANA ENERGÍA", "NATURGY", "TOTAL", "ENDESA", "O2", "SEGURMA"]:
         with st.expander(f"📁 DOCUMENTACIÓN {c}"):
             if os.path.exists("manuales"):
-                busq = c.split()[0].lower()
-                archivos = [f for f in os.listdir("manuales") if busq in f.lower()]
+                busq = "total" if c == "TOTAL" else c.split()[0].lower()
+                archivos = [f for f in os.listdir("manuales") if busq in f.lower() and not f.lower().endswith(('.png', '.jpg'))]
                 for fn in archivos:
                     with open(f"manuales/{fn}", "rb") as f:
                         st.download_button(f"📥 {fn}", f, file_name=fn, key=f"b_{fn}")
