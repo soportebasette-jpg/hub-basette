@@ -345,13 +345,15 @@ elif menu == "📢 ANUNCIOS Y PLAN AMIGO":
             full_path = f"{path_anuncios}{item['file']}"
             if os.path.exists(full_path):
                 st.image(full_path, use_container_width=True)
-                with open(full_path, "rb") as file:
+                # Abrimos el archivo en cada iteración con un identificador de botón único
+                with open(full_path, "rb") as f_anuncio:
+                    data_anuncio = f_anuncio.read()
                     st.download_button(
                         label=f"Descargar {item['name']}",
-                        data=file,
+                        data=data_anuncio,
                         file_name=item['file'],
                         mime="image/png" if item['file'].lower().endswith('.png') else "image/jpeg",
-                        key=f"dl_anuncio_{idx}"
+                        key=f"btn_anuncio_{idx}" # Clave única obligatoria
                     )
             else:
                 st.error(f"Falta: {item['file']}")
