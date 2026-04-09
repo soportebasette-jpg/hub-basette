@@ -31,15 +31,15 @@ st.markdown("""
         border: 2px solid #d2ff00 !important; 
     }
     
-    /* Estilos para que el Ranking sea visual y no esté pegado */
+    /* Contenedor para que el Ranking no esté pegado */
     .ranking-container {
         background-color: white !important;
-        padding: 20px;
+        padding: 25px;
         border-radius: 15px;
-        margin-bottom: 25px;
+        margin-bottom: 30px;
     }
     .stTable { background-color: white !important; border-radius: 10px; }
-    .stTable td, .stTable th { color: #000000 !important; padding: 10px !important; }
+    .stTable td, .stTable th { color: #000000 !important; padding: 12px !important; border: 1px solid #f0f0f0 !important; }
 
     .block-header {
         background-color: #d2ff00; color: black; padding: 8px 20px; border-radius: 5px;
@@ -64,7 +64,6 @@ st.markdown("""
         padding: 20px;
         text-align: center;
         margin-bottom: 15px;
-        transition: transform 0.3s;
         height: 100%;
     }
     </style>
@@ -90,8 +89,8 @@ def load_and_clean_ranking():
     df_e['V_Luz'] = df_e['CUPS Luz'].apply(lambda x: 1 if pd.notnull(x) and str(x).strip() != "" else 0)
     df_e['V_Gas'] = df_e['CUPS Gas'].apply(lambda x: 1 if pd.notnull(x) and str(x).strip() != "" else 0)
     df_e['Total_Ene'] = df_e['V_Luz'] + df_e['V_Gas']
-    # CONTEO REF DRIVE ENERGÍA
-    df_e['REF_Ene'] = df_e['Canal'].astype(str).str.strip().apply(lambda x: 1 if x == "REF" else 0)
+    # CONTEO REF DINÁMICO (Limpia espacios y busca contenido)
+    df_e['REF_Ene'] = df_e['Canal'].astype(str).str.upper().apply(lambda x: 1 if "REF" in x else 0)
     
     # TELCO
     df_t = pd.read_csv(URL_TEL)
@@ -100,8 +99,7 @@ def load_and_clean_ranking():
     df_t = df_t.dropna(subset=['Comercial', 'Fecha Creación'])
     df_t['Año'] = df_t['Fecha Creación'].dt.year.astype(str)
     df_t['Mes'] = df_t['Fecha Creación'].dt.strftime('%m - %B')
-    # CONTEO REF DRIVE TELCO
-    df_t['REF_Tel'] = df_t['Canal'].astype(str).str.strip().apply(lambda x: 1 if x == "REF" else 0)
+    df_t['REF_Tel'] = df_t['Canal'].astype(str).str.upper().apply(lambda x: 1 if "REF" in x else 0)
     
     def get_telco_metrics(row):
         f, m = 0, 0
@@ -125,12 +123,11 @@ def load_and_clean_ranking():
     df_a['Año'] = df_a['Fecha Creación'].dt.year.astype(str)
     df_a['Mes'] = df_a['Fecha Creación'].dt.strftime('%m - %B')
     df_a['V_Alarma'] = 1 
-    # CONTEO REF DRIVE ALARMAS
-    df_a['REF_Ala'] = df_a['Canal'].astype(str).str.strip().apply(lambda x: 1 if x == "REF" else 0)
+    df_a['REF_Ala'] = df_a['Canal'].astype(str).str.upper().apply(lambda x: 1 if "REF" in x else 0)
     
     return df_e, df_t, df_a
 
-# --- BASE DE DATOS LUZ (No se modifica) ---
+# --- BASE DE DATOS LUZ ---
 tarifas_luz = [
     {"PRIORIDAD": 1, "COMPAÑÍA": "GANA ENERGÍA", "TARIFA": "24H", "P1": 0.089, "P2": 0.089, "ENERGIA": 0.129, "EXCEDENTE": 0.05, "DTO": "0%", "BATERIA": "SI_GRATIS", "logo": "manuales/logo_gana.png"},
     {"PRIORIDAD": 1, "COMPAÑÍA": "GANA ENERGÍA", "TARIFA": "3T", "P1": 0.089, "P2": 0.089, "ENERGIA": "0,181/0,114/0,090", "EXCEDENTE": 0.05, "DTO": "0%", "BATERIA": "SI_GRATIS", "logo": "manuales/logo_gana.png"},
@@ -244,7 +241,7 @@ elif menu == "📢 ANUNCIOS Y PLAN AMIGO":
     st.header("📢 Anuncios y Plan Amigo")
     if os.path.exists(QR_PLAN_AMIGO): st.image(QR_PLAN_AMIGO, width=250)
 
-# --- DASHBOARD Y RANKING (ESTA ES LA SECCIÓN QUE CAMBIA) ---
+# --- DASHBOARD Y RANKING (CORREGIDO) ---
 elif menu == "📈 DASHBOARD Y RANKING":
     st.header("📊 Dashboard de Rendimiento y Ranking")
     try:
@@ -266,7 +263,6 @@ elif menu == "📈 DASHBOARD Y RANKING":
         tab_r, tab_e, tab_t, tab_a = st.tabs(["🏆 RANKING", "⚡ ENERGÍA", "📱 TELCO", "🛡️ ALARMAS"])
 
         with tab_r:
-            # Agrupar datos para el Ranking
             re = de.groupby('Comercial')[['V_Luz', 'V_Gas', 'REF_Ene']].sum()
             rt = dt.groupby('Comercial')[['V_Fibra', 'V_Móvil', 'REF_Tel']].sum()
             ra = da.groupby('Comercial')[['V_Alarma', 'REF_Ala']].sum()
@@ -277,7 +273,7 @@ elif menu == "📈 DASHBOARD Y RANKING":
             rank['T+M'] = rank['TOTAL'] + rank['V_Móvil']
             rank['REF'] = rank['REF_Ene'] + rank['REF_Tel'] + rank['REF_Ala']
             rank['OBJ'] = 25
-            rank['OBJ REF'] = 8 # CAMBIADO DE OBJ R A OBJ REF
+            rank['OBJ REF'] = 8
             rank['FALTA'] = (rank['OBJ'] - rank['TOTAL']).clip(lower=0)
             rank['%'] = ((rank['TOTAL'] / rank['OBJ']) * 100).fillna(0).astype(int)
 
@@ -289,19 +285,19 @@ elif menu == "📈 DASHBOARD Y RANKING":
                 st.markdown(f"""<div class="winner-card">👑 #1 ACTUAL: {ganador.upper()} ({total_ganador} VENTAS SIN MÓVIL)</div>""", unsafe_allow_html=True)
                 
                 # FUNCIONES DE COLOR SEMÁFORO
-                def color_semaforo_total(val):
-                    if val >= 25: color = '#90EE90' # Verde
-                    elif val >= 15: color = '#FFFFE0' # Amarillo
-                    else: color = '#FFCCCB' # Rojo
+                def semaforo_total(val):
+                    if val >= 25: color = '#90EE90'
+                    elif val >= 15: color = '#FFFFE0'
+                    else: color = '#FFCCCB'
                     return f'background-color: {color}; color: black; font-weight: bold;'
 
-                def color_semaforo_falta(val):
+                def semaforo_falta(val):
                     if val == 0: color = '#90EE90'
                     elif val <= 10: color = '#FFFFE0'
                     else: color = '#FFCCCB'
                     return f'background-color: {color}; color: black; font-weight: bold;'
 
-                def color_semaforo_perc(val):
+                def semaforo_perc(val):
                     v = int(str(val).replace('%',''))
                     if v >= 100: color = '#90EE90'
                     elif v >= 60: color = '#FFFFE0'
@@ -311,57 +307,48 @@ elif menu == "📈 DASHBOARD Y RANKING":
                 rank_visual = rank.reset_index()
                 rank_visual.insert(0, 'Pos', [("🥇" if i==0 else "🥈" if i==1 else "🥉" if i==2 else "⭐") for i in range(len(rank_visual))])
                 
-                # Seleccionar y renombrar columnas
                 df_mostrar = rank_visual[['Pos', 'Comercial', 'V_Luz', 'V_Gas', 'V_Fibra', 'V_Móvil', 'V_Alarma', 'TOTAL', 'T+M', 'OBJ', 'FALTA', 'REF', 'OBJ REF', '%']].copy()
                 df_mostrar.columns = ['Pos', 'Comercial', 'Luz', 'Gas', 'Fibra', 'Móvil', 'Alarma', 'TOTAL', 'T+M', 'OBJ', 'FALTA', 'REF', 'OBJ REF', '%']
                 
-                # Quitar decimales
                 cols_int = ['Luz', 'Gas', 'Fibra', 'Móvil', 'Alarma', 'TOTAL', 'T+M', 'OBJ', 'FALTA', 'REF', 'OBJ REF']
                 df_mostrar[cols_int] = df_mostrar[cols_int].astype(int)
                 df_mostrar['%'] = df_mostrar['%'].astype(str) + "%"
 
-                # Mostrar Tabla con Estilo
                 st.markdown('<div class="ranking-container">', unsafe_allow_html=True)
-                st.table(df_mostrar.style.map(color_semaforo_total, subset=['TOTAL'])
-                                         .map(color_semaforo_falta, subset=['FALTA'])
-                                         .map(color_semaforo_perc, subset=['%']))
+                st.table(df_mostrar.style.map(semaforo_total, subset=['TOTAL'])
+                                         .map(semaforo_falta, subset=['FALTA'])
+                                         .map(semaforo_perc, subset=['%']))
                 st.markdown('</div>', unsafe_allow_html=True)
 
                 # BOTONES DE FRASES CON GLOBOS
                 st.write("---")
-                st.subheader("🎯 Frases de Motivación Personalizadas")
+                st.subheader("🎯 Frases de Motivación")
                 cols_frases = st.columns(4)
-                for index, row in rank_visual.iterrows():
+                for idx, row in rank_visual.iterrows():
                     nombre = row['Comercial'].split()[0]
                     total = row['TOTAL']
-                    
                     if total >= 25: frase = f"🥇 {nombre}: ¡ERES LEYENDA!"
                     elif total >= 15: frase = f"🚀 {nombre}: ¡VAS VOLANDO!"
                     elif total >= 5: frase = f"💪 {nombre}: ¡DALE DURO!"
                     else: frase = f"🎯 {nombre}: ¡A POR TODAS!"
 
-                    with cols_frases[index % 4]:
-                        if st.button(frase, key=f"btn_{index}"):
+                    with cols_frases[idx % 4]:
+                        if st.button(frase, key=f"btn_rank_{idx}"):
                             st.balloons()
-                            st.toast(f"¡Vamos {nombre}! Te faltan {int(row['FALTA'])} para el objetivo.")
+                            st.toast(f"¡Vamos {nombre}! Llevas {int(row['REF'])} Referidos.")
 
         with tab_e:
             if not de.empty:
-                fig_eb = px.bar(de.groupby('Comercial')['Total_Ene'].sum().reset_index().sort_values('Total_Ene'), x='Total_Ene', y='Comercial', orientation='h', text_auto=True, title="Ventas Energía")
-                st.plotly_chart(fig_eb, use_container_width=True)
-
+                st.plotly_chart(px.bar(de.groupby('Comercial')['Total_Ene'].sum().reset_index().sort_values('Total_Ene'), x='Total_Ene', y='Comercial', orientation='h', text_auto=True, title="Ventas Energía"), use_container_width=True)
         with tab_t:
             if not dt.empty:
-                fig_tb = px.bar(dt.groupby('Comercial')[['V_Fibra', 'V_Móvil']].sum().reset_index(), x='Comercial', y=['V_Fibra', 'V_Móvil'], barmode='group', title="Mix de Telco")
-                st.plotly_chart(fig_tb, use_container_width=True)
-
+                st.plotly_chart(px.bar(dt.groupby('Comercial')[['V_Fibra', 'V_Móvil']].sum().reset_index(), x='Comercial', y=['V_Fibra', 'V_Móvil'], barmode='group', title="Mix Telco"), use_container_width=True)
         with tab_a:
             if not da.empty:
-                fig_a_bar = px.bar(da.groupby('Comercial')['V_Alarma'].sum().reset_index().sort_values('V_Alarma'), x='V_Alarma', y='Comercial', orientation='h', text_auto=True, title="Ventas de Alarmas", color_discrete_sequence=['#0000FF']) 
-                st.plotly_chart(fig_a_bar, use_container_width=True)
+                st.plotly_chart(px.bar(da.groupby('Comercial')['V_Alarma'].sum().reset_index().sort_values('V_Alarma'), x='V_Alarma', y='Comercial', orientation='h', text_auto=True, title="Alarmas", color_discrete_sequence=['#0000FF']), use_container_width=True)
 
     except Exception as e:
-        st.error(f"Error cargando el Dashboard: {e}")
+        st.error(f"Error en Dashboard: {e}")
 
 # --- REPOSITORIO ---
 elif menu == "📂 REPOSITORIO":
