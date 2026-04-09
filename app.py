@@ -96,6 +96,7 @@ URL_ALA = get_csv_url("https://docs.google.com/spreadsheets/d/17o4HSJ4DZBwMgp9AA
 def load_and_clean_ranking():
     # ENERGÍA
     df_e = pd.read_csv(URL_ENE)
+    df_e.columns = df_e.columns.str.strip()
     df_e['Fecha Creación'] = pd.to_datetime(df_e['Fecha Creación'], dayfirst=True, errors='coerce')
     df_e = df_e.dropna(subset=['Comercial', 'Fecha Creación'])
     df_e['Año'] = df_e['Fecha Creación'].dt.year.astype(str)
@@ -103,15 +104,22 @@ def load_and_clean_ranking():
     df_e['V_Luz'] = df_e['CUPS Luz'].apply(lambda x: 1 if pd.notnull(x) and str(x).strip() != "" else 0)
     df_e['V_Gas'] = df_e['CUPS Gas'].apply(lambda x: 1 if pd.notnull(x) and str(x).strip() != "" else 0)
     df_e['Total_Ene'] = df_e['V_Luz'] + df_e['V_Gas']
-    df_e['REF_Ene'] = df_e['Canal'].apply(lambda x: 1 if str(x).strip().upper() == "REF" else 0)
+    if 'Canal' in df_e.columns:
+        df_e['REF_Ene'] = df_e['Canal'].apply(lambda x: 1 if str(x).strip().upper() == "REF" else 0)
+    else:
+        df_e['REF_Ene'] = 0
     
     # TELCO
     df_t = pd.read_csv(URL_TEL)
+    df_t.columns = df_t.columns.str.strip()
     df_t['Fecha Creación'] = pd.to_datetime(df_t['Fecha Creación'], dayfirst=True, errors='coerce')
     df_t = df_t.dropna(subset=['Comercial', 'Fecha Creación'])
     df_t['Año'] = df_t['Fecha Creación'].dt.year.astype(str)
     df_t['Mes'] = df_t['Fecha Creación'].dt.strftime('%m - %B')
-    df_t['REF_Tel'] = df_t['Canal'].apply(lambda x: 1 if str(x).strip().upper() == "REF" else 0)
+    if 'Canal' in df_t.columns:
+        df_t['REF_Tel'] = df_t['Canal'].apply(lambda x: 1 if str(x).strip().upper() == "REF" else 0)
+    else:
+        df_t['REF_Tel'] = 0
     
     def get_telco_metrics(row):
         f, m = 0, 0
@@ -130,12 +138,16 @@ def load_and_clean_ranking():
 
     # ALARMAS
     df_a = pd.read_csv(URL_ALA)
+    df_a.columns = df_a.columns.str.strip()
     df_a['Fecha Creación'] = pd.to_datetime(df_a['Fecha Creación'], dayfirst=True, errors='coerce')
     df_a = df_a.dropna(subset=['Comercial', 'Fecha Creación'])
     df_a['Año'] = df_a['Fecha Creación'].dt.year.astype(str)
     df_a['Mes'] = df_a['Fecha Creación'].dt.strftime('%m - %B')
     df_a['V_Alarma'] = 1 
-    df_a['REF_Ala'] = df_a['Canal'].apply(lambda x: 1 if str(x).strip().upper() == "REF" else 0)
+    if 'Canal' in df_a.columns:
+        df_a['REF_Ala'] = df_a['Canal'].apply(lambda x: 1 if str(x).strip().upper() == "REF" else 0)
+    else:
+        df_a['REF_Ala'] = 0
     
     return df_e, df_t, df_a
 
@@ -391,23 +403,15 @@ elif menu == "📈 DASHBOARD Y RANKING":
             
             rank = pd.concat([re, rt, ra], axis=1).fillna(0)
             
-            # 1. Totales Ventas
             rank['VENTAS TOTALES SIN MOVIL'] = rank['V_Luz'] + rank['V_Gas'] + rank['V_Fibra'] + rank['V_Alarma']
             rank['TOTAL CON MOVIL'] = rank['VENTAS TOTALES SIN MOVIL'] + rank['V_Móvil']
-            
-            # 2. Referidos y Objetivos Ref
             rank['TOTAL REF'] = rank['REF_Ene'] + rank['REF_Tel'] + rank['REF_Ala']
             rank['OBJETIVO REF'] = 8
-            
-            # 3. Objetivo General y Faltan
             rank['OBJETIVO'] = 25
             rank['FALTAN'] = rank['OBJETIVO'] - rank['VENTAS TOTALES SIN MOVIL']
             rank['FALTAN'] = rank['FALTAN'].apply(lambda x: x if x > 0 else 0)
-            
-            # 4. % Sin decimales
             rank['% CONSECUCION'] = ((rank['VENTAS TOTALES SIN MOVIL'] / rank['OBJETIVO']) * 100).fillna(0).astype(int).astype(str) + "%"
 
-            # 5. Frase motivadora con colores HTML
             def get_motivacion_html(row):
                 perc = (row['VENTAS TOTALES SIN MOVIL'] / row['OBJETIVO']) * 100
                 if perc >= 100: return '<b style="color: #00ff00;">🔥 ¡NIVEL DIOS! Imparable.</b>'
@@ -431,24 +435,21 @@ elif menu == "📈 DASHBOARD Y RANKING":
                     elif n == 2: return "🥉 Bronce"
                     else: return "⭐"
                 
-                # Función para colorear la columna Faltan (Semáforo Ventas)
                 def style_faltan(val):
-                    if val == 0: color = '#90EE90' # Verde (Cumplido)
-                    elif val <= 5: color = '#FFFFE0' # Amarillo claro (Cerca)
-                    else: color = '#FFCCCB' # Rojo claro (Lejos)
+                    if val == 0: color = '#90EE90'
+                    elif val <= 5: color = '#FFFFE0'
+                    else: color = '#FFCCCB'
                     return f'background-color: {color}'
 
-                # Función para colorear la columna Referidos (Semáforo REF)
                 def style_ref(val):
-                    if val >= 8: color = '#90EE90' # Verde (Objetivo cumplido)
-                    elif val >= 4: color = '#FFFFE0' # Amarillo (Camino al éxito)
-                    else: color = '#FFCCCB' # Rojo (Por debajo)
+                    if val >= 8: color = '#90EE90'
+                    elif val >= 4: color = '#FFFFE0'
+                    else: color = '#FFCCCB'
                     return f'background-color: {color}'
 
                 rank_visual = rank.reset_index()
                 rank_visual.insert(0, 'Puesto', [asignar_medalla(i) for i in range(len(rank_visual))])
                 
-                # Seleccionar y reordenar columnas para visualización
                 cols_finales = [
                     'Puesto', 'Comercial', 'V_Luz', 'V_Gas', 'V_Fibra', 'V_Móvil', 'V_Alarma', 
                     'VENTAS TOTALES SIN MOVIL', 'TOTAL CON MOVIL', 'OBJETIVO', 'FALTAN', 
@@ -456,7 +457,6 @@ elif menu == "📈 DASHBOARD Y RANKING":
                 ]
                 rank_visual = rank_visual[cols_finales]
 
-                # Renderizado de la tabla con estilos
                 st.write(
                     rank_visual.style
                     .applymap(style_faltan, subset=['FALTAN'])
@@ -471,10 +471,12 @@ elif menu == "📈 DASHBOARD Y RANKING":
         with tab_e:
             col_e1, col_e2 = st.columns([1, 1.2])
             with col_e1:
-                if not de.empty:
+                if not de.empty and 'Comercializadora' in de.columns:
                     fig_e = px.pie(de, values='Total_Ene', names='Comercializadora', hole=0.5, title="Cuota de Energía")
                     fig_e.update_traces(textposition='outside', textinfo='label+percent')
                     st.plotly_chart(fig_e, use_container_width=True)
+                elif not de.empty:
+                    st.info("Columna 'Comercializadora' no encontrada para el gráfico.")
                 else: st.info("Sin datos de energía.")
             with col_e2:
                 if not de.empty:
@@ -484,10 +486,12 @@ elif menu == "📈 DASHBOARD Y RANKING":
         with tab_t:
             col_t1, col_t2 = st.columns([1, 1.2])
             with col_t1:
-                if not dt.empty:
+                if not dt.empty and 'Operadora' in dt.columns:
                     fig_t = px.pie(dt, values='Total_Tel', names='Operadora', hole=0.5, title="Cuota de Telco")
                     fig_t.update_traces(textposition='outside', textinfo='label+percent')
                     st.plotly_chart(fig_t, use_container_width=True)
+                elif not dt.empty:
+                    st.info("Columna 'Operadora' no encontrada.")
                 else: st.info("Sin datos de telefonía.")
             with col_t2:
                 if not dt.empty:
