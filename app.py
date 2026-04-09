@@ -330,13 +330,14 @@ elif menu == "📢 ANUNCIOS Y PLAN AMIGO":
     st.write("Visualiza y descarga los últimos anuncios:")
     
     path_anuncios = "anunciosbasette/"
+    # CORRECCIÓN AQUÍ: Cambiadas las extensiones a .png para los 3 archivos indicados
     lista_anuncios = [
         {"file": "Anuncio1_qr.png", "name": "Anuncio 1 QR"},
         {"file": "Anuncio2_qr.png", "name": "Anuncio 2 QR"},
         {"file": "PUBLI3.jpg", "name": "Publicidad 3"},
-        {"file": "anuncio alarma1.jpg", "name": "Anuncio Alarma 1"},
-        {"file": "anuncio1.jpg", "name": "Anuncio 1"},
-        {"file": "anuncio2.jpg", "name": "Anuncio 2"}
+        {"file": "anuncio alarma1.png", "name": "Anuncio Alarma 1"},
+        {"file": "anuncio1.png", "name": "Anuncio 1"},
+        {"file": "anuncio2.png", "name": "Anuncio 2"}
     ]
     
     cols_anuncios = st.columns(3)
@@ -345,7 +346,6 @@ elif menu == "📢 ANUNCIOS Y PLAN AMIGO":
             full_path = f"{path_anuncios}{item['file']}"
             if os.path.exists(full_path):
                 st.image(full_path, use_container_width=True)
-                # Abrimos el archivo en cada iteración con un identificador de botón único
                 with open(full_path, "rb") as f_anuncio:
                     data_anuncio = f_anuncio.read()
                     st.download_button(
@@ -353,7 +353,7 @@ elif menu == "📢 ANUNCIOS Y PLAN AMIGO":
                         data=data_anuncio,
                         file_name=item['file'],
                         mime="image/png" if item['file'].lower().endswith('.png') else "image/jpeg",
-                        key=f"btn_anuncio_{idx}" # Clave única obligatoria
+                        key=f"btn_anuncio_{idx}"
                     )
             else:
                 st.error(f"Falta: {item['file']}")
