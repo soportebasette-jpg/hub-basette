@@ -1,150 +1,107 @@
 import streamlit as st
+import os
 import pandas as pd
-import datetime
+import plotly.express as px
+from datetime import datetime
+from fpdf import FPDF
 
-# Configuración de la página
-st.set_page_config(page_title="Dashboard Comercial Basette", layout="wide")
+# 1. CONFIGURACIÓN
+st.set_page_config(
+    page_title="Basette Group | Hub", 
+    layout="wide", 
+    initial_sidebar_state="expanded" 
+)
 
-# --- FUNCIONES DE CARGA DE DATOS ---
-def cargar_objetivos():
-    # Enlace de Google Sheets en formato exportable
-    sheet_url = "https://docs.google.com/spreadsheets/d/1RSvqNHuymjYKVZ0QHgTKrLEl4xuSPVeS/export?format=xlsx"
-    try:
-        df_obj = pd.read_excel(sheet_url)
-        # Limpieza de nombres de columnas por si acaso hay espacios
-        df_obj.columns = df_obj.columns.str.strip()
-        return df_obj
-    except Exception as e:
-        st.error(f"Error al conectar con Drive: {e}")
-        return pd.DataFrame()
-
-# Simulación de carga de ventas (aquí deberías tener tu conexión actual a la base de datos o CSV)
-# Esta función es un ejemplo, asegúrate de que use tu fuente de datos real
-def cargar_ventas_reales():
-    # Placeholder: Datos de ejemplo basados en tus capturas
-    data = {
-        'COMERCIAL': ['BELEN TRONCOSO', 'DEBORAH RODRIGUEZ', 'LORENA POZO', 'LUIS RODRIGUEZ GOMEZ'],
-        'V_Fibra': [5, 1, 2, 1],
-        'V_Móvil': [7, 1, 2, 1],
-        'TIPO': ['Fibra', 'Fibra', 'Fibra', 'Móvil'] # Esto es para el filtro de conteo
-    }
-    return pd.DataFrame(data)
-
-# --- INTERFAZ DEL DASHBOARD ---
-
-# Menú superior
-tabs = st.tabs(["RANKING", "ENERGÍA", "TELCO", "ALARMAS", "OBJETIVO MENSUAL"])
-
-# --- TAB RANKING, ENERGÍA, TELCO, ALARMAS (Mantenidos sin cambios según instrucción) ---
-with tabs[0]:
-    st.header("Ranking de Ventas")
-    # Aquí iría tu código actual de Ranking
-
-with tabs[1]:
-    st.header("Ventas Energía")
-    # Aquí iría tu código actual de Energía
-
-with tabs[2]:
-    st.header("Estadísticas Telco")
-    # Código para mostrar gráficos de Telco como en image_9f0626.png
-    col1, col2 = st.columns(2)
-    with col1:
-        st.subheader("Cuota de Telco")
-        # Tu gráfico circular aquí
-    with col2:
-        st.subheader("Mix de Telco")
-        # Tu gráfico de barras aquí
-
-with tabs[3]:
-    st.header("Gestión de Alarmas y Publicidad")
-    
-    # CORRECCIÓN DE RUTAS DE ANUNCIOS
-    # Se añade el prefijo de la carpeta 'anunciosbasette/' para evitar los errores de carga
-    col_an1, col_an2, col_pub = st.columns(3)
-    
-    with col_an1:
-        st.image("anunciosbasette/anuncio1.jpg", caption="Anuncio 1", use_container_width=True)
-        st.download_button("Descargar Anuncio 1 QR", data=open("anunciosbasette/anuncio1.jpg", "rb"), file_name="anuncio1.jpg")
-        
-    with col_an2:
-        st.image("anunciosbasette/anuncio2.jpg", caption="Anuncio 2", use_container_width=True)
-        st.download_button("Descargar Anuncio 2 QR", data=open("anunciosbasette/anuncio2.jpg", "rb"), file_name="anuncio2.jpg")
-
-    with col_pub:
-        st.image("anunciosbasette/PUBLI3.png", caption="Publicidad 3", use_container_width=True)
-        st.download_button("Descargar Publicidad 3", data=open("anunciosbasette/PUBLI3.png", "rb"), file_name="PUBLI3.png")
-
-    # Otros anuncios mencionados en tus errores
-    st.subheader("Otros Materiales")
-    col_ext1, col_ext2 = st.columns(2)
-    with col_ext1:
-        try:
-            st.image("anunciosbasette/anuncio_alarma1.png", width=200)
-        except:
-            st.warning("Archivo anuncio_alarma1.png no encontrado en carpeta anunciosbasette")
-    
-# --- NUEVA SECCIÓN: OBJETIVO MENSUAL ---
-with tabs[4]:
-    st.header("Cumplimiento de Objetivos Mensuales")
-    
-    # Obtener mes actual en español y mayúsculas para coincidir con el Excel
-    meses_es = {1: "ENERO", 2: "FEBRERO", 3: "MARZO", 4: "ABRIL", 5: "MAYO", 6: "JUNIO", 
-                7: "JULIO", 8: "AGOSTO", 9: "SEPTIEMBRE", 10: "OCTUBRE", 11: "NOVIEMBRE", 12: "DICIEMBRE"}
-    mes_actual = meses_es[datetime.datetime.now().month]
-    
-    # Cargar datos
-    df_objetivos = cargar_objetivos()
-    df_ventas = cargar_ventas_reales() # Asegúrate que esta función use tus datos reales
-    
-    if not df_objetivos.empty:
-        # Filtrar objetivos por el mes actual
-        df_obj_mes = df_objetivos[df_objetivos['MES'].astype(str).str.upper() == mes_actual].copy()
-        
-        if df_obj_mes.empty:
-            st.warning(f"No se han encontrado objetivos configurados para el mes: {mes_actual}")
-        else:
-            # Preparar tabla final
-            # Sumamos solo ventas que NO sean móviles (en este ejemplo usamos V_Fibra)
-            # Ajusta 'V_Fibra' al nombre de tu columna de ventas de fibra/energía/alarmas
-            resumen_ventas = df_ventas.groupby('COMERCIAL')['V_Fibra'].sum().reset_index()
-            resumen_ventas.columns = ['COMERCIAL', 'VENTAS_ACTUALES']
-            
-            # Unir con objetivos
-            df_final = pd.merge(df_obj_mes, resumen_ventas, on='COMERCIAL', how='left').fillna(0)
-            
-            # Cálculos solicitados
-            df_final['VENTAS_ACTUALES'] = df_final['VENTAS_ACTUALES'].astype(int)
-            df_final['OBJETIVO'] = df_final['OBJETIVO'].astype(int)
-            
-            # Restante (Objetivo - Actuales, mínimo 0)
-            df_final['RESTANTE'] = (df_final['OBJETIVO'] - df_final['VENTAS_ACTUALES']).clip(lower=0)
-            
-            # % Consecución (sin decimales)
-            def calcular_porcentaje(row):
-                if row['OBJETIVO'] > 0:
-                    return int((row['VENTAS_ACTUALES'] / row['OBJETIVO']) * 100)
-                return 100 if row['VENTAS_ACTUALES'] > 0 else 0
-            
-            df_final['% LOGRADO'] = df_final.apply(calcular_porcentaje, axis=1)
-            
-            # Renombrar columnas para visualización
-            df_mostrar = df_final[['COMERCIAL', 'VENTAS_ACTUALES', 'OBJETIVO', 'RESTANTE', '% LOGRADO']]
-            df_mostrar.columns = ['COMERCIAL', 'VENTAS ACTUALES', 'OBJETIVO/FIRMAS', 'RESTANTE', '% LOGRADO']
-            
-            # Estilo de la tabla (Fondo rojo como en tu imagen)
-            def style_red(styler):
-                styler.set_properties(**{'background-color': '#ff4b4b', 'color': 'white', 'border': '1px solid white'})
-                return styler
-
-            st.table(df_mostrar.style.pipe(style_red).format(precision=0))
-    else:
-        st.error("No se pudo cargar la información de objetivos desde Google Sheets.")
-
-# --- PIE DE PÁGINA O ESTILOS ADICIONALES ---
+# 2. CSS DE ALTA VISIBILIDAD
 st.markdown("""
     <style>
-    .stTable {
-        border-radius: 10px;
+    .stApp { background-color: #0d1117; color: #ffffff; }
+    header { visibility: hidden; }
+    label[data-testid="stWidgetLabel"] p {
+        color: #d2ff00 !important;
+        font-weight: 900 !important;
+        font-size: 1.25rem !important;
+    }
+    button p, .stDownloadButton button p, .stButton button p { 
+        color: #000000 !important; 
+        font-weight: 900 !important; 
+    }
+    button, .stDownloadButton button, .stButton button { 
+        background-color: #ffffff !important; 
+        border: 2px solid #d2ff00 !important; 
+    }
+    .stTable { background-color: white !important; border-radius: 10px; }
+    .stTable td, .stTable th { color: #000000 !important; text-align: center !important; }
+    
+    .block-header {
+        background-color: #d2ff00; color: black; padding: 8px 20px; border-radius: 5px;
+        font-weight: bold; margin-bottom: 20px; margin-top: 25px; display: inline-block; font-size: 1.1rem;
+    }
+    
+    .winner-card { 
+        background: linear-gradient(90deg, #1e3a8a, #3b82f6); 
+        padding: 25px; 
+        border-radius: 15px; 
+        color: white !important; 
+        text-align: center; 
+        font-weight: bold; 
+        font-size: 28px; 
+        margin-bottom: 25px;
+        box-shadow: 0px 4px 15px rgba(0,0,0,0.5);
+    }
+
+    .price-card {
+        background-color: #161b22;
+        border: 2px solid #30363d;
+        border-radius: 15px;
+        padding: 20px;
+        text-align: center;
+        margin-bottom: 15px;
+        transition: transform 0.3s;
+        height: 100%;
+    }
+    .price-card:hover {
+        border-color: #d2ff00;
+        transform: translateY(-5px);
+    }
+    .price-title { color: #d2ff00; font-size: 1.2rem; font-weight: bold; margin-bottom: 10px; }
+    .price-val { color: white; font-size: 2rem; font-weight: 900; }
+    .price-sub { color: #8b949e; font-size: 0.85rem; margin-bottom: 5px; }
+
+    span[data-baseweb="tag"] {
+        background-color: #d2ff00 !important;
+        border-radius: 5px !important;
+    }
+    span[data-baseweb="tag"] span {
+        color: black !important;
+        font-weight: bold !important;
+    }
+
+    .stSelectbox div[data-baseweb="select"], .stMultiSelect div[data-baseweb="select"] {
+        background-color: #161b22 !important;
+        color: white !important;
     }
     </style>
     """, unsafe_allow_html=True)
+
+# --- FUNCIONES DE DATOS DASHBOARD ---
+def get_csv_url(url):
+    return url.replace('/edit?usp=sharing', '/export?format=csv').split('&ouid=')[0].split('?')[0] + '/export?format=csv'
+
+URL_ENE = get_csv_url("https://docs.google.com/spreadsheets/d/1W-Eq63SnBBlOykJlP9XgASXDPpWQhQnVW-oFHUlSMcQ/edit?usp=sharing")
+URL_TEL = get_csv_url("https://docs.google.com/spreadsheets/d/1HkI37_hUTZbsm_DwLjbi2kMTKcC23QsV/edit?usp=sharing")
+URL_ALA = get_csv_url("https://docs.google.com/spreadsheets/d/17o4HSJ4DZBwMgp9AAiGhkd8NQCZEaaQ_/edit?usp=sharing")
+# URL OBJETIVOS
+URL_OBJ = "https://docs.google.com/spreadsheets/d/1RSvqNHuymjYKVZ0QHgTKrLEl4xuSPVeS/export?format=xlsx"
+
+@st.cache_data(ttl=60)
+def load_and_clean_ranking():
+    # Energía
+    df_e = pd.read_csv(URL_ENE)
+    df_e['Fecha Creación'] = pd.to_datetime(df_e['Fecha Creación'], dayfirst=True, errors='coerce')
+    df_e = df_e.dropna(subset=['Comercial', 'Fecha Creación'])
+    df_e['Año'] = df_e['Fecha Creación'].dt.year.astype(str)
+    df_e['Mes'] = df_e['Fecha Creación'].dt.strftime('%m - %B')
+    df_e['V_Luz'] = df_e['CUPS Luz'].apply(lambda x: 1 if pd.notnull(x) and str(x).strip() != "" else 0)
+    df_e['V_Gas'] = df_e['CUPS Gas'].apply(lambda x: 1 if pd.notnull(x) and str(x).strip() != "" else 0)
+    df_e['Total_Ene'] = df_e['V_Luz
