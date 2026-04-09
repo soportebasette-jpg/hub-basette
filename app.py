@@ -95,7 +95,7 @@ URL_OBJ = get_csv_url("https://docs.google.com/spreadsheets/d/1RSvqNHuymjYKVZ0QH
 
 @st.cache_data(ttl=60)
 def load_and_clean_ranking():
-    # ENERGÍA
+    # Energía
     df_e = pd.read_csv(URL_ENE)
     df_e['Fecha Creación'] = pd.to_datetime(df_e['Fecha Creación'], dayfirst=True, errors='coerce')
     df_e = df_e.dropna(subset=['Comercial', 'Fecha Creación'])
@@ -105,7 +105,7 @@ def load_and_clean_ranking():
     df_e['V_Gas'] = df_e['CUPS Gas'].apply(lambda x: 1 if pd.notnull(x) and str(x).strip() != "" else 0)
     df_e['Total_Ene'] = df_e['V_Luz'] + df_e['V_Gas']
     
-    # TELCO
+    # Telco
     df_t = pd.read_csv(URL_TEL)
     df_t['Fecha Creación'] = pd.to_datetime(df_t['Fecha Creación'], dayfirst=True, errors='coerce')
     df_t = df_t.dropna(subset=['Comercial', 'Fecha Creación'])
@@ -127,7 +127,7 @@ def load_and_clean_ranking():
     df_t['V_Móvil'] = res.apply(lambda x: x[1])
     df_t['Total_Tel'] = res.apply(lambda x: x[2])
 
-    # ALARMAS
+    # Alarmas
     df_a = pd.read_csv(URL_ALA)
     df_a['Fecha Creación'] = pd.to_datetime(df_a['Fecha Creación'], dayfirst=True, errors='coerce')
     df_a = df_a.dropna(subset=['Comercial', 'Fecha Creación'])
@@ -135,7 +135,7 @@ def load_and_clean_ranking():
     df_a['Mes'] = df_a['Fecha Creación'].dt.strftime('%m - %B')
     df_a['V_Alarma'] = 1
     
-    # OBJETIVOS
+    # Objetivos (Carga directa)
     df_obj = pd.read_csv(URL_OBJ)
     
     return df_e, df_t, df_a, df_obj
@@ -237,12 +237,39 @@ elif menu == "📊 PRECIOS":
         for i, (vel, pre) in enumerate(solo_fibra):
             with f_cols[i]:
                 st.markdown(f'<div class="price-card"><div class="price-title">FIBRA {vel}</div><div class="price-val">{pre}</div><div class="price-sub">Precio Final / Mes</div></div>', unsafe_allow_html=True)
+        
+        st.markdown('<div class="block-header">🌐 FIBRA Y MÓVIL (O2)</div>', unsafe_allow_html=True)
+        fm_cols = st.columns(3)
+        # Datos extraídos de la imagen tarifaria O2
+        fibra_movil_o2 = [
+            ("300 Mb", "30€", "1 LÍNEA (10GB)"),
+            ("600 Mb", "35€", "1 LÍNEA (60GB)"),
+            ("600 Mb", "35€", "2 LÍNEAS (10GB+40GB)"),
+            ("1 Gb", "38€", "1 LÍNEA (120GB)"),
+            ("1 Gb", "50€", "1 LÍNEA (350GB)")
+        ]
+        for i, (vel, pre, lin) in enumerate(fibra_movil_o2):
+            with fm_cols[i % 3]:
+                st.markdown(f'<div class="price-card"><div class="price-title">{vel} + {lin}</div><div class="price-val">{pre}</div><div class="price-sub">O2 Digital</div></div>', unsafe_allow_html=True)
+
+        st.markdown('<div class="block-header">📺 FIBRA, MÓVIL Y TV (MOVISTAR+)</div>', unsafe_allow_html=True)
+        tv_cols = st.columns(3)
+        planes_tv_o2 = [
+            ("600 Mb + TV", "38€", "35GB Móvil"),
+            ("600 Mb + TV + NETFLIX", "45€", "60GB Móvil"),
+            ("1 Gb + TV", "50€", "350GB Móvil"),
+            ("1 Gb + TV + NETFLIX", "56€", "375GB Móvil")
+        ]
+        for i, (vel, pre, gb) in enumerate(planes_tv_o2):
+            with tv_cols[i % 3]:
+                st.markdown(f'<div class="price-card"><div class="price-title">{vel}</div><div class="price-val">{pre}</div><div class="price-sub">{gb} Incluidos</div></div>', unsafe_allow_html=True)
+
         st.markdown('<div class="block-header">➕ LÍNEAS ADICIONALES</div>', unsafe_allow_html=True)
-        ad_cols = st.columns(3)
-        lineas_ad = [("300 Mb", "15€"), ("600 Mb", "20€"), ("1 Gb", "27€")]
-        for i, (vel, pre, gb) in enumerate([("300 Mb", "15€", "60GB"), ("600 Mb", "20€", "100GB"), ("1 Gb", "27€", "120GB")]):
+        ad_cols = st.columns(4)
+        lineas_ad = [("10 GB", "5€"), ("40 GB", "10€"), ("100 GB", "15€"), ("200 GB", "20€")]
+        for i, (gb, pre) in enumerate(lineas_ad):
             with ad_cols[i]:
-                st.markdown(f'<div class="price-card"><div class="price-title">ADICIONAL {vel}</div><div class="price-val">{pre}</div><div class="price-sub">{gb}</div></div>', unsafe_allow_html=True)
+                st.markdown(f'<div class="price-card"><div class="price-title">MÓVIL {gb}</div><div class="price-val">{pre}</div><div class="price-sub">Solo Adicional</div></div>', unsafe_allow_html=True)
 
 # --- COMPARADOR ---
 elif menu == "⚖️ COMPARADOR":
@@ -338,7 +365,7 @@ elif menu == "📈 DASHBOARD Y RANKING":
     try:
         df_e, df_t, df_a, df_obj = load_and_clean_ranking()
         
-        # Filtros globales
+        # Filtros
         anos = sorted(list(set(df_e['Año']) | set(df_t['Año']) | set(df_a['Año'])))
         meses = sorted(list(set(df_e['Mes']) | set(df_t['Mes']) | set(df_a['Mes'])))
         comerciales_lista = sorted(list(set(df_e['Comercial']) | set(df_t['Comercial']) | set(df_a['Comercial'])))
@@ -370,31 +397,33 @@ elif menu == "📈 DASHBOARD Y RANKING":
                 st.table(rank.reset_index().style.format(precision=0))
 
         with tab_obj:
-            # Ventas sin móviles: Luz + Gas + Fibra + Alarma
-            ventas_sin_movil = pd.concat([
-                de.groupby('Comercial')[['V_Luz', 'V_Gas']].sum(),
-                dt.groupby('Comercial')[['V_Fibra']].sum(),
-                da.groupby('Comercial')[['V_Alarma']].sum()
-            ], axis=1).fillna(0)
+            # Ventas sin móviles
+            v_luz_gas = de.groupby('Comercial')[['V_Luz', 'V_Gas']].sum()
+            v_fibra = dt.groupby('Comercial')[['V_Fibra']].sum()
+            v_alarma = da.groupby('Comercial')[['V_Alarma']].sum()
             
-            ventas_sin_movil['VENTAS_ACTUALES'] = ventas_sin_movil.sum(axis=1)
+            ventas_actuales = pd.concat([v_luz_gas, v_fibra, v_alarma], axis=1).fillna(0).sum(axis=1).reset_index()
+            ventas_actuales.columns = ['COMERCIAL', 'VENTAS_ACTUALES']
             
-            # Limpieza nombre mes para cruzar con objetivos (ej: "04 - April" -> "Abril" o según formato Excel)
-            # Asumimos que el Excel tiene el nombre del mes o se filtra por mes actual
-            df_obj_mes = df_obj[df_obj['MES'].astype(str).str.contains(f_mes.split('-')[-1].strip(), case=False, na=False)]
+            # Limpiar nombre de mes del filtro para cruzar con el Excel de objetivos
+            mes_texto = f_mes.split('-')[-1].strip().upper()
+            df_obj_mes = df_obj[df_obj['MES'].astype(str).str.upper() == mes_texto]
             
-            res_obj = pd.merge(ventas_sin_movil[['VENTAS_ACTUALES']].reset_index(), df_obj_mes, left_on='Comercial', right_on='COMERCIAL', how='left').fillna(0)
+            # Unimos las ventas actuales con los objetivos reales del excel
+            res_obj = pd.merge(ventas_actuales, df_obj_mes, on='COMERCIAL', how='left').fillna(0)
             
+            # Lógica de cálculo
             res_obj['RESTANTE'] = res_obj['OBJETIVO/FIRMAS'] - res_obj['VENTAS_ACTUALES']
+            res_obj.loc[res_obj['RESTANTE'] < 0, 'RESTANTE'] = 0
             res_obj['% LOGRADO'] = (res_obj['VENTAS_ACTUALES'] / res_obj['OBJETIVO/FIRMAS'].replace(0, 1) * 100).round(1)
 
             def highlight_obj(row):
-                color = 'background-color: #ff4b4b; color: white' if row['VENTAS_ACTUALES'] < row['OBJETIVO/FIRMAS'] else 'background-color: #28a745; color: white'
+                # Verde si llega o supera, Rojo si no llega
+                color = 'background-color: #28a745; color: white' if row['VENTAS_ACTUALES'] >= row['OBJETIVO/FIRMAS'] and row['OBJETIVO/FIRMAS'] > 0 else 'background-color: #ff4b4b; color: white'
                 return [color] * len(row)
 
             if not res_obj.empty:
-                cols_obj = ['Comercial', 'VENTAS_ACTUALES', 'OBJETIVO/FIRMAS', 'RESTANTE', '% LOGRADO']
-                st.table(res_obj[cols_obj].style.apply(highlight_obj, axis=1).format({'% LOGRADO': '{:.1f}%', 'RESTANTE': '{:.0f}', 'OBJETIVO/FIRMAS': '{:.0f}', 'VENTAS_ACTUALES': '{:.0f}'}))
+                st.table(res_obj[['COMERCIAL', 'VENTAS_ACTUALES', 'OBJETIVO/FIRMAS', 'RESTANTE', '% LOGRADO']].style.apply(highlight_obj, axis=1).format({'% LOGRADO': '{:.1f}%'}))
 
         with tab_e:
             if not de.empty:
@@ -403,12 +432,12 @@ elif menu == "📈 DASHBOARD Y RANKING":
         
         with tab_t:
             if not dt.empty:
-                fig_t = px.bar(dt.groupby('Comercial')[['V_Fibra', 'V_Móvil']].sum().reset_index(), x='Comercial', y=['V_Fibra', 'V_Móvil'], barmode='group', title="Mix de Telecomunicaciones")
+                fig_t = px.bar(dt.groupby('Comercial')[['V_Fibra', 'V_Móvil']].sum().reset_index(), x='Comercial', y=['V_Fibra', 'V_Móvil'], barmode='group', title="Mix de Telco")
                 st.plotly_chart(fig_t, use_container_width=True)
 
         with tab_a:
             if not da.empty:
-                fig_a = px.bar(da.groupby('Comercial')[['V_Alarma']].sum().reset_index(), x='Comercial', y='V_Alarma', title="Alarmas por Comercial", color_discrete_sequence=['#d2ff00'])
+                fig_a = px.bar(da.groupby('Comercial')[['V_Alarma']].sum().reset_index(), x='Comercial', y='V_Alarma', title="Ventas Alarmas", color_discrete_sequence=['#d2ff00'])
                 st.plotly_chart(fig_a, use_container_width=True)
 
     except Exception as e: st.error(f"Error en Dashboard: {e}")
