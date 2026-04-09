@@ -389,10 +389,26 @@ elif menu == "📈 DASHBOARD Y RANKING":
             rank = pd.concat([re, rt, ra], axis=1).fillna(0)
             
             # MODIFICACIÓN SOLICITADA:
-            # 1. Creamos el Total SIN Móvil (Para el Ganador y Ranking Principal)
+            # 1. Creamos el Total SIN Móvil
             rank['VENTAS TOTALES SIN MOVIL'] = rank['V_Luz'] + rank['V_Gas'] + rank['V_Fibra'] + rank['V_Alarma']
             # 2. Creamos el Total CON Móvil
             rank['TOTAL CON MOVIL'] = rank['VENTAS TOTALES SIN MOVIL'] + rank['V_Móvil']
+            
+            # 3. Columnas solicitadas: Objetivo, Faltan y % Consecución
+            rank['OBJETIVO'] = 25
+            rank['FALTAN'] = rank['OBJETIVO'] - rank['VENTAS TOTALES SIN MOVIL']
+            rank['FALTAN'] = rank['FALTAN'].apply(lambda x: x if x > 0 else 0)
+            rank['% CONSECUCION'] = (rank['VENTAS TOTALES SIN MOVIL'] / rank['OBJETIVO'] * 100).round(1).astype(str) + "%"
+
+            # 4. Frase motivadora
+            def get_motivacion(row):
+                perc = (row['VENTAS TOTALES SIN MOVIL'] / row['OBJETIVO']) * 100
+                if perc >= 100: return "¡ESPECTACULAR! Eres una leyenda."
+                elif perc >= 75: return "¡Casi lo tienes! Dale el último empujón."
+                elif perc >= 50: return "Buen ritmo, ¡no bajes la guardia!"
+                else: return "¡Vamos! Cada venta cuenta, tú puedes."
+            
+            rank['MOTIVACIÓN'] = rank.apply(get_motivacion, axis=1)
             
             # Ordenamos por Ventas Totales Sin Móvil para determinar el ganador
             rank = rank.sort_values('VENTAS TOTALES SIN MOVIL', ascending=False)
@@ -410,7 +426,7 @@ elif menu == "📈 DASHBOARD Y RANKING":
                 
                 rank_visual = rank.reset_index()
                 rank_visual.insert(0, 'Puesto', [asignar_medalla(i) for i in range(len(rank_visual))])
-                st.table(rank_visual.style.format(precision=0))
+                st.table(rank_visual.style.format(subset=['V_Luz', 'V_Gas', 'V_Fibra', 'V_Móvil', 'V_Alarma', 'VENTAS TOTALES SIN MOVIL', 'TOTAL CON MOVIL', 'OBJETIVO', 'FALTAN'], precision=0))
             else:
                 st.warning("No hay datos para esta selección.")
 
