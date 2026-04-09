@@ -330,7 +330,6 @@ elif menu == "📢 ANUNCIOS Y PLAN AMIGO":
     st.write("Visualiza y descarga los últimos anuncios:")
     
     path_anuncios = "anunciosbasette/"
-    # CORRECCIÓN AQUÍ: Cambiadas las extensiones a .png para los 3 archivos indicados
     lista_anuncios = [
         {"file": "Anuncio1_qr.png", "name": "Anuncio 1 QR"},
         {"file": "Anuncio2_qr.png", "name": "Anuncio 2 QR"},
@@ -388,14 +387,14 @@ elif menu == "📈 DASHBOARD Y RANKING":
             ra = da.groupby('Comercial')[['V_Alarma']].sum()
             
             rank = pd.concat([re, rt, ra], axis=1).fillna(0)
-            rank['TOTAL'] = rank['V_Luz'] + rank['V_Gas'] + rank['V_Fibra'] + rank['V_Móvil'] + rank['V_Alarma']
-            rank['TOTAL VENTAS SIN MOVIL'] = rank['V_Luz'] + rank['V_Gas'] + rank['V_Fibra'] + rank['V_Alarma']
+            # MODIFICACIÓN SOLICITADA: Total es sin móvil
+            rank['TOTAL'] = rank['V_Luz'] + rank['V_Gas'] + rank['V_Fibra'] + rank['V_Alarma']
             rank = rank.sort_values('TOTAL', ascending=False)
 
             if not rank.empty:
                 ganador = rank.index[0]
                 total_ganador = int(rank.iloc[0]['TOTAL'])
-                st.markdown(f"""<div class="winner-card">👑 EL NÚMERO 1: {ganador.upper()} ({total_ganador} VENTAS) 👑</div>""", unsafe_allow_html=True)
+                st.markdown(f"""<div class="winner-card">👑 EL NÚMERO 1: {ganador.upper()} ({total_ganador} VENTAS SIN MÓVIL) 👑</div>""", unsafe_allow_html=True)
                 
                 def asignar_medalla(n):
                     if n == 0: return "🥇 Oro"
