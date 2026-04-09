@@ -344,14 +344,13 @@ elif menu == "📢 ANUNCIOS Y PLAN AMIGO":
         with cols_anuncios[idx % 3]:
             full_path = f"{path_anuncios}{item['file']}"
             if os.path.exists(full_path):
-                # Arreglo de visualización: use_container_width asegura que se vea bien
                 st.image(full_path, use_container_width=True)
                 with open(full_path, "rb") as file:
                     st.download_button(
                         label=f"Descargar {item['name']}",
                         data=file,
                         file_name=item['file'],
-                        mime="image/png" if "png" in item['file'].lower() else "image/jpeg",
+                        mime="image/png" if item['file'].lower().endswith('.png') else "image/jpeg",
                         key=f"dl_anuncio_{idx}"
                     )
             else:
@@ -388,10 +387,7 @@ elif menu == "📈 DASHBOARD Y RANKING":
             
             rank = pd.concat([re, rt, ra], axis=1).fillna(0)
             rank['TOTAL'] = rank['V_Luz'] + rank['V_Gas'] + rank['V_Fibra'] + rank['V_Móvil'] + rank['V_Alarma']
-            
-            # --- NUEVA COLUMNA SOLICITADA ---
             rank['TOTAL VENTAS SIN MOVIL'] = rank['V_Luz'] + rank['V_Gas'] + rank['V_Fibra'] + rank['V_Alarma']
-            
             rank = rank.sort_values('TOTAL', ascending=False)
 
             if not rank.empty:
@@ -481,7 +477,7 @@ elif menu == "📂 REPOSITORIO":
         with st.expander(f"📁 DOCUMENTACIÓN {c}"):
             if os.path.exists("manuales"):
                 busq = "total" if c == "TOTAL" else c.split()[0].lower()
-                archivos = [f for f in os.listdir("manuales") if busq in f.lower() and not f.lower().endswith('.png')]
+                archivos = [f for f in os.listdir("manuales") if busq in f.lower() and not f.lower().endswith(('.png', '.jpg'))]
                 for fn in archivos:
                     with open(f"manuales/{fn}", "rb") as f:
                         st.download_button(f"📥 {fn}", f, file_name=fn, key=f"b_{fn}")
