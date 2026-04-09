@@ -367,26 +367,10 @@ elif menu == "📢 ANUNCIOS Y PLAN AMIGO":
 elif menu == "📈 DASHBOARD Y RANKING":
     st.markdown("""
         <style>
-        .ranking-table-container {
-            background-color: white !important;
-            padding: 10px;
-            border-radius: 10px;
-            overflow-x: auto;
-        }
-        div[data-testid="stTable"] table {
-            color: black !important;
-            font-size: 11px !important;
-        }
-        div[data-testid="stTable"] th {
-            background-color: #f1f1f1 !important;
-            color: black !important;
-            font-weight: bold !important;
-        }
-        div[data-testid="stTable"] td {
-            background-color: white !important;
-            color: black !important;
-            padding: 4px 8px !important;
-        }
+        .ranking-table-container { background-color: white !important; padding: 10px; border-radius: 10px; overflow-x: auto; }
+        div[data-testid="stTable"] table { color: black !important; font-size: 11px !important; }
+        div[data-testid="stTable"] th { background-color: #f1f1f1 !important; color: black !important; font-weight: bold !important; }
+        div[data-testid="stTable"] td { background-color: white !important; color: black !important; padding: 4px 8px !important; }
         </style>
     """, unsafe_allow_html=True)
 
@@ -413,81 +397,82 @@ elif menu == "📈 DASHBOARD Y RANKING":
         tab_r, tab_e, tab_t, tab_a = st.tabs(["🏆 RANKING", "⚡ ENERGÍA", "📱 TELCO", "🛡️ ALARMAS"])
 
         with tab_r:
-            # Agrupar y Calcular Referidos Correctamente
             re = de.groupby('Comercial')[['V_Luz', 'V_Gas', 'REF_Ene']].sum()
             rt = dt.groupby('Comercial')[['V_Fibra', 'V_Móvil', 'REF_Tel']].sum()
             ra = da.groupby('Comercial')[['V_Alarma', 'REF_Ala']].sum()
             
             rank = pd.concat([re, rt, ra], axis=1).fillna(0)
             
-            rank['TOTAL'] = rank['V_Luz'] + rank['V_Gas'] + rank['V_Fibra'] + rank['V_Alarma']
-            rank['T+M'] = rank['TOTAL'] + rank['V_Móvil']
-            rank['REF'] = rank['REF_Ene'] + rank['REF_Tel'] + rank['REF_Ala']
-            rank['OBJ'] = 25
-            rank['OBJ REF'] = 8
-            rank['FALTA'] = (rank['OBJ'] - rank['TOTAL']).clip(lower=0)
-            rank['%'] = ((rank['TOTAL'] / rank['OBJ']) * 100).fillna(0).astype(int)
+            rank['VENTAS TOTALES SIN MOVIL'] = rank['V_Luz'] + rank['V_Gas'] + rank['V_Fibra'] + rank['V_Alarma']
+            rank['TOTAL CON MOVIL'] = rank['VENTAS TOTALES SIN MOVIL'] + rank['V_Móvil']
+            rank['TOTAL REF'] = rank['REF_Ene'] + rank['REF_Tel'] + rank['REF_Ala']
+            rank['OBJETIVO REF'] = 8
+            rank['OBJETIVO'] = 25
+            rank['FALTAN'] = rank['OBJETIVO'] - rank['VENTAS TOTALES SIN MOVIL']
+            rank['FALTAN'] = rank['FALTAN'].apply(lambda x: x if x > 0 else 0)
+            rank['% CONSECUCION'] = ((rank['VENTAS TOTALES SIN MOVIL'] / rank['OBJETIVO']) * 100).fillna(0).astype(int).astype(str) + "%"
 
-            rank = rank.sort_values('TOTAL', ascending=False)
+            def get_motivacion_html(row):
+                perc = (row['VENTAS TOTALES SIN MOVIL'] / row['OBJETIVO']) * 100
+                if perc >= 100: return '<b style="color: #008000;">🔥 NIVEL DIOS</b>'
+                elif perc >= 80: return '<b style="color: #2E8B57;">🚀 MÁQUINA</b>'
+                elif perc >= 60: return '<b style="color: #B8860B;">💪 VAS BIEN</b>'
+                elif perc >= 40: return '<b style="color: #D2691E;">📈 DALE MÁS</b>'
+                elif perc >= 20: return '<b style="color: #FF8C00;">🎈 ARRANCANDO</b>'
+                else: return '<b style="color: #FF4500;">🎯 CALENTANDO</b>'
+            
+            rank['MOTIVACIÓN'] = rank.apply(get_motivacion_html, axis=1)
+            rank = rank.sort_values('VENTAS TOTALES SIN MOVIL', ascending=False)
 
             if not rank.empty:
                 ganador = rank.index[0]
-                total_ganador = int(rank.iloc[0]['TOTAL'])
+                total_ganador = int(rank.iloc[0]['VENTAS TOTALES SIN MOVIL'])
                 st.markdown(f"""<div class="winner-card" style="font-size: 20px; padding: 15px;">👑 #1: {ganador.upper()} ({total_ganador} VENTAS)</div>""", unsafe_allow_html=True)
                 
-                # Funciones de Estilo Semáforo Mejoradas
+                def asignar_medalla(n):
+                    if n == 0: return "🥇"
+                    elif n == 1: return "🥈"
+                    elif n == 2: return "🥉"
+                    else: return "⭐"
+                
                 def style_faltan(val):
-                    if val <= 5: color = '#90EE90' # Verde (Cerca)
-                    elif val <= 15: color = '#FFFFE0' # Amarillo
-                    else: color = '#FFCCCB' # Rojo (Lejos)
-                    return f'background-color: {color}; color: black; font-weight: bold'
+                    if val == 0: color = '#90EE90'
+                    elif val <= 5: color = '#FFFFE0'
+                    else: color = '#FFCCCB'
+                    return f'background-color: {color}'
 
                 def style_ref(val):
                     if val >= 8: color = '#90EE90'
                     elif val >= 4: color = '#FFFFE0'
                     else: color = '#FFCCCB'
-                    return f'background-color: {color}; color: black; font-weight: bold'
-
-                def style_perc(val):
-                    if val >= 80: color = '#90EE90'
-                    elif val >= 40: color = '#FFFFE0'
-                    else: color = '#FFCCCB'
-                    return f'background-color: {color}; color: black; font-weight: bold'
+                    return f'background-color: {color}'
 
                 rank_visual = rank.reset_index()
-                medallas = [("🥇" if i==0 else "🥈" if i==1 else "🥉" if i==2 else "⭐") for i in range(len(rank_visual))]
-                rank_visual.insert(0, 'Pos', medallas)
+                rank_visual.insert(0, 'Pos', [asignar_medalla(i) for i in range(len(rank_visual))])
                 
-                # Formateo de columna % para visualización
-                rank_visual['%'] = rank_visual['%'].astype(str) + "%"
-
-                # Selección y Renombrado Final
                 cols_finales = {
                     'Pos': 'Pos', 'Comercial': 'Comercial', 'V_Luz': 'Luz', 'V_Gas': 'Gas', 
                     'V_Fibra': 'Fibra', 'V_Móvil': 'Móvil', 'V_Alarma': 'Alarma', 
-                    'TOTAL': 'TOTAL', 'T+M': 'T+M', 
-                    'OBJ': 'OBJ', 'FALTA': 'FALTA', 
-                    'REF': 'REF', 'OBJ REF': 'OBJ REF', '%': '%'
+                    'VENTAS TOTALES SIN MOVIL': 'TOTAL', 'TOTAL CON MOVIL': 'T+M', 
+                    'OBJETIVO': 'OBJ', 'FALTAN': 'FALTA', 
+                    'TOTAL REF': 'REF', 'OBJETIVO REF': 'OBJ R', '% CONSECUCION': '%', 'MOTIVACIÓN': 'INFO'
                 }
                 
-                df_mostrar = rank_visual[list(cols_finales.keys())].rename(columns=cols_finales)
+                rank_visual = rank_visual[list(cols_finales.keys())].rename(columns=cols_finales)
 
-                # Renderizado de Tabla con Semáforo
-                st.table(
-                    df_mostrar.style
+                # FORZAR ENTEROS PARA QUITAR DECIMALES
+                cols_to_int = ['Luz', 'Gas', 'Fibra', 'Móvil', 'Alarma', 'TOTAL', 'T+M', 'OBJ', 'FALTA', 'REF', 'OBJ R']
+                for c in cols_to_int:
+                    rank_visual[c] = rank_visual[c].astype(int)
+
+                st.write(
+                    rank_visual.style
                     .map(style_faltan, subset=['FALTA'])
                     .map(style_ref, subset=['REF'])
-                    .map(lambda x: style_perc(int(x.replace('%',''))), subset=['%'])
-                    .map(style_faltan, subset=['TOTAL']) # Semáforo también en TOTAL
+                    .set_properties(**{'background-color': 'white', 'color': 'black', 'border-color': '#eeeeee'})
+                    .to_html(escape=False, index=False), 
+                    unsafe_allow_html=True
                 )
-
-                # Botones Motivacionales
-                st.write("---")
-                cols_v = st.columns(len(rank_visual))
-                for i, r in rank_visual.iterrows():
-                    with cols_v[i]:
-                        if st.button(f"🎯 VAMOS {r['Comercial'].split()[0]}", key=f"btn_{i}"):
-                            st.balloons()
             else:
                 st.warning("No hay datos para esta selección.")
 
@@ -498,7 +483,7 @@ elif menu == "📈 DASHBOARD Y RANKING":
                     fig_e = px.pie(de, values='Total_Ene', names='Comercializadora', hole=0.5, title="Cuota de Energía")
                     fig_e.update_traces(textposition='outside', textinfo='label+percent')
                     st.plotly_chart(fig_e, use_container_width=True)
-                else: st.info("Sin datos de comercializadoras.")
+                else: st.info("Sin datos de energía.")
             with col_e2:
                 if not de.empty:
                     fig_eb = px.bar(de.groupby('Comercial')['Total_Ene'].sum().reset_index().sort_values('Total_Ene'), x='Total_Ene', y='Comercial', orientation='h', text_auto=True, title="Ventas Energía")
@@ -511,7 +496,7 @@ elif menu == "📈 DASHBOARD Y RANKING":
                     fig_t = px.pie(dt, values='Total_Tel', names='Operadora', hole=0.5, title="Cuota de Telco")
                     fig_t.update_traces(textposition='outside', textinfo='label+percent')
                     st.plotly_chart(fig_t, use_container_width=True)
-                else: st.info("Sin datos de operadoras.")
+                else: st.info("Sin datos de telefonía.")
             with col_t2:
                 if not dt.empty:
                     fig_tb = px.bar(dt.groupby('Comercial')[['V_Fibra', 'V_Móvil']].sum().reset_index(), x='Comercial', y=['V_Fibra', 'V_Móvil'], barmode='group', title="Mix de Telco")
@@ -547,9 +532,11 @@ elif menu == "📂 REPOSITORIO":
         if os.path.exists(archivo_lowi):
             with open(archivo_lowi, "rb") as f:
                 st.download_button("📥 DESCARGAR TARIFAS LOWI MARZO 2026", f, file_name="TARIFAS_LOWI_MARZO2026.pdf")
-        else:
-            st.warning("Archivo TARIFAS_LOWI_MARZO2026.pdf no encontrado.")
-
     for c in ["GANA ENERGÍA", "NATURGY", "TOTAL", "ENDESA", "O2", "SEGURMA"]:
         with st.expander(f"📁 DOCUMENTACIÓN {c}"):
-            st.write(f"Buscando archivos para {c}...")
+            if os.path.exists("manuales"):
+                busq = "total" if c == "TOTAL" else c.split()[0].lower()
+                archivos = [f for f in os.listdir("manuales") if busq in f.lower() and not f.lower().endswith(('.png', '.jpg'))]
+                for fn in archivos:
+                    with open(f"manuales/{fn}", "rb") as f:
+                        st.download_button(f"📥 {fn}", f, file_name=fn, key=f"b_{fn}")
