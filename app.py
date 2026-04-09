@@ -95,7 +95,6 @@ URL_OBJ = get_csv_url("https://docs.google.com/spreadsheets/d/1RSvqNHuymjYKVZ0QH
 
 @st.cache_data(ttl=60)
 def load_and_clean_ranking():
-    # Energía
     df_e = pd.read_csv(URL_ENE)
     df_e['Fecha Creación'] = pd.to_datetime(df_e['Fecha Creación'], dayfirst=True, errors='coerce')
     df_e = df_e.dropna(subset=['Comercial', 'Fecha Creación'])
@@ -105,7 +104,6 @@ def load_and_clean_ranking():
     df_e['V_Gas'] = df_e['CUPS Gas'].apply(lambda x: 1 if pd.notnull(x) and str(x).strip() != "" else 0)
     df_e['Total_Ene'] = df_e['V_Luz'] + df_e['V_Gas']
     
-    # Telco
     df_t = pd.read_csv(URL_TEL)
     df_t['Fecha Creación'] = pd.to_datetime(df_t['Fecha Creación'], dayfirst=True, errors='coerce')
     df_t = df_t.dropna(subset=['Comercial', 'Fecha Creación'])
@@ -127,7 +125,7 @@ def load_and_clean_ranking():
     df_t['V_Móvil'] = res.apply(lambda x: x[1])
     df_t['Total_Tel'] = res.apply(lambda x: x[2])
 
-    # Alarmas
+    # Nuevos datos de Alarmas
     df_a = pd.read_csv(URL_ALA)
     df_a['Fecha Creación'] = pd.to_datetime(df_a['Fecha Creación'], dayfirst=True, errors='coerce')
     df_a = df_a.dropna(subset=['Comercial', 'Fecha Creación'])
@@ -135,7 +133,7 @@ def load_and_clean_ranking():
     df_a['Mes'] = df_a['Fecha Creación'].dt.strftime('%m - %B')
     df_a['V_Alarma'] = 1
     
-    # Objetivos (Carga directa)
+    # Nuevos datos de Objetivos
     df_obj = pd.read_csv(URL_OBJ)
     
     return df_e, df_t, df_a, df_obj
@@ -205,13 +203,13 @@ if menu == "🚀 CRM":
     with col_izq_p:
         st.markdown('<div class="block-header">🛡️ 🚨 ALARMAS</div>', unsafe_allow_html=True)
         st.markdown('<div style="background:#161b22; padding:15px; border-radius:10px; border:1px solid #30363d; text-align:center; margin-bottom:10px;"><h4 style="color:white; margin:0;">SEGURMA</h4></div>', unsafe_allow_html=True)
-        st.link_button("ENTRAR", "https://crm.segurma.com/web#action=619&cids=1&menu_id=200&model=sale.order&view_type=list", use_container_width=True)
+        st.link_button("ENTRAR", "https://partners.segurma.com/", use_container_width=True)
     with col_der_p:
         st.markdown('<div class="block-header">📶 📱 TELECOMUNICACIONES</div>', unsafe_allow_html=True)
         c_t1, c_t2 = st.columns(2)
         with c_t1:
             st.markdown('<div style="background:#161b22; padding:15px; border-radius:10px; border:1px solid #30363d; text-align:center; margin-bottom:10px;"><h4 style="color:white; margin:0;">O2</h4></div>', unsafe_allow_html=True)
-            st.link_button("ENTRAR O2", "https://o2online.es/auth/login/?next=%2Fventas%2F&type=retail", use_container_width=True)
+            st.link_button("ENTRAR O2", "https://o2online.es/auth/login/", use_container_width=True)
         with c_t2:
             st.markdown('<div style="background:#161b22; padding:15px; border-radius:10px; border:1px solid #30363d; text-align:center; margin-bottom:10px;"><h4 style="color:white; margin:0;">LOWI</h4></div>', unsafe_allow_html=True)
             st.link_button("ENTRAR LOWI", "https://vodafone.topgestion.es/login", use_container_width=True)
@@ -238,25 +236,45 @@ elif menu == "📊 PRECIOS":
             with f_cols[i]:
                 st.markdown(f'<div class="price-card"><div class="price-title">FIBRA {vel}</div><div class="price-val">{pre}</div><div class="price-sub">Precio Final / Mes</div></div>', unsafe_allow_html=True)
         
-        st.markdown('<div class="block-header">🌐 FIBRA Y MÓVIL (O2)</div>', unsafe_allow_html=True)
+        st.markdown('<div class="block-header">🌐 FIBRA Y MÓVIL</div>', unsafe_allow_html=True)
         fm_cols = st.columns(3)
+        # Datos extraídos de la imagen y actualizados
         fibra_movil_o2 = [
-            ("300 Mb", "30€", "1 LÍNEA (10GB)"),
-            ("600 Mb", "35€", "1 LÍNEA (60GB)"),
-            ("600 Mb", "35€", "2 LÍNEAS (10GB+40GB)"),
-            ("1 Gb", "38€", "1 LÍNEA (120GB)"),
-            ("1 Gb", "50€", "1 LÍNEA (350GB)")
+            ("300 Mb + 10 GB", "30€", "Sigue así, campeón 💪"),
+            ("600 Mb + 60 GB", "35€", "¡Ánimo! Lo estás haciendo genial 😉"),
+            ("1 GB + 120 GB", "38€", "¡Tú puedes con todo! 🚀"),
+            ("600 Mb + 10 GB + 40 GB", "35€", "Gran trabajo en equipo ✨"),
+            ("1 GB + 350 GB", "50€", "¡A por todas! 🏆")
         ]
-        for i, (vel, pre, lin) in enumerate(fibra_movil_o2):
+        for i, (vel, pre, frase) in enumerate(fibra_movil_o2):
             with fm_cols[i % 3]:
-                st.markdown(f'<div class="price-card"><div class="price-title">{vel} + {lin}</div><div class="price-val">{pre}</div><div class="price-sub">O2 Digital</div></div>', unsafe_allow_html=True)
+                st.markdown(f'<div class="price-card"><div class="price-title">{vel}</div><div class="price-val">{pre}</div><div class="price-sub">{frase}</div></div>', unsafe_allow_html=True)
+
+        st.markdown('<div class="block-header">📺 TELEVISIÓN Y PACKS TV</div>', unsafe_allow_html=True)
+        tv_cols = st.columns(3)
+        # Datos extraídos de la imagen y actualizados
+        packs_tv_o2 = [
+            ("SOLO TV", "9.99€", "M+ Suscrpición 📺"),
+            ("600 Mb + TV", "38€", "35 GB Incluidos 🎥"),
+            ("600 Mb + TV + NETFLIX", "45€", "60 GB Incluidos 🍿"),
+            ("1 Gb + TV", "50€", "350 GB Incluidos 🎬"),
+            ("1 Gb + TV + NETFLIX", "56€", "375 GB Incluidos 🎫")
+        ]
+        for i, (vel, pre, frase) in enumerate(packs_tv_o2):
+            with tv_cols[i % 3]:
+                st.markdown(f'<div class="price-card"><div class="price-title">{vel}</div><div class="price-val">{pre}</div><div class="price-sub">{frase}</div></div>', unsafe_allow_html=True)
 
         st.markdown('<div class="block-header">➕ LÍNEAS ADICIONALES</div>', unsafe_allow_html=True)
-        ad_cols = st.columns(4)
-        lineas_ad = [("10 GB", "5€"), ("40 GB", "10€"), ("100 GB", "15€"), ("200 GB", "20€")]
-        for i, (gb, pre) in enumerate(lineas_ad):
+        ad_cols = st.columns(3)
+        # Datos extraídos de la imagen y actualizados
+        lineas_ad_o2 = [
+            ("Móvil 40 GB", "5€", "Solo Adicional 📲"),
+            ("Móvil 150 GB", "10€", "Pago Mensual 💵"),
+            ("Móvil 300 GB", "15€", "¡Máxima potencia! 🔥")
+        ]
+        for i, (gb, pre, frase) in enumerate(lineas_ad_o2):
             with ad_cols[i]:
-                st.markdown(f'<div class="price-card"><div class="price-title">MÓVIL {gb}</div><div class="price-val">{pre}</div><div class="price-sub">Solo Adicional</div></div>', unsafe_allow_html=True)
+                st.markdown(f'<div class="price-card"><div class="price-title">{gb}</div><div class="price-val">{pre}</div><div class="price-sub">{frase}</div></div>', unsafe_allow_html=True)
 
 # --- COMPARADOR ---
 elif menu == "⚖️ COMPARADOR":
@@ -337,6 +355,7 @@ elif menu == "📢 ANUNCIOS Y PLAN AMIGO":
                 st.image(full_path, use_column_width=True)
                 with open(full_path, "rb") as file:
                     st.download_button(label=f"Descargar {item['name']}", data=file, file_name=item['file'], key=f"dl_{idx}")
+            else: st.error(f"Falta: {item['file']}")
 
 # --- DASHBOARD Y RANKING ---
 elif menu == "📈 DASHBOARD Y RANKING":
@@ -379,10 +398,14 @@ elif menu == "📈 DASHBOARD Y RANKING":
             ventas_actuales = pd.concat([v_luz_gas, v_fibra, v_alarma], axis=1).fillna(0).sum(axis=1).reset_index()
             ventas_actuales.columns = ['COMERCIAL', 'VENTAS_ACTUALES']
             
+            # Limpiar nombre de mes del filtro para cruzar con el Excel de objetivos
             mes_texto = f_mes.split('-')[-1].strip().upper()
             df_obj_mes = df_obj[df_obj['MES'].astype(str).str.upper() == mes_texto]
             
+            # Unimos las ventas actuales con los objetivos reales del excel
             res_obj = pd.merge(ventas_actuales, df_obj_mes, on='COMERCIAL', how='left').fillna(0)
+            
+            # Lógica de cálculo
             res_obj['RESTANTE'] = res_obj['OBJETIVO/FIRMAS'] - res_obj['VENTAS_ACTUALES']
             res_obj.loc[res_obj['RESTANTE'] < 0, 'RESTANTE'] = 0
             res_obj['% LOGRADO'] = (res_obj['VENTAS_ACTUALES'] / res_obj['OBJETIVO/FIRMAS'].replace(0, 1) * 100).round(1)
