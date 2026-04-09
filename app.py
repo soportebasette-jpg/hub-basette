@@ -94,7 +94,6 @@ URL_ALA = get_csv_url("https://docs.google.com/spreadsheets/d/17o4HSJ4DZBwMgp9AA
 
 @st.cache_data(ttl=60)
 def load_and_clean_ranking():
-    # Energía
     df_e = pd.read_csv(URL_ENE)
     df_e['Fecha Creación'] = pd.to_datetime(df_e['Fecha Creación'], dayfirst=True, errors='coerce')
     df_e = df_e.dropna(subset=['Comercial', 'Fecha Creación'])
@@ -104,7 +103,6 @@ def load_and_clean_ranking():
     df_e['V_Gas'] = df_e['CUPS Gas'].apply(lambda x: 1 if pd.notnull(x) and str(x).strip() != "" else 0)
     df_e['Total_Ene'] = df_e['V_Luz'] + df_e['V_Gas']
     
-    # Telefonía
     df_t = pd.read_csv(URL_TEL)
     df_t['Fecha Creación'] = pd.to_datetime(df_t['Fecha Creación'], dayfirst=True, errors='coerce')
     df_t = df_t.dropna(subset=['Comercial', 'Fecha Creación'])
@@ -126,7 +124,6 @@ def load_and_clean_ranking():
     df_t['V_Móvil'] = res.apply(lambda x: x[1])
     df_t['Total_Tel'] = res.apply(lambda x: x[2])
 
-    # Alarmas
     df_a = pd.read_csv(URL_ALA)
     df_a['Fecha Creación'] = pd.to_datetime(df_a['Fecha Creación'], dayfirst=True, errors='coerce')
     df_a = df_a.dropna(subset=['Comercial', 'Fecha Creación'])
@@ -388,29 +385,29 @@ elif menu == "📈 DASHBOARD Y RANKING":
             
             rank = pd.concat([re, rt, ra], axis=1).fillna(0)
             
-            # MODIFICACIÓN SOLICITADA:
-            # 1. Creamos el Total SIN Móvil
+            # 1. Totales
             rank['VENTAS TOTALES SIN MOVIL'] = rank['V_Luz'] + rank['V_Gas'] + rank['V_Fibra'] + rank['V_Alarma']
-            # 2. Creamos el Total CON Móvil
             rank['TOTAL CON MOVIL'] = rank['VENTAS TOTALES SIN MOVIL'] + rank['V_Móvil']
             
-            # 3. Columnas solicitadas: Objetivo, Faltan y % Consecución
+            # 2. Objetivo y Faltan
             rank['OBJETIVO'] = 25
             rank['FALTAN'] = rank['OBJETIVO'] - rank['VENTAS TOTALES SIN MOVIL']
             rank['FALTAN'] = rank['FALTAN'].apply(lambda x: x if x > 0 else 0)
-            rank['% CONSECUCION'] = (rank['VENTAS TOTALES SIN MOVIL'] / rank['OBJETIVO'] * 100).round(1).astype(str) + "%"
+            
+            # 3. % Sin decimales
+            rank['% CONSECUCION'] = ((rank['VENTAS TOTALES SIN MOVIL'] / rank['OBJETIVO']) * 100).fillna(0).astype(int).astype(str) + "%"
 
-            # 4. Frase motivadora
-            def get_motivacion(row):
+            # 4. Frase motivadora con colores HTML
+            def get_motivacion_html(row):
                 perc = (row['VENTAS TOTALES SIN MOVIL'] / row['OBJETIVO']) * 100
-                if perc >= 100: return "¡ESPECTACULAR! Eres una leyenda."
-                elif perc >= 75: return "¡Casi lo tienes! Dale el último empujón."
-                elif perc >= 50: return "Buen ritmo, ¡no bajes la guardia!"
-                else: return "¡Vamos! Cada venta cuenta, tú puedes."
+                if perc >= 100: return '<b style="color: #00ff00;">🔥 ¡NIVEL DIOS! Imparable.</b>'
+                elif perc >= 80: return '<b style="color: #7FFF00;">🚀 ¡Huele a éxito total!</b>'
+                elif perc >= 60: return '<b style="color: #FFD700;">💪 ¡A un paso de la gloria!</b>'
+                elif perc >= 40: return '<b style="color: #FFA500;">📈 ¡Vas por buen camino!</b>'
+                elif perc >= 20: return '<b style="color: #FF8C00;">⚡ ¡Dale gas, tú puedes!</b>'
+                else: return '<b style="color: #FF4500;">🎯 ¡A por todas, crack!</b>'
             
-            rank['MOTIVACIÓN'] = rank.apply(get_motivacion, axis=1)
-            
-            # Ordenamos por Ventas Totales Sin Móvil para determinar el ganador
+            rank['MOTIVACIÓN'] = rank.apply(get_motivacion_html, axis=1)
             rank = rank.sort_values('VENTAS TOTALES SIN MOVIL', ascending=False)
 
             if not rank.empty:
@@ -424,9 +421,23 @@ elif menu == "📈 DASHBOARD Y RANKING":
                     elif n == 2: return "🥉 Bronce"
                     else: return "⭐"
                 
+                # Función para colorear la columna Faltan (Semáforo)
+                def style_faltan(val):
+                    if val == 0: color = '#90EE90' # Verde (Cumplido)
+                    elif val <= 5: color = '#FFFFE0' # Amarillo claro (Cerca)
+                    else: color = '#FFCCCB' # Rojo claro (Lejos)
+                    return f'background-color: {color}'
+
                 rank_visual = rank.reset_index()
                 rank_visual.insert(0, 'Puesto', [asignar_medalla(i) for i in range(len(rank_visual))])
-                st.table(rank_visual.style.format(subset=['V_Luz', 'V_Gas', 'V_Fibra', 'V_Móvil', 'V_Alarma', 'VENTAS TOTALES SIN MOVIL', 'TOTAL CON MOVIL', 'OBJETIVO', 'FALTAN'], precision=0))
+                
+                # Renderizado de la tabla con estilos
+                st.write(
+                    rank_visual.style.applymap(style_faltan, subset=['FALTAN'])
+                    .format(subset=['V_Luz', 'V_Gas', 'V_Fibra', 'V_Móvil', 'V_Alarma', 'VENTAS TOTALES SIN MOVIL', 'TOTAL CON MOVIL', 'OBJETIVO', 'FALTAN'], precision=0)
+                    .to_html(escape=False, index=False), 
+                    unsafe_allow_html=True
+                )
             else:
                 st.warning("No hay datos para esta selección.")
 
