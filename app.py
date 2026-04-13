@@ -410,6 +410,29 @@ elif menu == "📈 DASHBOARD Y RANKING":
             rank['OBJETIVO'] = 25
             rank['FALTAN'] = rank['OBJETIVO'] - rank['VENTAS TOTALES SIN MOVIL']
             rank['FALTAN'] = rank['FALTAN'].apply(lambda x: x if x > 0 else 0)
+            
+            # --- NUEVAS FUNCIONES DE ESTILO COLORIDO ---
+            def style_total_sin_movil(val):
+                if val >= 25: color = '#90EE90'  # Verde claro (Cumplido)
+                elif val >= 15: color = '#FFFACD' # Amarillo suave
+                else: color = '#FFEBEE'           # Rojo muy claro
+                return f'background-color: {color}; font-weight: bold; font-size: 13px; border: 1.5px solid #2ecc71;'
+
+            def style_referidos(val):
+                if val >= 8: color = '#00D1FF'    # Azul Cyan (TOP)
+                elif val >= 4: color = '#E0F7FA'  # Azul claro
+                else: color = '#FFFFFF'
+                return f'background-color: {color}; font-weight: bold;'
+
+            def style_porcentaje(val_str):
+                try:
+                    val = int(val_str.replace('%',''))
+                    if val >= 100: color = '#27ae60'; text = 'white'
+                    elif val >= 50: color = '#f1c40f'; text = 'black'
+                    else: color = '#e74c3c'; text = 'white'
+                    return f'background-color: {color}; color: {text}; font-weight: 900;'
+                except: return ''
+
             rank['% CONSECUCION'] = ((rank['VENTAS TOTALES SIN MOVIL'] / rank['OBJETIVO']) * 100).fillna(0).astype(int).astype(str) + "%"
 
             def get_motivacion_html(row):
@@ -441,12 +464,6 @@ elif menu == "📈 DASHBOARD Y RANKING":
                     else: color = '#FFCCCB'
                     return f'background-color: {color}'
 
-                def style_ref(val):
-                    if val >= 8: color = '#90EE90'
-                    elif val >= 4: color = '#FFFFE0'
-                    else: color = '#FFCCCB'
-                    return f'background-color: {color}'
-
                 rank_visual = rank.reset_index()
                 rank_visual.insert(0, 'Pos', [asignar_medalla(i) for i in range(len(rank_visual))])
                 
@@ -459,16 +476,16 @@ elif menu == "📈 DASHBOARD Y RANKING":
                 }
                 
                 rank_visual = rank_visual[list(cols_finales.keys())].rename(columns=cols_finales)
-
-                # FORZAR ENTEROS PARA QUITAR DECIMALES
                 cols_to_int = ['Luz', 'Gas', 'Fibra', 'Móvil', 'Alarma', 'TOTAL', 'T+M', 'OBJ', 'FALTA', 'REF', 'OBJ R']
                 for c in cols_to_int:
                     rank_visual[c] = rank_visual[c].astype(int)
 
                 st.write(
                     rank_visual.style
+                    .map(style_total_sin_movil, subset=['TOTAL']) # Columna de totales resaltada
+                    .map(style_referidos, subset=['REF'])         # Columna de referidos con azul
+                    .map(style_porcentaje, subset=['%'])          # Semáforo en porcentaje
                     .map(style_faltan, subset=['FALTA'])
-                    .map(style_ref, subset=['REF'])
                     .set_properties(**{'background-color': 'white', 'color': 'black', 'border-color': '#eeeeee'})
                     .to_html(escape=False, index=False), 
                     unsafe_allow_html=True
@@ -539,4 +556,4 @@ elif menu == "📂 REPOSITORIO":
                 archivos = [f for f in os.listdir("manuales") if busq in f.lower() and not f.lower().endswith(('.png', '.jpg'))]
                 for fn in archivos:
                     with open(f"manuales/{fn}", "rb") as f:
-                        st.download_button(f"📥 {fn}", f, file_name=fn, key=f"b_{fn}")
+                        st.download_button(f"📥 {fn}", f, file_name=fn)
