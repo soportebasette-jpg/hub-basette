@@ -2,6 +2,7 @@ import streamlit as st
 import os
 import pandas as pd
 import plotly.express as px
+import random
 from datetime import datetime
 from fpdf import FPDF
 
@@ -365,6 +366,7 @@ elif menu == "📢 ANUNCIOS Y PLAN AMIGO":
 
 # --- DASHBOARD Y RANKING ---
 elif menu == "📈 DASHBOARD Y RANKING":
+    st.balloons() # Efecto visual al entrar
     st.markdown("""
         <style>
         .ranking-table-container { background-color: white !important; padding: 10px; border-radius: 10px; overflow-x: auto; }
@@ -410,39 +412,28 @@ elif menu == "📈 DASHBOARD Y RANKING":
             rank['OBJETIVO'] = 25
             rank['FALTAN'] = rank['OBJETIVO'] - rank['VENTAS TOTALES SIN MOVIL']
             rank['FALTAN'] = rank['FALTAN'].apply(lambda x: x if x > 0 else 0)
-            
-            # --- NUEVAS FUNCIONES DE ESTILO COLORIDO ---
-            def style_total_sin_movil(val):
-                if val >= 25: color = '#90EE90'  # Verde claro (Cumplido)
-                elif val >= 15: color = '#FFFACD' # Amarillo suave
-                else: color = '#FFEBEE'           # Rojo muy claro
-                return f'background-color: {color}; font-weight: bold; font-size: 13px; border: 1.5px solid #2ecc71;'
-
-            def style_referidos(val):
-                if val >= 8: color = '#00D1FF'    # Azul Cyan (TOP)
-                elif val >= 4: color = '#E0F7FA'  # Azul claro
-                else: color = '#FFFFFF'
-                return f'background-color: {color}; font-weight: bold;'
-
-            def style_porcentaje(val_str):
-                try:
-                    val = int(val_str.replace('%',''))
-                    if val >= 100: color = '#27ae60'; text = 'white'
-                    elif val >= 50: color = '#f1c40f'; text = 'black'
-                    else: color = '#e74c3c'; text = 'white'
-                    return f'background-color: {color}; color: {text}; font-weight: 900;'
-                except: return ''
-
             rank['% CONSECUCION'] = ((rank['VENTAS TOTALES SIN MOVIL'] / rank['OBJETIVO']) * 100).fillna(0).astype(int).astype(str) + "%"
 
             def get_motivacion_html(row):
                 perc = (row['VENTAS TOTALES SIN MOVIL'] / row['OBJETIVO']) * 100
-                if perc >= 100: return '<b style="color: #008000;">🔥 NIVEL DIOS</b>'
-                elif perc >= 80: return '<b style="color: #2E8B57;">🚀 MÁQUINA</b>'
-                elif perc >= 60: return '<b style="color: #B8860B;">💪 VAS BIEN</b>'
-                elif perc >= 40: return '<b style="color: #D2691E;">📈 DALE MÁS</b>'
-                elif perc >= 20: return '<b style="color: #FF8C00;">🎈 ARRANCANDO</b>'
-                else: return '<b style="color: #FF4500;">🎯 CALENTANDO</b>'
+                if perc >= 100: 
+                    msg = random.choice(["¡LEYENDA VIVA!", "NIVEL DIOS", "INTRATABLE", "REVENTANDO EL PANEL"])
+                    return f'<b style="color: #008000;">🔥 {msg}</b>'
+                elif perc >= 80: 
+                    msg = random.choice(["ESTÁS IMPARABLE", "MÁQUINA TOTAL", "A OTRO NIVEL", "VA SOBRADO"])
+                    return f'<b style="color: #2E8B57;">🚀 {msg}</b>'
+                elif perc >= 60: 
+                    msg = random.choice(["VAS MUY BIEN", "SIGUE ASÍ", "BUEN RITMO", "EL ÉXITO LLEGA"])
+                    return f'<b style="color: #B8860B;">💪 {msg}</b>'
+                elif perc >= 40: 
+                    msg = random.choice(["MÁS GAS", "DALE CAÑA", "APRIETA UN POCO", "NO TE RINDAS"])
+                    return f'<b style="color: #D2691E;">📈 {msg}</b>'
+                elif perc >= 20: 
+                    msg = random.choice(["ARRANCANDO", "VAMOS ARRIBA", "CALENTANDO MOTORES", "PASO A PASO"])
+                    return f'<b style="color: #FF8C00;">🎈 {msg}</b>'
+                else: 
+                    msg = random.choice(["OBJETIVO EN MIRA", "A POR TODAS", "CONCENTRACIÓN", "DALE FUERTE"])
+                    return f'<b style="color: #FF4500;">🎯 {msg}</b>'
             
             rank['MOTIVACIÓN'] = rank.apply(get_motivacion_html, axis=1)
             rank = rank.sort_values('VENTAS TOTALES SIN MOVIL', ascending=False)
@@ -458,11 +449,13 @@ elif menu == "📈 DASHBOARD Y RANKING":
                     elif n == 2: return "🥉"
                     else: return "⭐"
                 
-                def style_faltan(val):
-                    if val == 0: color = '#90EE90'
-                    elif val <= 5: color = '#FFFFE0'
-                    else: color = '#FFCCCB'
-                    return f'background-color: {color}'
+                def style_semaforo_faltan(val):
+                    if val == 0: return 'background-color: #90EE90; font-weight: bold;' # Verde claro
+                    elif val <= 10: return 'background-color: #FFF9C4; font-weight: bold;' # Amarillo suave
+                    else: return 'background-color: #FFCDD2; font-weight: bold;' # Rojo suave
+
+                def style_celdas_destacadas(val):
+                    return 'background-color: #F0F4F8; color: black; font-weight: bold;'
 
                 rank_visual = rank.reset_index()
                 rank_visual.insert(0, 'Pos', [asignar_medalla(i) for i in range(len(rank_visual))])
@@ -476,17 +469,18 @@ elif menu == "📈 DASHBOARD Y RANKING":
                 }
                 
                 rank_visual = rank_visual[list(cols_finales.keys())].rename(columns=cols_finales)
+
+                # FORZAR ENTEROS PARA QUITAR DECIMALES
                 cols_to_int = ['Luz', 'Gas', 'Fibra', 'Móvil', 'Alarma', 'TOTAL', 'T+M', 'OBJ', 'FALTA', 'REF', 'OBJ R']
                 for c in cols_to_int:
                     rank_visual[c] = rank_visual[c].astype(int)
 
+                # Aplicar estilos con colores de fondo
                 st.write(
                     rank_visual.style
-                    .map(style_total_sin_movil, subset=['TOTAL']) # Columna de totales resaltada
-                    .map(style_referidos, subset=['REF'])         # Columna de referidos con azul
-                    .map(style_porcentaje, subset=['%'])          # Semáforo en porcentaje
-                    .map(style_faltan, subset=['FALTA'])
-                    .set_properties(**{'background-color': 'white', 'color': 'black', 'border-color': '#eeeeee'})
+                    .map(style_semaforo_faltan, subset=['FALTA'])
+                    .map(style_celdas_destacadas, subset=['TOTAL', 'T+M', '%'])
+                    .set_properties(**{'border-color': '#eeeeee', 'text-align': 'center'})
                     .to_html(escape=False, index=False), 
                     unsafe_allow_html=True
                 )
@@ -556,4 +550,4 @@ elif menu == "📂 REPOSITORIO":
                 archivos = [f for f in os.listdir("manuales") if busq in f.lower() and not f.lower().endswith(('.png', '.jpg'))]
                 for fn in archivos:
                     with open(f"manuales/{fn}", "rb") as f:
-                        st.download_button(f"📥 {fn}", f, file_name=fn)
+                        st.download_button(f"📥 {fn}", f, file_name=fn, key=f"b_{fn}")
