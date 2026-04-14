@@ -51,6 +51,20 @@ st.markdown("""
         box-shadow: 0px 4px 15px rgba(0,0,0,0.5);
     }
 
+    .social-container {
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+        gap: 20px;
+        padding: 10px;
+    }
+    .social-icon {
+        transition: transform 0.3s;
+    }
+    .social-icon:hover {
+        transform: scale(1.1);
+    }
+
     .price-card {
         background-color: #161b22;
         border: 2px solid #30363d;
@@ -180,13 +194,34 @@ with st.sidebar:
 
 # --- CRM ---
 if menu == "🚀 CRM":
-    st.header("Portales de Gestión")
+    # Fila de Cabecera con Redes Sociales arriba a la derecha
+    col_t_izq, col_t_der = st.columns([2, 1])
+    with col_t_izq:
+        st.header("Portales de Gestión")
+    with col_t_der:
+        st.markdown(f"""
+            <div class="social-container">
+                <a href="https://x.com/tecomparotodoes?s=21" target="_blank">
+                    <img src="https://cdn-icons-png.flaticon.com/512/733/733579.png" width="35" class="social-icon">
+                </a>
+                <a href="https://www.instagram.com/tecomparotodoes?igsh=MXRkcTV2anJ6NmJkcA%3D%3D&utm_source=qr" target="_blank">
+                    <img src="https://cdn-icons-png.flaticon.com/512/174/174855.png" width="35" class="social-icon">
+                </a>
+                <a href="http://www.tecomparotodo.es" target="_blank">
+                    <img src="https://raw.githubusercontent.com/FortAwesome/Font-Awesome/6.x/svgs/solid/globe.svg" width="0" style="display:none;">
+                    <img src="https://i.ibb.co/3ykYpC6/edited-image.jpg" width="100" style="border-radius:8px;" class="social-icon">
+                </a>
+            </div>
+        """, unsafe_allow_html=True)
+
     st.markdown('<div class="block-header">🕒 CONTROL LABORAL</div>', unsafe_allow_html=True)
     st.markdown(f'''<div style="background:#161b22; padding:15px; border-radius:10px; border:2px solid #d2ff00; text-align:center; margin-bottom:10px;"><h4 style="color:white; margin:0;">REGISTRO DE JORNADA</h4></div>''', unsafe_allow_html=True)
     st.link_button(f"ENTRAR AL FORMULARIO", "https://forms.gle/icG7jFPoyGmFD6vC8", use_container_width=True)
+    
     st.markdown('<div class="block-header">⭐ MARCADOR</div>', unsafe_allow_html=True)
     st.markdown(f'''<div style="background:#161b22; padding:15px; border-radius:10px; border:2px solid #d2ff00; text-align:center; margin-bottom:10px;"><h4 style="color:white; margin:0;">MARCADOR PRINCIPAL</h4></div>''', unsafe_allow_html=True)
     st.link_button(f"ENTRAR AL MARCADOR", "https://grupobasette.vozipcenter.com/", use_container_width=True)
+    
     st.markdown('<div class="block-header">💡 🔥 ENERGÍA</div>', unsafe_allow_html=True)
     energia = [{"n": "CRM BASETTE", "u": "https://crm.grupobasette.eu/login"}, {"n": "GANA ENERGÍA", "u": "https://colaboradores.ganaenergia.com/"}, {"n": "NATURGY", "u": "https://checkout.naturgy.es/backoffice"}, {"n": "GAS TOTAL", "u": "https://totalenergiesespana.my.site.com/portalcolaboradores/s/login/?ec=302&startURL=%2Fportalcolaboradores%2Fs%2F"}, {"n": "LUZ TOTAL", "u": "https://agentes.totalenergies.es/#/resumen"}, {"n": "IBERDROLA", "u": "https://crm.gesventas.eu/login.php"}, {"n": "NIBA", "u": "https://clientes.niba.es/"}, {"n": "ENDESA", "u": "https://inergia.app"}]
     cols_en = st.columns(3)
@@ -194,6 +229,7 @@ if menu == "🚀 CRM":
         with cols_en[i % 3]:
             st.markdown(f'''<div style="background:#161b22; padding:15px; border-radius:10px; border:1px solid #30363d; text-align:center; margin-bottom:10px;"><h4 style="color:white; margin:0;">{p["n"]}</h4></div>''', unsafe_allow_html=True)
             st.link_button(f"ENTRAR", p["u"], use_container_width=True)
+    
     st.markdown("---")
     col_izq, col_der = st.columns(2)
     with col_izq:
