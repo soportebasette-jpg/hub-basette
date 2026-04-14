@@ -3,6 +3,7 @@ import os
 import pandas as pd
 import plotly.express as px
 import random
+import base64
 from datetime import datetime
 from fpdf import FPDF
 
@@ -12,6 +13,17 @@ st.set_page_config(
     layout="wide", 
     initial_sidebar_state="expanded" 
 )
+
+# Función para convertir imagen a base64 y que se vea en el HTML
+def get_base64_of_bin_file(bin_file):
+    if os.path.exists(bin_file):
+        with open(bin_file, 'rb') as f:
+            data = f.read()
+        return base64.b64encode(data).decode()
+    return ""
+
+# Preparamos la imagen del perrito
+img_base64 = get_base64_of_bin_file("edited-image.jpg")
 
 # 2. CSS DE ALTA VISIBILIDAD (GENERAL)
 st.markdown("""
@@ -194,11 +206,11 @@ with st.sidebar:
 
 # --- CRM ---
 if menu == "🚀 CRM":
-    # Fila de Cabecera con Redes Sociales arriba a la derecha
     col_t_izq, col_t_der = st.columns([2, 1])
     with col_t_izq:
         st.header("Portales de Gestión")
     with col_t_der:
+        # Seccion Redes Sociales con Imagen del Perrito corregida
         st.markdown(f"""
             <div class="social-container">
                 <a href="https://x.com/tecomparotodoes?s=21" target="_blank">
@@ -208,8 +220,7 @@ if menu == "🚀 CRM":
                     <img src="https://cdn-icons-png.flaticon.com/512/174/174855.png" width="35" class="social-icon">
                 </a>
                 <a href="http://www.tecomparotodo.es" target="_blank">
-                    <img src="https://raw.githubusercontent.com/FortAwesome/Font-Awesome/6.x/svgs/solid/globe.svg" width="0" style="display:none;">
-                    <img src="https://i.ibb.co/3ykYpC6/edited-image.jpg" width="100" style="border-radius:8px;" class="social-icon">
+                    <img src="data:image/jpeg;base64,{img_base64}" width="100" style="border-radius:8px;" class="social-icon">
                 </a>
             </div>
         """, unsafe_allow_html=True)
@@ -475,7 +486,6 @@ elif menu == "📈 DASHBOARD Y RANKING":
             rank = rank.sort_values('VENTAS TOTALES SIN MOVIL', ascending=False)
 
             if not rank.empty:
-                # --- CALCULOS DE TOTALES ---
                 total_luz = rank['V_Luz'].sum()
                 total_gas = rank['V_Gas'].sum()
                 total_fibra = rank['V_Fibra'].sum()
@@ -516,7 +526,6 @@ elif menu == "📈 DASHBOARD Y RANKING":
                 }
                 
                 rank_visual = rank_visual[list(cols_finales.keys())].rename(columns=cols_finales)
-
                 cols_to_int = ['Luz', 'Gas', 'Fibra', 'Móvil', 'Alarma', 'TOTAL', 'T+M', 'OBJ', 'FALTA', 'REF', 'OBJ R']
                 for c in cols_to_int:
                     rank_visual[c] = rank_visual[c].astype(int)
@@ -530,7 +539,6 @@ elif menu == "📈 DASHBOARD Y RANKING":
                     unsafe_allow_html=True
                 )
 
-                # --- BLOQUE DE TOTALES GLOBALES ---
                 st.markdown(f"""
                 <div style="margin-top: 25px; padding: 20px; background-color: #161b22; border: 2px solid #d2ff00; border-radius: 12px;">
                     <h3 style="color: #d2ff00; margin-top: 0; text-align: center; font-weight: 900;">📊 RESUMEN TOTAL EQUIPO</h3>
