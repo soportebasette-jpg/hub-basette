@@ -22,8 +22,8 @@ def get_base64_of_bin_file(bin_file):
         return base64.b64encode(data).decode()
     return ""
 
-# Preparamos la imagen del perrito
-img_base64 = get_base64_of_bin_file("edited-image.jpg")
+# Preparamos la imagen de Rosco
+img_base64 = get_base64_of_bin_file("rosco.jpg")
 
 # 2. CSS DE ALTA VISIBILIDAD (GENERAL)
 st.markdown("""
@@ -210,7 +210,7 @@ if menu == "🚀 CRM":
     with col_t_izq:
         st.header("Portales de Gestión")
     with col_t_der:
-        # Seccion Redes Sociales con Imagen del Perrito corregida
+        # Seccion Redes Sociales con Imagen de ROSCO
         st.markdown(f"""
             <div class="social-container">
                 <a href="https://x.com/tecomparotodoes?s=21" target="_blank">
@@ -220,7 +220,7 @@ if menu == "🚀 CRM":
                     <img src="https://cdn-icons-png.flaticon.com/512/174/174855.png" width="35" class="social-icon">
                 </a>
                 <a href="http://www.tecomparotodo.es" target="_blank">
-                    <img src="data:image/jpeg;base64,{img_base64}" width="100" style="border-radius:8px;" class="social-icon">
+                    <img src="data:image/jpeg;base64,{img_base64}" width="100" style="border-radius:8px; border: 2px solid #d2ff00;" class="social-icon">
                 </a>
             </div>
         """, unsafe_allow_html=True)
