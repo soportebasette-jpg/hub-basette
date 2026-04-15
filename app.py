@@ -210,9 +210,12 @@ if menu == "🚀 CRM":
     with col_t_izq:
         st.header("Portales de Gestión")
     with col_t_der:
-        # Seccion Redes Sociales con Imagen de ROSCO
+        # Seccion Redes Sociales con Facebook incluido
         st.markdown(f"""
             <div class="social-container">
+                <a href="https://www.facebook.com/share/1CqrZ4hGYp/?mibextid=wwXIfr" target="_blank">
+                    <img src="https://cdn-icons-png.flaticon.com/512/733/733547.png" width="35" class="social-icon">
+                </a>
                 <a href="https://x.com/tecomparotodoes?s=21" target="_blank">
                     <img src="https://cdn-icons-png.flaticon.com/512/733/733579.png" width="35" class="social-icon">
                 </a>
