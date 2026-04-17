@@ -169,10 +169,10 @@ def load_and_clean_ranking():
     
     return df_e, df_t, df_a
 
-# 3. BASE DE DATOS LUZ - PRECIOS ACTUALIZADOS GANA ENERGÍA
+# 3. BASE DE DATOS LUZ
 tarifas_luz = [
-    {"PRIORIDAD": 1, "COMPAÑÍA": "GANA ENERGÍA", "TARIFA": "24H", "P1": 0.089, "P2": 0.089, "ENERGIA": 0.119, "EXCEDENTE": 0.05, "DTO": "0%", "BATERIA": "SI_GRATIS", "logo": "manuales/logo_gana.png"},
-    {"PRIORIDAD": 1, "COMPAÑÍA": "GANA ENERGÍA", "TARIFA": "3T", "P1": 0.089, "P2": 0.089, "ENERGIA": "0,171/0,104/0,08", "EXCEDENTE": 0.05, "DTO": "0%", "BATERIA": "SI_GRATIS", "logo": "manuales/logo_gana.png"},
+    {"PRIORIDAD": 1, "COMPAÑÍA": "GANA ENERGÍA", "TARIFA": "24H", "P1": 0.089, "P2": 0.089, "ENERGIA": 0.129, "EXCEDENTE": 0.05, "DTO": "0%", "BATERIA": "SI_GRATIS", "logo": "manuales/logo_gana.png"},
+    {"PRIORIDAD": 1, "COMPAÑÍA": "GANA ENERGÍA", "TARIFA": "3T", "P1": 0.089, "P2": 0.089, "ENERGIA": "0,181/0,114/0,090", "EXCEDENTE": 0.05, "DTO": "0%", "BATERIA": "SI_GRATIS", "logo": "manuales/logo_gana.png"},
     {"PRIORIDAD": 2, "COMPAÑÍA": "NATURGY", "TARIFA": "24H (POR USO)", "P1": 0.123, "P2": 0.037, "ENERGIA": 0.109, "EXCEDENTE": 0.06, "DTO": "0%", "BATERIA": "SI_GRATIS", "logo": "manuales/logo_naturgy.png"},
     {"PRIORIDAD": 2, "COMPAÑÍA": "NATURGY", "TARIFA": "3T (TARIF NOCHE)", "P1": 0.123, "P2": 0.037, "ENERGIA": "0,180/0,107/0,718", "EXCEDENTE": 0.06, "DTO": "0%", "BATERIA": "SI_GRATIS", "logo": "manuales/logo_naturgy.png"},
     {"PRIORIDAD": 3, "COMPAÑÍA": "TOTAL LUZ", "TARIFA": "24H (A TU AIRE)", "P1": 0.081, "P2": 0.081, "ENERGIA": 0.114, "EXCEDENTE": 0.07, "DTO": "0%", "BATERIA": "NO", "logo": "manuales/logo_total.png"},
@@ -497,6 +497,24 @@ elif menu == "📈 DASHBOARD Y RANKING":
                 total_v_con_m = rank['TOTAL CON MOVIL'].sum()
                 total_faltan = rank['FALTAN'].sum()
                 total_ref = rank['TOTAL REF'].sum()
+                
+                # --- CALCULO DE ESTADOS ---
+                # Unificamos todos los dataframes filtrados para contar estados
+                df_unificado = pd.concat([
+                    de[['Estado']] if 'Estado' in de.columns else pd.DataFrame(columns=['Estado']),
+                    dt[['Estado']] if 'Estado' in dt.columns else pd.DataFrame(columns=['Estado']),
+                    da[['Estado']] if 'Estado' in da.columns else pd.DataFrame(columns=['Estado'])
+                ])
+                
+                # Normalización de texto para asegurar el conteo (quitamos espacios y pasamos a minúsculas)
+                if not df_unificado.empty:
+                    df_unificado['Estado_Norm'] = df_unificado['Estado'].astype(str).str.strip().str.lower()
+                    c_bajas = len(df_unificado[df_unificado['Estado_Norm'].str.contains('baja', na=False)])
+                    c_activacion = len(df_unificado[df_unificado['Estado_Norm'].str.contains('activacion|activación', na=False)])
+                    c_incidencias = len(df_unificado[df_unificado['Estado_Norm'].str.contains('incidencia', na=False)])
+                    c_activos = len(df_unificado[df_unificado['Estado_Norm'].str.contains('activo', na=False)])
+                else:
+                    c_bajas = c_activacion = c_incidencias = c_activos = 0
 
                 ganador = rank.index[0]
                 total_ganador = int(rank.iloc[0]['VENTAS TOTALES SIN MOVIL'])
@@ -566,7 +584,31 @@ elif menu == "📈 DASHBOARD Y RANKING":
                             <h2 style="margin: 0; color: #d2ff00;">{int(total_ref)}</h2>
                         </div>
                     </div>
+                    
                     <hr style="border: 1px solid #30363d; margin: 20px 0;">
+                    
+                    <h4 style="color: #ffffff; text-align: center; margin-bottom: 15px;">🔍 DESGLOSE POR ESTADOS</h4>
+                    <div style="display: flex; justify-content: space-around; flex-wrap: wrap; text-align: center; margin-bottom: 20px;">
+                        <div style="margin: 10px; padding: 10px; border: 1px solid #ff4b4b; border-radius: 8px; min-width: 120px;">
+                            <p style="color: #ff4b4b; margin: 0; font-size: 0.8rem; font-weight: bold;">BAJAS</p>
+                            <h2 style="margin: 0; color: white;">{c_bajas}</h2>
+                        </div>
+                        <div style="margin: 10px; padding: 10px; border: 1px solid #3b82f6; border-radius: 8px; min-width: 120px;">
+                            <p style="color: #3b82f6; margin: 0; font-size: 0.8rem; font-weight: bold;">EN ACTIVACIÓN</p>
+                            <h2 style="margin: 0; color: white;">{c_activacion}</h2>
+                        </div>
+                        <div style="margin: 10px; padding: 10px; border: 1px solid #f97316; border-radius: 8px; min-width: 120px;">
+                            <p style="color: #f97316; margin: 0; font-size: 0.8rem; font-weight: bold;">INCIDENCIAS</p>
+                            <h2 style="margin: 0; color: white;">{c_incidencias}</h2>
+                        </div>
+                        <div style="margin: 10px; padding: 10px; border: 1px solid #22c55e; border-radius: 8px; min-width: 120px;">
+                            <p style="color: #22c55e; margin: 0; font-size: 0.8rem; font-weight: bold;">ACTIVOS</p>
+                            <h2 style="margin: 0; color: white;">{c_activos}</h2>
+                        </div>
+                    </div>
+
+                    <hr style="border: 1px solid #30363d; margin: 20px 0;">
+                    
                     <div style="display: flex; justify-content: space-around; flex-wrap: wrap;">
                         <div style="background: #d2ff00; padding: 15px; border-radius: 10px; min-width: 200px; text-align: center; margin: 5px;">
                             <p style="margin: 0; color: black !important; font-weight: bold; font-size: 0.9rem;">TOTAL SIN MÓVILES</p>
