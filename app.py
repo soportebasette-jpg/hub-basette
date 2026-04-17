@@ -108,6 +108,17 @@ st.markdown("""
         background-color: #161b22 !important;
         color: white !important;
     }
+
+    /* Estilo para las métricas de estado en el dashboard */
+    .status-box {
+        padding: 15px;
+        border-radius: 10px;
+        text-align: center;
+        margin-bottom: 10px;
+        border: 1px solid #30363d;
+    }
+    .status-label { font-size: 0.8rem; color: #8b949e; margin-bottom: 2px; text-transform: uppercase; }
+    .status-value { font-size: 1.5rem; font-weight: 900; color: white; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -133,14 +144,6 @@ def load_and_clean_ranking():
     df_e['Total_Ene'] = df_e['V_Luz'] + df_e['V_Gas']
     df_e['REF_Ene'] = df_e['Canal'].apply(lambda x: 1 if pd.notnull(x) and "REF" in str(x).upper() else 0) if 'Canal' in df_e.columns else 0
     
-    # Estados Energía
-    if 'Estado' in df_e.columns:
-        df_e['E_ACT'] = df_e['Estado'].apply(lambda x: 1 if str(x).upper() == "ACTIVO" else 0)
-        df_e['E_INC'] = df_e['Estado'].apply(lambda x: 1 if "INCIDENCIA" in str(x).upper() else 0)
-        df_e['E_PROC'] = df_e['Estado'].apply(lambda x: 1 if "ACTIVACION" in str(x).upper() or "CURSO" in str(x).upper() else 0)
-    else:
-        df_e['E_ACT'], df_e['E_INC'], df_e['E_PROC'] = 0, 0, 0
-
     # TELCO
     df_t = pd.read_csv(URL_TEL)
     df_t.columns = df_t.columns.str.strip()
@@ -165,14 +168,6 @@ def load_and_clean_ranking():
     df_t['V_Móvil'] = res.apply(lambda x: x[1])
     df_t['Total_Tel'] = res.apply(lambda x: x[2])
 
-    # Estados Telco
-    if 'Estado' in df_t.columns:
-        df_t['E_ACT'] = df_t['Estado'].apply(lambda x: 1 if str(x).upper() == "ACTIVO" else 0)
-        df_t['E_INC'] = df_t['Estado'].apply(lambda x: 1 if "INCIDENCIA" in str(x).upper() else 0)
-        df_t['E_PROC'] = df_t['Estado'].apply(lambda x: 1 if "ACTIVACION" in str(x).upper() or "CURSO" in str(x).upper() else 0)
-    else:
-        df_t['E_ACT'], df_t['E_INC'], df_t['E_PROC'] = 0, 0, 0
-
     # ALARMAS
     df_a = pd.read_csv(URL_ALA)
     df_a.columns = df_a.columns.str.strip()
@@ -182,14 +177,6 @@ def load_and_clean_ranking():
     df_a['Mes'] = df_a['Fecha Creación'].dt.strftime('%m - %B')
     df_a['V_Alarma'] = 1 
     df_a['REF_Ala'] = df_a['Canal'].apply(lambda x: 1 if pd.notnull(x) and "REF" in str(x).upper() else 0) if 'Canal' in df_a.columns else 0
-    
-    # Estados Alarmas
-    if 'Estado' in df_a.columns:
-        df_a['E_ACT'] = df_a['Estado'].apply(lambda x: 1 if str(x).upper() == "ACTIVO" else 0)
-        df_a['E_INC'] = df_a['Estado'].apply(lambda x: 1 if "INCIDENCIA" in str(x).upper() else 0)
-        df_a['E_PROC'] = df_a['Estado'].apply(lambda x: 1 if "ACTIVACION" in str(x).upper() or "CURSO" in str(x).upper() else 0)
-    else:
-        df_a['E_ACT'], df_a['E_INC'], df_a['E_PROC'] = 0, 0, 0
     
     return df_e, df_t, df_a
 
@@ -472,25 +459,19 @@ elif menu == "📈 DASHBOARD Y RANKING":
         tab_r, tab_e, tab_t, tab_a = st.tabs(["🏆 RANKING", "⚡ ENERGÍA", "📱 TELCO", "🛡️ ALARMAS"])
 
         with tab_r:
-            re = de.groupby('Comercial')[['V_Luz', 'V_Gas', 'REF_Ene', 'E_ACT', 'E_INC', 'E_PROC']].sum()
-            rt = dt.groupby('Comercial')[['V_Fibra', 'V_Móvil', 'REF_Tel', 'E_ACT', 'E_INC', 'E_PROC']].sum()
-            ra = da.groupby('Comercial')[['V_Alarma', 'REF_Ala', 'E_ACT', 'E_INC', 'E_PROC']].sum()
+            re = de.groupby('Comercial')[['V_Luz', 'V_Gas', 'REF_Ene']].sum()
+            rt = dt.groupby('Comercial')[['V_Fibra', 'V_Móvil', 'REF_Tel']].sum()
+            ra = da.groupby('Comercial')[['V_Alarma', 'REF_Ala']].sum()
             
             rank = pd.concat([re, rt, ra], axis=1).fillna(0)
-            
-            # Totales de estados (Suma de las 3 verticales)
-            rank['ACTIVOS'] = rank['E_ACT'].sum(axis=1)
-            rank['INCIDENCIAS'] = rank['E_INC'].sum(axis=1)
-            rank['EN ACTIVACION'] = rank['E_PROC'].sum(axis=1)
-
-            rank['VENTAS TOTALES SIN MOVIL'] = rank['V_Luz'].sum(axis=1) + rank['V_Gas'].sum(axis=1) + rank['V_Fibra'].sum(axis=1) + rank['V_Alarma'].sum(axis=1)
-            rank['TOTAL CON MOVIL'] = rank['VENTAS TOTALES SIN MOVIL'] + rank['V_Móvil'].sum(axis=1)
-            rank['TOTAL REF'] = rank['REF_Ene'].sum(axis=1) + rank['REF_Tel'].sum(axis=1) + rank['REF_Ala'].sum(axis=1)
+            rank['VENTAS TOTALES SIN MOVIL'] = rank['V_Luz'] + rank['V_Gas'] + rank['V_Fibra'] + rank['V_Alarma']
+            rank['TOTAL CON MOVIL'] = rank['VENTAS TOTALES SIN MOVIL'] + rank['V_Móvil']
+            rank['TOTAL REF'] = rank['REF_Ene'] + rank['REF_Tel'] + rank['REF_Ala']
             rank['OBJETIVO REF'] = 8
             rank['OBJETIVO'] = 25
             rank['FALTAN'] = rank['OBJETIVO'] - rank['VENTAS TOTALES SIN MOVIL']
             rank['FALTAN'] = rank['FALTAN'].apply(lambda x: x if x > 0 else 0)
-            rank['% CONSECUCION'] = ((rank['VENTAS TOTALES SIN MOVil'] / rank['OBJETIVO']) * 100).fillna(0).astype(int).astype(str) + "%"
+            rank['% CONSECUCION'] = ((rank['VENTAS TOTALES SIN MOVIL'] / rank['OBJETIVO']) * 100).fillna(0).astype(int).astype(str) + "%"
 
             def get_motivacion_html(row):
                 perc = (row['VENTAS TOTALES SIN MOVIL'] / row['OBJETIVO']) * 100
@@ -517,11 +498,11 @@ elif menu == "📈 DASHBOARD Y RANKING":
             rank = rank.sort_values('VENTAS TOTALES SIN MOVIL', ascending=False)
 
             if not rank.empty:
-                total_luz = rank['V_Luz'].sum(axis=1).sum()
-                total_gas = rank['V_Gas'].sum(axis=1).sum()
-                total_fibra = rank['V_Fibra'].sum(axis=1).sum()
-                total_movil = rank['V_Móvil'].sum(axis=1).sum()
-                total_alarma = rank['V_Alarma'].sum(axis=1).sum()
+                total_luz = rank['V_Luz'].sum()
+                total_gas = rank['V_Gas'].sum()
+                total_fibra = rank['V_Fibra'].sum()
+                total_movil = rank['V_Móvil'].sum()
+                total_alarma = rank['V_Alarma'].sum()
                 total_v_sin_m = rank['VENTAS TOTALES SIN MOVIL'].sum()
                 total_v_con_m = rank['TOTAL CON MOVIL'].sum()
                 total_faltan = rank['FALTAN'].sum()
@@ -551,14 +532,13 @@ elif menu == "📈 DASHBOARD Y RANKING":
                 cols_finales = {
                     'Pos': 'Pos', 'Comercial': 'Comercial', 'V_Luz': 'Luz', 'V_Gas': 'Gas', 
                     'V_Fibra': 'Fibra', 'V_Móvil': 'Móvil', 'V_Alarma': 'Alarma', 
-                    'ACTIVOS': 'ACT', 'INCIDENCIAS': 'INC', 'EN ACTIVACION': 'PROC',
                     'VENTAS TOTALES SIN MOVIL': 'TOTAL', 'TOTAL CON MOVIL': 'T+M', 
                     'OBJETIVO': 'OBJ', 'FALTAN': 'FALTA', 
                     'TOTAL REF': 'REF', 'OBJETIVO REF': 'OBJ R', '% CONSECUCION': '%', 'MOTIVACIÓN': 'INFO'
                 }
                 
                 rank_visual = rank_visual[list(cols_finales.keys())].rename(columns=cols_finales)
-                cols_to_int = ['Luz', 'Gas', 'Fibra', 'Móvil', 'Alarma', 'ACT', 'INC', 'PROC', 'TOTAL', 'T+M', 'OBJ', 'FALTA', 'REF', 'OBJ R']
+                cols_to_int = ['Luz', 'Gas', 'Fibra', 'Móvil', 'Alarma', 'TOTAL', 'T+M', 'OBJ', 'FALTA', 'REF', 'OBJ R']
                 for c in cols_to_int:
                     rank_visual[c] = rank_visual[c].astype(int)
 
@@ -617,38 +597,79 @@ elif menu == "📈 DASHBOARD Y RANKING":
                 st.warning("No hay datos para esta selección.")
 
         with tab_e:
-            col_e1, col_e2 = st.columns([1, 1.2])
-            with col_e1:
-                if not de.empty and 'Comercializadora' in de.columns:
-                    fig_e = px.pie(de, values='Total_Ene', names='Comercializadora', hole=0.5, title="Cuota de Energía")
-                    fig_e.update_traces(textposition='outside', textinfo='label+percent')
-                    st.plotly_chart(fig_e, use_container_width=True)
-            with col_e2:
-                if not de.empty:
+            if not de.empty:
+                # --- NUEVA SECCIÓN DE TOTALES POR ESTADO (ENERGÍA) ---
+                st.markdown('<div class="block-header">📊 TOTALES POR ESTADO (ENERGÍA)</div>', unsafe_allow_html=True)
+                e_activos = de[de['Estado'].str.upper().str.contains("ACTIVO", na=False)].shape[0] if 'Estado' in de.columns else 0
+                e_incidencias = de[de['Estado'].str.upper().str.contains("INCIDENCIA", na=False)].shape[0] if 'Estado' in de.columns else 0
+                e_bajas = de[de['Estado'].str.upper().str.contains("BAJA", na=False)].shape[0] if 'Estado' in de.columns else 0
+                e_activacion = de[de['Estado'].str.upper().str.contains("ACTIVACION|CURSO", na=False)].shape[0] if 'Estado' in de.columns else 0
+                
+                ce1, ce2, ce3, ce4 = st.columns(4)
+                with ce1: st.markdown(f'<div class="status-box" style="background: #1b4d3e;"><div class="status-label">ACTIVOS</div><div class="status-value">{e_activos}</div></div>', unsafe_allow_html=True)
+                with ce2: st.markdown(f'<div class="status-box" style="background: #5d2a2a;"><div class="status-label">INCIDENCIAS</div><div class="status-value">{e_incidencias}</div></div>', unsafe_allow_html=True)
+                with ce3: st.markdown(f'<div class="status-box" style="background: #444444;"><div class="status-label">BAJAS</div><div class="status-value">{e_bajas}</div></div>', unsafe_allow_html=True)
+                with ce4: st.markdown(f'<div class="status-box" style="background: #1e3a5f;"><div class="status-label">EN ACTIVACIÓN</div><div class="status-value">{e_activacion}</div></div>', unsafe_allow_html=True)
+                # --- FIN NUEVA SECCIÓN ---
+
+                col_e1, col_e2 = st.columns([1, 1.2])
+                with col_e1:
+                    if 'Comercializadora' in de.columns:
+                        fig_e = px.pie(de, values='Total_Ene', names='Comercializadora', hole=0.5, title="Cuota de Energía")
+                        fig_e.update_traces(textposition='outside', textinfo='label+percent')
+                        st.plotly_chart(fig_e, use_container_width=True)
+                with col_e2:
                     fig_eb = px.bar(de.groupby('Comercial')['Total_Ene'].sum().reset_index().sort_values('Total_Ene'), x='Total_Ene', y='Comercial', orientation='h', text_auto=True, title="Ventas Energía")
                     st.plotly_chart(fig_eb, use_container_width=True)
 
         with tab_t:
-            col_t1, col_t2 = st.columns([1, 1.2])
-            with col_t1:
-                if not dt.empty and 'Operadora' in dt.columns:
-                    fig_t = px.pie(dt, values='Total_Tel', names='Operadora', hole=0.5, title="Cuota de Telco")
-                    fig_t.update_traces(textposition='outside', textinfo='label+percent')
-                    st.plotly_chart(fig_t, use_container_width=True)
-            with col_t2:
-                if not dt.empty:
+            if not dt.empty:
+                # --- NUEVA SECCIÓN DE TOTALES POR ESTADO (TELCO) ---
+                st.markdown('<div class="block-header">📊 TOTALES POR ESTADO (TELCO)</div>', unsafe_allow_html=True)
+                t_activos = dt[dt['Estado'].str.upper().str.contains("ACTIVO", na=False)].shape[0] if 'Estado' in dt.columns else 0
+                t_incidencias = dt[dt['Estado'].str.upper().str.contains("INCIDENCIA", na=False)].shape[0] if 'Estado' in dt.columns else 0
+                t_bajas = dt[dt['Estado'].str.upper().str.contains("BAJA", na=False)].shape[0] if 'Estado' in dt.columns else 0
+                t_activacion = dt[dt['Estado'].str.upper().str.contains("ACTIVACION|CURSO", na=False)].shape[0] if 'Estado' in dt.columns else 0
+                
+                ct1, ct2, ct3, ct4 = st.columns(4)
+                with ct1: st.markdown(f'<div class="status-box" style="background: #1b4d3e;"><div class="status-label">ACTIVOS</div><div class="status-value">{t_activos}</div></div>', unsafe_allow_html=True)
+                with ct2: st.markdown(f'<div class="status-box" style="background: #5d2a2a;"><div class="status-label">INCIDENCIAS</div><div class="status-value">{t_incidencias}</div></div>', unsafe_allow_html=True)
+                with ct3: st.markdown(f'<div class="status-box" style="background: #444444;"><div class="status-label">BAJAS</div><div class="status-value">{t_bajas}</div></div>', unsafe_allow_html=True)
+                with ct4: st.markdown(f'<div class="status-box" style="background: #1e3a5f;"><div class="status-label">EN ACTIVACIÓN</div><div class="status-value">{t_activacion}</div></div>', unsafe_allow_html=True)
+                # --- FIN NUEVA SECCIÓN ---
+
+                col_t1, col_t2 = st.columns([1, 1.2])
+                with col_t1:
+                    if 'Operadora' in dt.columns:
+                        fig_t = px.pie(dt, values='Total_Tel', names='Operadora', hole=0.5, title="Cuota de Telco")
+                        fig_t.update_traces(textposition='outside', textinfo='label+percent')
+                        st.plotly_chart(fig_t, use_container_width=True)
+                with col_t2:
                     fig_tb = px.bar(dt.groupby('Comercial')[['V_Fibra', 'V_Móvil']].sum().reset_index(), x='Comercial', y=['V_Fibra', 'V_Móvil'], barmode='group', title="Mix de Telco")
                     st.plotly_chart(fig_tb, use_container_width=True)
 
         with tab_a:
-            col_a1, col_a2 = st.columns([1, 1.2])
-            with col_a1:
-                if not da.empty:
+            if not da.empty:
+                # --- NUEVA SECCIÓN DE TOTALES POR ESTADO (ALARMAS) ---
+                st.markdown('<div class="block-header">📊 TOTALES POR ESTADO (ALARMAS)</div>', unsafe_allow_html=True)
+                a_activos = da[da['Estado'].str.upper().str.contains("ACTIVO", na=False)].shape[0] if 'Estado' in da.columns else 0
+                a_incidencias = da[da['Estado'].str.upper().str.contains("INCIDENCIA", na=False)].shape[0] if 'Estado' in da.columns else 0
+                a_bajas = da[da['Estado'].str.upper().str.contains("BAJA", na=False)].shape[0] if 'Estado' in da.columns else 0
+                a_activacion = da[da['Estado'].str.upper().str.contains("ACTIVACION|CURSO", na=False)].shape[0] if 'Estado' in da.columns else 0
+                
+                ca1, ca2, ca3, ca4 = st.columns(4)
+                with ca1: st.markdown(f'<div class="status-box" style="background: #1b4d3e;"><div class="status-label">ACTIVOS</div><div class="status-value">{a_activos}</div></div>', unsafe_allow_html=True)
+                with ca2: st.markdown(f'<div class="status-box" style="background: #5d2a2a;"><div class="status-label">INCIDENCIAS</div><div class="status-value">{a_incidencias}</div></div>', unsafe_allow_html=True)
+                with ca3: st.markdown(f'<div class="status-box" style="background: #444444;"><div class="status-label">BAJAS</div><div class="status-value">{a_bajas}</div></div>', unsafe_allow_html=True)
+                with ca4: st.markdown(f'<div class="status-box" style="background: #1e3a5f;"><div class="status-label">EN ACTIVACIÓN</div><div class="status-value">{a_activacion}</div></div>', unsafe_allow_html=True)
+                # --- FIN NUEVA SECCIÓN ---
+
+                col_a1, col_a2 = st.columns([1, 1.2])
+                with col_a1:
                     fig_a_pie = px.pie(da, values='V_Alarma', names='Comercial', hole=0.5, title="Cuota de Alarmas", color_discrete_sequence=px.colors.sequential.Blues_r)
                     fig_a_pie.update_traces(textposition='outside', textinfo='label+percent')
                     st.plotly_chart(fig_a_pie, use_container_width=True)
-            with col_a2:
-                if not da.empty:
+                with col_a2:
                     fig_a_bar = px.bar(da.groupby('Comercial')['V_Alarma'].sum().reset_index().sort_values('V_Alarma'), x='V_Alarma', y='Comercial', orientation='h', text_auto=True, title="Ventas de Alarmas", color_discrete_sequence=['#0000FF']) 
                     st.plotly_chart(fig_a_bar, use_container_width=True)
 
