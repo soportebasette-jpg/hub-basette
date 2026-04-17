@@ -109,7 +109,6 @@ st.markdown("""
         color: white !important;
     }
 
-    /* Estilo para las métricas de estado en el dashboard */
     .status-box {
         padding: 15px;
         border-radius: 10px;
@@ -142,7 +141,8 @@ def load_and_clean_ranking():
     df_e['V_Luz'] = df_e['CUPS Luz'].apply(lambda x: 1 if pd.notnull(x) and str(x).strip() != "" else 0)
     df_e['V_Gas'] = df_e['CUPS Gas'].apply(lambda x: 1 if pd.notnull(x) and str(x).strip() != "" else 0)
     df_e['Total_Ene'] = df_e['V_Luz'] + df_e['V_Gas']
-    df_e['REF_Ene'] = df_e['Canal'].apply(lambda x: 1 if pd.notnull(x) and "REF" in str(x).upper() else 0) if 'Canal' in df_e.columns else 0
+    # FILTRO ESTRICTO REF
+    df_e['REF_Ene'] = df_e['Canal'].apply(lambda x: 1 if pd.notnull(x) and str(x).strip().upper() == "REF" else 0) if 'Canal' in df_e.columns else 0
     
     # TELCO
     df_t = pd.read_csv(URL_TEL)
@@ -151,7 +151,8 @@ def load_and_clean_ranking():
     df_t = df_t.dropna(subset=['Comercial', 'Fecha Creación'])
     df_t['Año'] = df_t['Fecha Creación'].dt.year.astype(str)
     df_t['Mes'] = df_t['Fecha Creación'].dt.strftime('%m - %B')
-    df_t['REF_Tel'] = df_t['Canal'].apply(lambda x: 1 if pd.notnull(x) and "REF" in str(x).upper() else 0) if 'Canal' in df_t.columns else 0
+    # FILTRO ESTRICTO REF
+    df_t['REF_Tel'] = df_t['Canal'].apply(lambda x: 1 if pd.notnull(x) and str(x).strip().upper() == "REF" else 0) if 'Canal' in df_t.columns else 0
     
     def get_telco_metrics(row):
         f, m = 0, 0
@@ -176,7 +177,8 @@ def load_and_clean_ranking():
     df_a['Año'] = df_a['Fecha Creación'].dt.year.astype(str)
     df_a['Mes'] = df_a['Fecha Creación'].dt.strftime('%m - %B')
     df_a['V_Alarma'] = 1 
-    df_a['REF_Ala'] = df_a['Canal'].apply(lambda x: 1 if pd.notnull(x) and "REF" in str(x).upper() else 0) if 'Canal' in df_a.columns else 0
+    # FILTRO ESTRICTO REF
+    df_a['REF_Ala'] = df_a['Canal'].apply(lambda x: 1 if pd.notnull(x) and str(x).strip().upper() == "REF" else 0) if 'Canal' in df_a.columns else 0
     
     return df_e, df_t, df_a
 
@@ -598,7 +600,6 @@ elif menu == "📈 DASHBOARD Y RANKING":
 
         with tab_e:
             if not de.empty:
-                # --- NUEVA SECCIÓN DE TOTALES POR ESTADO (ENERGÍA) ---
                 st.markdown('<div class="block-header">📊 TOTALES POR ESTADO (ENERGÍA)</div>', unsafe_allow_html=True)
                 e_activos = de[de['Estado'].str.upper().str.contains("ACTIVO", na=False)].shape[0] if 'Estado' in de.columns else 0
                 e_incidencias = de[de['Estado'].str.upper().str.contains("INCIDENCIA", na=False)].shape[0] if 'Estado' in de.columns else 0
@@ -610,7 +611,6 @@ elif menu == "📈 DASHBOARD Y RANKING":
                 with ce2: st.markdown(f'<div class="status-box" style="background: #5d2a2a;"><div class="status-label">INCIDENCIAS</div><div class="status-value">{e_incidencias}</div></div>', unsafe_allow_html=True)
                 with ce3: st.markdown(f'<div class="status-box" style="background: #444444;"><div class="status-label">BAJAS</div><div class="status-value">{e_bajas}</div></div>', unsafe_allow_html=True)
                 with ce4: st.markdown(f'<div class="status-box" style="background: #1e3a5f;"><div class="status-label">EN ACTIVACIÓN</div><div class="status-value">{e_activacion}</div></div>', unsafe_allow_html=True)
-                # --- FIN NUEVA SECCIÓN ---
 
                 col_e1, col_e2 = st.columns([1, 1.2])
                 with col_e1:
@@ -624,7 +624,6 @@ elif menu == "📈 DASHBOARD Y RANKING":
 
         with tab_t:
             if not dt.empty:
-                # --- NUEVA SECCIÓN DE TOTALES POR ESTADO (TELCO) ---
                 st.markdown('<div class="block-header">📊 TOTALES POR ESTADO (TELCO)</div>', unsafe_allow_html=True)
                 t_activos = dt[dt['Estado'].str.upper().str.contains("ACTIVO", na=False)].shape[0] if 'Estado' in dt.columns else 0
                 t_incidencias = dt[dt['Estado'].str.upper().str.contains("INCIDENCIA", na=False)].shape[0] if 'Estado' in dt.columns else 0
@@ -636,7 +635,6 @@ elif menu == "📈 DASHBOARD Y RANKING":
                 with ct2: st.markdown(f'<div class="status-box" style="background: #5d2a2a;"><div class="status-label">INCIDENCIAS</div><div class="status-value">{t_incidencias}</div></div>', unsafe_allow_html=True)
                 with ct3: st.markdown(f'<div class="status-box" style="background: #444444;"><div class="status-label">BAJAS</div><div class="status-value">{t_bajas}</div></div>', unsafe_allow_html=True)
                 with ct4: st.markdown(f'<div class="status-box" style="background: #1e3a5f;"><div class="status-label">EN ACTIVACIÓN</div><div class="status-value">{t_activacion}</div></div>', unsafe_allow_html=True)
-                # --- FIN NUEVA SECCIÓN ---
 
                 col_t1, col_t2 = st.columns([1, 1.2])
                 with col_t1:
@@ -650,7 +648,6 @@ elif menu == "📈 DASHBOARD Y RANKING":
 
         with tab_a:
             if not da.empty:
-                # --- NUEVA SECCIÓN DE TOTALES POR ESTADO (ALARMAS) ---
                 st.markdown('<div class="block-header">📊 TOTALES POR ESTADO (ALARMAS)</div>', unsafe_allow_html=True)
                 a_activos = da[da['Estado'].str.upper().str.contains("ACTIVO", na=False)].shape[0] if 'Estado' in da.columns else 0
                 a_incidencias = da[da['Estado'].str.upper().str.contains("INCIDENCIA", na=False)].shape[0] if 'Estado' in da.columns else 0
@@ -660,9 +657,8 @@ elif menu == "📈 DASHBOARD Y RANKING":
                 ca1, ca2, ca3, ca4 = st.columns(4)
                 with ca1: st.markdown(f'<div class="status-box" style="background: #1b4d3e;"><div class="status-label">ACTIVOS</div><div class="status-value">{a_activos}</div></div>', unsafe_allow_html=True)
                 with ca2: st.markdown(f'<div class="status-box" style="background: #5d2a2a;"><div class="status-label">INCIDENCIAS</div><div class="status-value">{a_incidencias}</div></div>', unsafe_allow_html=True)
-                with ca3: st.markdown(f'<div class="status-box" style="background: #444444;"><div class="status-label">BAJAS</div><div class="status-value">{a_bajas}</div></div>', unsafe_allow_html=True)
-                with ca4: st.markdown(f'<div class="status-box" style="background: #1e3a5f;"><div class="status-label">EN ACTIVACIÓN</div><div class="status-value">{a_activacion}</div></div>', unsafe_allow_html=True)
-                # --- FIN NUEVA SECCIÓN ---
+                with ce3: st.markdown(f'<div class="status-box" style="background: #444444;"><div class="status-label">BAJAS</div><div class="status-value">{a_bajas}</div></div>', unsafe_allow_html=True)
+                with ce4: st.markdown(f'<div class="status-box" style="background: #1e3a5f;"><div class="status-label">EN ACTIVACIÓN</div><div class="status-value">{a_activacion}</div></div>', unsafe_allow_html=True)
 
                 col_a1, col_a2 = st.columns([1, 1.2])
                 with col_a1:
