@@ -37,7 +37,7 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# 3. CARGA DE DATOS DESDE GOOGLE SHEETS
+# 3. CARGA DE DATOS (RECONSTRUCCIÓN SEGURA)
 def get_csv_url(url):
     return url.replace('/edit?usp=sharing', '/export?format=csv').split('&ouid=')[0].split('?')[0] + '/export?format=csv'
 
@@ -56,9 +56,15 @@ def load_and_clean_ranking():
             df['Año'] = df['Fecha Creación'].dt.year.astype(str)
             df['Mes'] = df['Fecha Creación'].dt.strftime('%m - %B')
             if 'Estado' not in df.columns: df['Estado'] = 'PENDIENTE'
-            # Marcar bajas y cancelados por pestaña
-            df[f'B_{label}'] = df['Estado'].str.upper().apply(lambda x: 1 if "BAJA" in str(x) else 0)
-            df[f'C_{label}'] = df['Estado'].str.upper().apply(lambda x: 1 if "CANCELADO" in str(x) else 0)
+            
+            # Crear columnas de Bajas/Canc por defecto
+            df['B_Ene'] = 0; df['C_Ene'] = 0; df['B_Tel'] = 0; df['C_Tel'] = 0; df['B_Ala'] = 0; df['C_Ala'] = 0
+            
+            # Lógica de estados
+            cond_baja = df['Estado'].str.upper().str.contains("BAJA", na=False)
+            cond_canc = df['Estado'].str.upper().str.contains("CANCELADO", na=False)
+            df.loc[cond_baja, f'B_{label}'] = 1
+            df.loc[cond_canc, f'C_{label}'] = 1
             return df
         except: return pd.DataFrame()
 
@@ -66,10 +72,12 @@ def load_and_clean_ranking():
     dt = process(URL_TEL, "Tel")
     da = process(URL_ALA, "Ala")
 
+    # Asegurar métricas de Energía
     if not de.empty:
         de['V_Luz'] = de['CUPS Luz'].apply(lambda x: 1 if pd.notnull(x) and str(x).strip() != "" else 0) if 'CUPS Luz' in de.columns else 0
         de['V_Gas'] = de['CUPS Gas'].apply(lambda x: 1 if pd.notnull(x) and str(x).strip() != "" else 0) if 'CUPS Gas' in de.columns else 0
     
+    # Asegurar métricas de Telco
     if not dt.empty:
         def calc_tel(row):
             f, m = 0, 0
@@ -83,6 +91,7 @@ def load_and_clean_ranking():
         dt['V_Fibra'] = res.apply(lambda x: x[0])
         dt['V_Móvil'] = res.apply(lambda x: x[1])
     
+    # Asegurar métricas de Alarmas
     if not da.empty: da['V_Alarma'] = 1
 
     return de, dt, da
@@ -98,44 +107,43 @@ if not st.session_state["password_correct"]:
             if pwd == "Ventas2024*":
                 st.session_state["password_correct"] = True
                 st.rerun()
-            else: st.error("Incorrecto")
+            else: st.error("Acceso Denegado")
     st.stop()
 
-# --- SIDEBAR ---
+# --- NAVEGACIÓN ---
 with st.sidebar:
     st.image("1000233813.jpg") if os.path.exists("1000233813.jpg") else None
-    menu = st.radio("MENÚ", ["🚀 CRM", "📊 PRECIOS", "⚖️ COMPARADOR", "📢 ANUNCIOS", "📈 DASHBOARD Y RANKING", "📂 REPOSITORIO"])
+    menu = st.radio("MENÚ PRINCIPAL", ["🚀 CRM", "📊 PRECIOS", "⚖️ COMPARADOR", "📢 ANUNCIOS", "📈 DASHBOARD Y RANKING", "📂 REPOSITORIO"])
 
-# --- DASHBOARD Y RANKING (ESTRUCTURA BLINDADA) ---
+# --- DASHBOARD Y RANKING (ESTRUCTURA ANTIBLOQUEO) ---
 if menu == "📈 DASHBOARD Y RANKING":
     try:
         de, dt, da = load_and_clean_ranking()
         
-        all_anos = sorted(list(set(de['Año'].unique() if not de.empty else []) | set(dt['Año'].unique() if not dt.empty else []) | set(da['Año'].unique() if not da.empty else [])))
-        all_meses = sorted(list(set(de['Mes'].unique() if not de.empty else []) | set(dt['Mes'].unique() if not dt.empty else []) | set(da['Mes'].unique() if not da.empty else [])))
-        all_coms = sorted(list(set(de['Comercial'].unique() if not de.empty else []) | set(dt['Comercial'].unique() if not dt.empty else []) | set(da['Comercial'].unique() if not da.empty else [])))
+        all_anos = sorted(list(set(de['Año']) | set(dt['Año']) | set(da['Año'])))
+        all_meses = sorted(list(set(de['Mes']) | set(dt['Mes']) | set(da['Mes'])))
+        all_coms = sorted(list(set(de['Comercial']) | set(dt['Comercial']) | set(da['Comercial'])))
 
         c1, c2, c3 = st.columns([1, 2, 2])
         with c1: f_ano = st.selectbox("📅 Año", all_anos, index=len(all_anos)-1 if all_anos else 0)
         with c2: f_meses = st.multiselect("📆 Meses", all_meses, default=[all_meses[-1]] if all_meses else [])
         with c3: f_coms = st.multiselect("👤 Comerciales", all_coms, default=all_coms)
 
-        f_de = de[(de['Año']==f_ano) & (de['Mes'].isin(f_meses)) & (de['Comercial'].isin(f_coms))] if not de.empty else de
-        f_dt = dt[(dt['Año']==f_ano) & (dt['Mes'].isin(f_meses)) & (dt['Comercial'].isin(f_coms))] if not dt.empty else dt
-        f_da = da[(da['Año']==f_ano) & (da['Mes'].isin(f_meses)) & (da['Comercial'].isin(f_coms))] if not da.empty else da
+        f_de = de[(de['Año']==f_ano) & (de['Mes'].isin(f_meses)) & (de['Comercial'].isin(f_coms))] if not de.empty else pd.DataFrame()
+        f_dt = dt[(dt['Año']==f_ano) & (dt['Mes'].isin(f_meses)) & (dt['Comercial'].isin(f_coms))] if not dt.empty else pd.DataFrame()
+        f_da = da[(da['Año']==f_ano) & (da['Mes'].isin(f_meses)) & (da['Comercial'].isin(f_coms))] if not da.empty else pd.DataFrame()
 
-        tab_r, tab_e, tab_t, tab_a = st.tabs(["🏆 RANKING", "⚡ ENERGÍA", "📱 TELCO", "🛡️ ALARMAS"])
+        t_rank, t_ene, t_tel, t_ala = st.tabs(["🏆 RANKING", "⚡ ENERGÍA", "📱 TELCO", "🛡️ ALARMAS"])
 
-        with tab_r:
-            st.markdown('<div class="block-header">RANKING GLOBAL CONSOLIDADO</div>', unsafe_allow_html=True)
+        with t_rank:
+            st.markdown('<div class="block-header">RANKING DE PRODUCTIVIDAD</div>', unsafe_allow_html=True)
             
-            # CREAR TABLA BASE CON CEROS PARA EVITAR KEYERROR
-            rank = pd.DataFrame({'Comercial': f_coms})
-            cols_necesarias = ['V_Luz', 'V_Gas', 'V_Fibra', 'V_Móvil', 'V_Alarma', 'B_Ene', 'C_Ene', 'B_Tel', 'C_Tel', 'B_Ala', 'C_Ala']
-            for c in cols_necesarias: rank[c] = 0.0
-            rank = rank.set_index('Comercial')
+            # 1. Crear matriz de ceros para todos los comerciales seleccionados
+            rank = pd.DataFrame(index=f_coms)
+            cols = ['V_Luz', 'V_Gas', 'V_Fibra', 'V_Móvil', 'V_Alarma', 'B_Ene', 'C_Ene', 'B_Tel', 'C_Tel', 'B_Ala', 'C_Ala']
+            for c in cols: rank[c] = 0.0
 
-            # Sumar datos reales si existen
+            # 2. Inyectar datos reales con validación de existencia
             if not f_de.empty:
                 sum_e = f_de.groupby('Comercial')[['V_Luz', 'V_Gas', 'B_Ene', 'C_Ene']].sum()
                 rank.update(sum_e)
@@ -146,54 +154,57 @@ if menu == "📈 DASHBOARD Y RANKING":
                 sum_a = f_da.groupby('Comercial')[['V_Alarma', 'B_Ala', 'C_Ala']].sum()
                 rank.update(sum_a)
 
+            # 3. Totales finales
             rank['TOTAL'] = rank['V_Luz'] + rank['V_Gas'] + rank['V_Fibra'] + rank['V_Alarma']
             rank['BAJAS'] = rank['B_Ene'] + rank['B_Tel'] + rank['B_Ala']
             rank['CANC'] = rank['C_Ene'] + rank['C_Tel'] + rank['C_Ala']
             
-            rank = rank.sort_values('TOTAL', ascending=False).reset_index()
+            rank = rank.sort_values('TOTAL', ascending=False).reset_index().rename(columns={'index':'Comercial'})
 
-            def color_r(s):
+            def style_rank(s):
                 if s.name in ['BAJAS', 'CANC']: return ['background-color: #ffcccc; color: #cc0000; font-weight: bold']*len(s)
                 if s.name == 'TOTAL': return ['background-color: #d2ff00; color: black; font-weight: bold']*len(s)
                 return ['']*len(s)
 
-            st.write(rank[['Comercial', 'V_Luz', 'V_Gas', 'V_Fibra', 'V_Alarma', 'V_Móvil', 'TOTAL', 'BAJAS', 'CANC']].style.apply(color_r).to_html(), unsafe_allow_html=True)
+            st.write(rank[['Comercial', 'V_Luz', 'V_Gas', 'V_Fibra', 'V_Alarma', 'V_Móvil', 'TOTAL', 'BAJAS', 'CANC']].style.apply(style_rank).to_html(), unsafe_allow_html=True)
 
-        for tab, d_f, tit in zip([tab_e, tab_t, tab_a], [f_de, f_dt, f_da], ["ENERGÍA", "TELCO", "ALARMAS"]):
+        # Tabs de detalles individuales
+        for tab, d_filt, tit in zip([t_ene, t_tel, t_ala], [f_de, f_dt, f_da], ["ENERGÍA", "TELCO", "ALARMAS"]):
             with tab:
-                if not d_f.empty:
+                if not d_filt.empty:
                     st.markdown(f'<div class="block-header">ESTADOS {tit}</div>', unsafe_allow_html=True)
-                    a, b, c = st.columns(3)
-                    st_act = d_f[d_f['Estado'].str.upper().str.contains("ACTIVO", na=False)].shape[0]
-                    st_baj = d_f[d_f['Estado'].str.upper().str.contains("BAJA", na=False)].shape[0]
-                    st_can = d_f[d_f['Estado'].str.upper().str.contains("CANCELADO", na=False)].shape[0]
-                    a.markdown(f'<div class="status-box" style="background: #1b4d3e;"><div class="status-label">ACTIVOS</div><div class="status-value">{st_act}</div></div>', unsafe_allow_html=True)
-                    b.markdown(f'<div class="status-box" style="background: #990000;"><div class="status-label">BAJAS</div><div class="status-value">{st_baj}</div></div>', unsafe_allow_html=True)
-                    c.markdown(f'<div class="status-box" style="background: #000000;"><div class="status-label">CANCELADOS</div><div class="status-value">{st_can}</div></div>', unsafe_allow_html=True)
+                    ca, cb, cc = st.columns(3)
+                    s_act = d_filt[d_filt['Estado'].str.upper().str.contains("ACTIVO", na=False)].shape[0]
+                    s_baj = d_filt[d_filt['Estado'].str.upper().str.contains("BAJA", na=False)].shape[0]
+                    s_can = d_filt[d_filt['Estado'].str.upper().str.contains("CANCELADO", na=False)].shape[0]
+                    ca.markdown(f'<div class="status-box" style="background: #1b4d3e;"><div class="status-label">ACTIVOS</div><div class="status-value">{s_act}</div></div>', unsafe_allow_html=True)
+                    cb.markdown(f'<div class="status-box" style="background: #990000;"><div class="status-label">BAJAS</div><div class="status-value">{s_baj}</div></div>', unsafe_allow_html=True)
+                    cc.markdown(f'<div class="status-box" style="background: #333333;"><div class="status-label">CANCELADOS</div><div class="status-value">{s_can}</div></div>', unsafe_allow_html=True)
 
     except Exception as e:
-        st.error(f"Error en Dashboard: {e}")
+        st.error(f"Error crítico en Dashboard: {e}")
 
-# --- RESTO DE SECCIONES COMPLETAS ---
+# --- SECCIONES RESTANTES (MANTENIENDO TODO LO QUE FUNCIONABA) ---
 elif menu == "🚀 CRM":
-    st.header("Accesos Directos")
-    st.link_button("MARCADOR VOZ", "https://grupobasette.vozipcenter.com/", use_container_width=True)
-    st.link_button("CRM BASETTE", "https://crm.grupobasette.eu/login", use_container_width=True)
+    st.header("Herramientas de Venta")
+    st.link_button("🔥 MARCADOR VOZ CENTER", "https://grupobasette.vozipcenter.com/", use_container_width=True)
+    st.link_button("💎 CRM INTERNO BASETTE", "https://crm.grupobasette.eu/login", use_container_width=True)
 
 elif menu == "📊 PRECIOS":
-    st.header("Tarifas Oficiales")
-    st.write("Carga de tablas de Gana Energía, Naturgy y Total.")
+    st.header("Tarifas y Comisiones")
+    st.write("Carga de ficheros Excel de Gana, Naturgy y Total.")
 
 elif menu == "⚖️ COMPARADOR":
-    st.header("Estudio de Ahorro")
-    st.info("Formulario para generación de propuesta en PDF.")
+    st.header("Generador de Estudios de Ahorro")
+    st.info("Utilice esta sección para crear el PDF comparativo para el cliente.")
 
 elif menu == "📢 ANUNCIOS":
-    st.header("Marketing")
-    if os.path.exists("anunciosbasette/qr-plan amigo.png"): st.image("anunciosbasette/qr-plan amigo.png")
+    st.header("Recursos de Marketing")
+    if os.path.exists("anunciosbasette/qr-plan amigo.png"): 
+        st.image("anunciosbasette/qr-plan amigo.png", caption="QR Plan Amigo")
 
 elif menu == "📂 REPOSITORIO":
-    st.header("Descargas")
+    st.header("Documentación Técnica")
     if os.path.exists("manuales/Manual_Premiumnumber_Agente.pdf"):
         with open("manuales/Manual_Premiumnumber_Agente.pdf", "rb") as f:
-            st.download_button("Descargar Manual Marcador", f, file_name="Manual.pdf")
+            st.download_button("📂 DESCARGAR MANUAL AGENTE", f, file_name="Manual_Basette.pdf")
