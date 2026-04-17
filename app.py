@@ -141,7 +141,6 @@ def load_and_clean_ranking():
     df_e['V_Luz'] = df_e['CUPS Luz'].apply(lambda x: 1 if pd.notnull(x) and str(x).strip() != "" else 0)
     df_e['V_Gas'] = df_e['CUPS Gas'].apply(lambda x: 1 if pd.notnull(x) and str(x).strip() != "" else 0)
     df_e['Total_Ene'] = df_e['V_Luz'] + df_e['V_Gas']
-    # FILTRO ESTRICTO REF
     df_e['REF_Ene'] = df_e['Canal'].apply(lambda x: 1 if pd.notnull(x) and str(x).strip().upper() == "REF" else 0) if 'Canal' in df_e.columns else 0
     
     # TELCO
@@ -151,7 +150,6 @@ def load_and_clean_ranking():
     df_t = df_t.dropna(subset=['Comercial', 'Fecha Creación'])
     df_t['Año'] = df_t['Fecha Creación'].dt.year.astype(str)
     df_t['Mes'] = df_t['Fecha Creación'].dt.strftime('%m - %B')
-    # FILTRO ESTRICTO REF
     df_t['REF_Tel'] = df_t['Canal'].apply(lambda x: 1 if pd.notnull(x) and str(x).strip().upper() == "REF" else 0) if 'Canal' in df_t.columns else 0
     
     def get_telco_metrics(row):
@@ -177,7 +175,6 @@ def load_and_clean_ranking():
     df_a['Año'] = df_a['Fecha Creación'].dt.year.astype(str)
     df_a['Mes'] = df_a['Fecha Creación'].dt.strftime('%m - %B')
     df_a['V_Alarma'] = 1 
-    # FILTRO ESTRICTO REF
     df_a['REF_Ala'] = df_a['Canal'].apply(lambda x: 1 if pd.notnull(x) and str(x).strip().upper() == "REF" else 0) if 'Canal' in df_a.columns else 0
     
     return df_e, df_t, df_a
@@ -605,12 +602,14 @@ elif menu == "📈 DASHBOARD Y RANKING":
                 e_incidencias = de[de['Estado'].str.upper().str.contains("INCIDENCIA", na=False)].shape[0] if 'Estado' in de.columns else 0
                 e_bajas = de[de['Estado'].str.upper().str.contains("BAJA", na=False)].shape[0] if 'Estado' in de.columns else 0
                 e_activacion = de[de['Estado'].str.upper().str.contains("ACTIVACION|CURSO", na=False)].shape[0] if 'Estado' in de.columns else 0
+                e_cancelados = de[de['Estado'].str.upper().str.contains("CANCELADO", na=False)].shape[0] if 'Estado' in de.columns else 0
                 
-                ce1, ce2, ce3, ce4 = st.columns(4)
+                ce1, ce2, ce3, ce4, ce5 = st.columns(5)
                 with ce1: st.markdown(f'<div class="status-box" style="background: #1b4d3e;"><div class="status-label">ACTIVOS</div><div class="status-value">{e_activos}</div></div>', unsafe_allow_html=True)
                 with ce2: st.markdown(f'<div class="status-box" style="background: #5d2a2a;"><div class="status-label">INCIDENCIAS</div><div class="status-value">{e_incidencias}</div></div>', unsafe_allow_html=True)
                 with ce3: st.markdown(f'<div class="status-box" style="background: #444444;"><div class="status-label">BAJAS</div><div class="status-value">{e_bajas}</div></div>', unsafe_allow_html=True)
                 with ce4: st.markdown(f'<div class="status-box" style="background: #1e3a5f;"><div class="status-label">EN ACTIVACIÓN</div><div class="status-value">{e_activacion}</div></div>', unsafe_allow_html=True)
+                with ce5: st.markdown(f'<div class="status-box" style="background: #7d0000;"><div class="status-label">CANCELADOS</div><div class="status-value">{e_cancelados}</div></div>', unsafe_allow_html=True)
 
                 col_e1, col_e2 = st.columns([1, 1.2])
                 with col_e1:
@@ -619,7 +618,15 @@ elif menu == "📈 DASHBOARD Y RANKING":
                         fig_e.update_traces(textposition='outside', textinfo='label+percent')
                         st.plotly_chart(fig_e, use_container_width=True)
                 with col_e2:
-                    fig_eb = px.bar(de.groupby('Comercial')['Total_Ene'].sum().reset_index().sort_values('Total_Ene'), x='Total_Ene', y='Comercial', orientation='h', text_auto=True, title="Ventas Energía")
+                    # Agrupación por comercial y estados solicitados
+                    de['Es_Activo'] = de['Estado'].str.upper().str.contains("ACTIVO", na=False).astype(int)
+                    de['Es_Baja'] = de['Estado'].str.upper().str.contains("BAJA", na=False).astype(int)
+                    de['Es_Cancelado'] = de['Estado'].str.upper().str.contains("CANCELADO", na=False).astype(int)
+                    
+                    df_bar_e = de.groupby('Comercial')[['Es_Activo', 'Es_Baja', 'Es_Cancelado']].sum().reset_index()
+                    fig_eb = px.bar(df_bar_e, x='Comercial', y=['Es_Activo', 'Es_Baja', 'Es_Cancelado'], 
+                                   title="Rendimiento Energía por Comercial", barmode='group',
+                                   color_discrete_map={'Es_Activo': '#1b4d3e', 'Es_Baja': '#444444', 'Es_Cancelado': '#7d0000'})
                     st.plotly_chart(fig_eb, use_container_width=True)
 
         with tab_t:
@@ -629,12 +636,14 @@ elif menu == "📈 DASHBOARD Y RANKING":
                 t_incidencias = dt[dt['Estado'].str.upper().str.contains("INCIDENCIA", na=False)].shape[0] if 'Estado' in dt.columns else 0
                 t_bajas = dt[dt['Estado'].str.upper().str.contains("BAJA", na=False)].shape[0] if 'Estado' in dt.columns else 0
                 t_activacion = dt[dt['Estado'].str.upper().str.contains("ACTIVACION|CURSO", na=False)].shape[0] if 'Estado' in dt.columns else 0
+                t_cancelados = dt[dt['Estado'].str.upper().str.contains("CANCELADO", na=False)].shape[0] if 'Estado' in dt.columns else 0
                 
-                ct1, ct2, ct3, ct4 = st.columns(4)
+                ct1, ct2, ct3, ct4, ct5 = st.columns(5)
                 with ct1: st.markdown(f'<div class="status-box" style="background: #1b4d3e;"><div class="status-label">ACTIVOS</div><div class="status-value">{t_activos}</div></div>', unsafe_allow_html=True)
                 with ct2: st.markdown(f'<div class="status-box" style="background: #5d2a2a;"><div class="status-label">INCIDENCIAS</div><div class="status-value">{t_incidencias}</div></div>', unsafe_allow_html=True)
                 with ct3: st.markdown(f'<div class="status-box" style="background: #444444;"><div class="status-label">BAJAS</div><div class="status-value">{t_bajas}</div></div>', unsafe_allow_html=True)
                 with ct4: st.markdown(f'<div class="status-box" style="background: #1e3a5f;"><div class="status-label">EN ACTIVACIÓN</div><div class="status-value">{t_activacion}</div></div>', unsafe_allow_html=True)
+                with ct5: st.markdown(f'<div class="status-box" style="background: #7d0000;"><div class="status-label">CANCELADOS</div><div class="status-value">{t_cancelados}</div></div>', unsafe_allow_html=True)
 
                 col_t1, col_t2 = st.columns([1, 1.2])
                 with col_t1:
@@ -643,7 +652,14 @@ elif menu == "📈 DASHBOARD Y RANKING":
                         fig_t.update_traces(textposition='outside', textinfo='label+percent')
                         st.plotly_chart(fig_t, use_container_width=True)
                 with col_t2:
-                    fig_tb = px.bar(dt.groupby('Comercial')[['V_Fibra', 'V_Móvil']].sum().reset_index(), x='Comercial', y=['V_Fibra', 'V_Móvil'], barmode='group', title="Mix de Telco")
+                    dt['Es_Activo'] = dt['Estado'].str.upper().str.contains("ACTIVO", na=False).astype(int)
+                    dt['Es_Baja'] = dt['Estado'].str.upper().str.contains("BAJA", na=False).astype(int)
+                    dt['Es_Cancelado'] = dt['Estado'].str.upper().str.contains("CANCELADO", na=False).astype(int)
+                    
+                    df_bar_t = dt.groupby('Comercial')[['Es_Activo', 'Es_Baja', 'Es_Cancelado']].sum().reset_index()
+                    fig_tb = px.bar(df_bar_t, x='Comercial', y=['Es_Activo', 'Es_Baja', 'Es_Cancelado'], 
+                                   title="Rendimiento Telco por Comercial", barmode='group',
+                                   color_discrete_map={'Es_Activo': '#1b4d3e', 'Es_Baja': '#444444', 'Es_Cancelado': '#7d0000'})
                     st.plotly_chart(fig_tb, use_container_width=True)
 
         with tab_a:
@@ -653,12 +669,14 @@ elif menu == "📈 DASHBOARD Y RANKING":
                 a_incidencias = da[da['Estado'].str.upper().str.contains("INCIDENCIA", na=False)].shape[0] if 'Estado' in da.columns else 0
                 a_bajas = da[da['Estado'].str.upper().str.contains("BAJA", na=False)].shape[0] if 'Estado' in da.columns else 0
                 a_activacion = da[da['Estado'].str.upper().str.contains("ACTIVACION|CURSO", na=False)].shape[0] if 'Estado' in da.columns else 0
+                a_cancelados = da[da['Estado'].str.upper().str.contains("CANCELADO", na=False)].shape[0] if 'Estado' in da.columns else 0
                 
-                ca1, ca2, ca3, ca4 = st.columns(4)
+                ca1, ca2, ca3, ca4, ca5 = st.columns(5)
                 with ca1: st.markdown(f'<div class="status-box" style="background: #1b4d3e;"><div class="status-label">ACTIVOS</div><div class="status-value">{a_activos}</div></div>', unsafe_allow_html=True)
                 with ca2: st.markdown(f'<div class="status-box" style="background: #5d2a2a;"><div class="status-label">INCIDENCIAS</div><div class="status-value">{a_incidencias}</div></div>', unsafe_allow_html=True)
-                with ce3: st.markdown(f'<div class="status-box" style="background: #444444;"><div class="status-label">BAJAS</div><div class="status-value">{a_bajas}</div></div>', unsafe_allow_html=True)
-                with ce4: st.markdown(f'<div class="status-box" style="background: #1e3a5f;"><div class="status-label">EN ACTIVACIÓN</div><div class="status-value">{a_activacion}</div></div>', unsafe_allow_html=True)
+                with ca3: st.markdown(f'<div class="status-box" style="background: #444444;"><div class="status-label">BAJAS</div><div class="status-value">{a_bajas}</div></div>', unsafe_allow_html=True)
+                with ca4: st.markdown(f'<div class="status-box" style="background: #1e3a5f;"><div class="status-label">EN ACTIVACIÓN</div><div class="status-value">{a_activacion}</div></div>', unsafe_allow_html=True)
+                with ca5: st.markdown(f'<div class="status-box" style="background: #7d0000;"><div class="status-label">CANCELADOS</div><div class="status-value">{a_cancelados}</div></div>', unsafe_allow_html=True)
 
                 col_a1, col_a2 = st.columns([1, 1.2])
                 with col_a1:
@@ -666,7 +684,14 @@ elif menu == "📈 DASHBOARD Y RANKING":
                     fig_a_pie.update_traces(textposition='outside', textinfo='label+percent')
                     st.plotly_chart(fig_a_pie, use_container_width=True)
                 with col_a2:
-                    fig_a_bar = px.bar(da.groupby('Comercial')['V_Alarma'].sum().reset_index().sort_values('V_Alarma'), x='V_Alarma', y='Comercial', orientation='h', text_auto=True, title="Ventas de Alarmas", color_discrete_sequence=['#0000FF']) 
+                    da['Es_Activo'] = da['Estado'].str.upper().str.contains("ACTIVO", na=False).astype(int)
+                    da['Es_Baja'] = da['Estado'].str.upper().str.contains("BAJA", na=False).astype(int)
+                    da['Es_Cancelado'] = da['Estado'].str.upper().str.contains("CANCELADO", na=False).astype(int)
+                    
+                    df_bar_a = da.groupby('Comercial')[['Es_Activo', 'Es_Baja', 'Es_Cancelado']].sum().reset_index()
+                    fig_a_bar = px.bar(df_bar_a, x='Comercial', y=['Es_Activo', 'Es_Baja', 'Es_Cancelado'], 
+                                   title="Rendimiento Alarmas por Comercial", barmode='group',
+                                   color_discrete_map={'Es_Activo': '#1b4d3e', 'Es_Baja': '#444444', 'Es_Cancelado': '#7d0000'})
                     st.plotly_chart(fig_a_bar, use_container_width=True)
 
     except Exception as e:
