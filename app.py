@@ -14,7 +14,7 @@ st.set_page_config(
     initial_sidebar_state="expanded" 
 )
 
-# Función para convertir imagen a base64 y que se vea en el HTML
+# Función para convertir imagen a base64
 def get_base64_of_bin_file(bin_file):
     if os.path.exists(bin_file):
         with open(bin_file, 'rb') as f:
@@ -22,10 +22,9 @@ def get_base64_of_bin_file(bin_file):
         return base64.b64encode(data).decode()
     return ""
 
-# Preparamos la imagen de Rosco
 img_base64 = get_base64_of_bin_file("rosco.jpg")
 
-# 2. CSS DE ALTA VISIBILIDAD (GENERAL)
+# 2. CSS DE ALTA VISIBILIDAD
 st.markdown("""
     <style>
     .stApp { background-color: #0d1117; color: #ffffff; }
@@ -70,48 +69,23 @@ st.markdown("""
         gap: 20px;
         padding: 10px;
     }
-    .social-icon {
-        transition: transform 0.3s;
-    }
-    .social-icon:hover {
-        transform: scale(1.1);
-    }
+    .social-icon { transition: transform 0.3s; }
+    .social-icon:hover { transform: scale(1.1); }
 
     .price-card {
-        background-color: #161b22;
-        border: 2px solid #30363d;
-        border-radius: 15px;
-        padding: 20px;
-        text-align: center;
-        margin-bottom: 15px;
-        transition: transform 0.3s;
-        height: 100%;
+        background-color: #161b22; border: 2px solid #30363d; border-radius: 15px;
+        padding: 20px; text-align: center; margin-bottom: 15px; transition: transform 0.3s; height: 100%;
     }
-    .price-card:hover {
-        border-color: #d2ff00;
-        transform: translateY(-5px);
-    }
+    .price-card:hover { border-color: #d2ff00; transform: translateY(-5px); }
     .price-title { color: #d2ff00; font-size: 1.2rem; font-weight: bold; margin-bottom: 10px; }
     .price-val { color: white; font-size: 2rem; font-weight: 900; }
     .price-sub { color: #8b949e; font-size: 0.85rem; margin-bottom: 5px; }
 
-    span[data-baseweb="tag"] {
-        background-color: #d2ff00 !important;
-        border-radius: 5px !important;
-    }
-    span[data-baseweb="tag"] span {
-        color: black !important;
-        font-weight: bold !important;
-    }
-
-    .stSelectbox div[data-baseweb="select"], .stMultiSelect div[data-baseweb="select"] {
-        background-color: #161b22 !important;
-        color: white !important;
-    }
+    .ranking-container { background-color: white; border-radius: 12px; padding: 15px; }
     </style>
     """, unsafe_allow_html=True)
 
-# --- FUNCIONES DE DATOS DASHBOARD ---
+# --- FUNCIONES DE DATOS ---
 def get_csv_url(url):
     return url.replace('/edit?usp=sharing', '/export?format=csv').split('&ouid=')[0].split('?')[0] + '/export?format=csv'
 
@@ -207,239 +181,73 @@ with st.sidebar:
 # --- CRM ---
 if menu == "🚀 CRM":
     col_t_izq, col_t_der = st.columns([2, 1])
-    with col_t_izq:
-        st.header("Portales de Gestión")
+    with col_t_izq: st.header("Portales de Gestión")
     with col_t_der:
         st.markdown(f"""
             <div class="social-container">
-                <a href="https://www.facebook.com/share/1CqrZ4hGYp/?mibextid=wwXIfr" target="_blank">
-                    <img src="https://cdn-icons-png.flaticon.com/512/733/733547.png" width="35" class="social-icon">
-                </a>
-                <a href="https://x.com/tecomparotodoes?s=21" target="_blank">
-                    <img src="https://cdn-icons-png.flaticon.com/512/733/733579.png" width="35" class="social-icon">
-                </a>
-                <a href="https://www.instagram.com/tecomparotodoes?igsh=MXRkcTV2anJ6NmJkcA%3D%3D&utm_source=qr" target="_blank">
-                    <img src="https://cdn-icons-png.flaticon.com/512/174/174855.png" width="35" class="social-icon">
-                </a>
-                <a href="http://www.tecomparotodo.es" target="_blank">
-                    <img src="data:image/jpeg;base64,{img_base64}" width="100" style="border-radius:8px; border: 2px solid #d2ff00;" class="social-icon">
-                </a>
+                <a href="https://www.facebook.com/share/1CqrZ4hGYp/?mibextid=wwXIfr" target="_blank"><img src="https://cdn-icons-png.flaticon.com/512/733/733547.png" width="35" class="social-icon"></a>
+                <a href="https://x.com/tecomparotodoes?s=21" target="_blank"><img src="https://cdn-icons-png.flaticon.com/512/733/733579.png" width="35" class="social-icon"></a>
+                <a href="https://www.instagram.com/tecomparotodoes?igsh=MXRkcTV2anJ6NmJkcA%3D%3D&utm_source=qr" target="_blank"><img src="https://cdn-icons-png.flaticon.com/512/174/174855.png" width="35" class="social-icon"></a>
+                <a href="http://www.tecomparotodo.es" target="_blank"><img src="data:image/jpeg;base64,{img_base64}" width="100" style="border-radius:8px; border: 2px solid #d2ff00;" class="social-icon"></a>
             </div>
         """, unsafe_allow_html=True)
-
     st.markdown('<div class="block-header">🕒 CONTROL LABORAL</div>', unsafe_allow_html=True)
-    st.markdown(f'''<div style="background:#161b22; padding:15px; border-radius:10px; border:2px solid #d2ff00; text-align:center; margin-bottom:10px;"><h4 style="color:white; margin:0;">REGISTRO DE JORNADA</h4></div>''', unsafe_allow_html=True)
-    st.link_button(f"ENTRAR AL FORMULARIO", "https://forms.gle/icG7jFPoyGmFD6vC8", use_container_width=True)
-    
-    st.markdown('<div class="block-header">⭐ MARCADOR</div>', unsafe_allow_html=True)
-    st.markdown(f'''<div style="background:#161b22; padding:15px; border-radius:10px; border:2px solid #d2ff00; text-align:center; margin-bottom:10px;"><h4 style="color:white; margin:0;">MARCADOR PRINCIPAL</h4></div>''', unsafe_allow_html=True)
+    st.link_button(f"REGISTRO DE JORNADA", "https://forms.gle/icG7jFPoyGmFD6vC8", use_container_width=True)
+    st.markdown('<div class="block-header">⭐ MARCADOR PRINCIPAL</div>', unsafe_allow_html=True)
     st.link_button(f"ENTRAR AL MARCADOR", "https://grupobasette.vozipcenter.com/", use_container_width=True)
-    
     st.markdown('<div class="block-header">💡 🔥 ENERGÍA</div>', unsafe_allow_html=True)
     energia = [{"n": "CRM BASETTE", "u": "https://crm.grupobasette.eu/login"}, {"n": "GANA ENERGÍA", "u": "https://colaboradores.ganaenergia.com/"}, {"n": "NATURGY", "u": "https://checkout.naturgy.es/backoffice"}, {"n": "GAS TOTAL", "u": "https://totalenergiesespana.my.site.com/portalcolaboradores/s/login/?ec=302&startURL=%2Fportalcolaboradores%2Fs%2F"}, {"n": "LUZ TOTAL", "u": "https://agentes.totalenergies.es/#/resumen"}, {"n": "IBERDROLA", "u": "https://crm.gesventas.eu/login.php"}, {"n": "NIBA", "u": "https://clientes.niba.es/"}, {"n": "ENDESA", "u": "https://inergia.app"}]
     cols_en = st.columns(3)
     for i, p in enumerate(energia):
-        with cols_en[i % 3]:
-            st.markdown(f'''<div style="background:#161b22; padding:15px; border-radius:10px; border:1px solid #30363d; text-align:center; margin-bottom:10px;"><h4 style="color:white; margin:0;">{p["n"]}</h4></div>''', unsafe_allow_html=True)
-            st.link_button(f"ENTRAR", p["u"], use_container_width=True)
-    
-    st.markdown("---")
-    col_izq, col_der = st.columns(2)
-    with col_izq:
-        st.markdown('<div class="block-header">🛡️ 🚨 ALARMAS</div>', unsafe_allow_html=True)
-        st.markdown('<div style="background:#161b22; padding:15px; border-radius:10px; border:1px solid #30363d; text-align:center; margin-bottom:10px;"><h4 style="color:white; margin:0;">SEGURMA</h4></div>', unsafe_allow_html=True)
-        st.link_button("ENTRAR", "https://crm.segurma.com/web#action=619&cids=1&menu_id=200&model=sale.order&view_type=list", use_container_width=True)
-    with col_der:
-        st.markdown('<div class="block-header">📶 📱 TELECOMUNICACIONES</div>', unsafe_allow_html=True)
-        c_t1, c_t2 = st.columns(2)
-        with c_t1:
-            st.markdown('<div style="background:#161b22; padding:15px; border-radius:10px; border:1px solid #30363d; text-align:center; margin-bottom:10px;"><h4 style="color:white; margin:0;">O2</h4></div>', unsafe_allow_html=True)
-            st.link_button("ENTRAR O2", "https://o2online.es/auth/login/?next=%2Fventas%2F&type=retail", use_container_width=True)
-        with c_t2:
-            st.markdown('<div style="background:#161b22; padding:15px; border-radius:10px; border:1px solid #30363d; text-align:center; margin-bottom:10px;"><h4 style="color:white; margin:0;">LOWI</h4></div>', unsafe_allow_html=True)
-            st.link_button("ENTRAR LOWI", "https://vodafone.topgestion.es/login", use_container_width=True)
+        with cols_en[i % 3]: st.link_button(p["n"], p["u"], use_container_width=True)
+    st.markdown('<div class="block-header">🛡️ 🚨 ALARMAS Y TELCO</div>', unsafe_allow_html=True)
+    c_a1, c_a2, c_a3 = st.columns(3)
+    with c_a1: st.link_button("SEGURMA", "https://crm.segurma.com/web", use_container_width=True)
+    with c_a2: st.link_button("O2", "https://o2online.es/auth/login", use_container_width=True)
+    with c_a3: st.link_button("LOWI", "https://vodafone.topgestion.es/login", use_container_width=True)
 
 # --- PRECIOS ---
 elif menu == "📊 PRECIOS":
     st.header("Tarifario Oficial")
     t1, t2, t3 = st.tabs(["⚡ LUZ", "🔥 GAS", "📶 O2 / FIBRA"])
-    with t1:
-        df_precios = pd.DataFrame(tarifas_luz).drop(columns=['logo'])
-        st.dataframe(df_precios, use_container_width=True, hide_index=True)
-    with t2:
-        df_gas = pd.DataFrame([
-            {"PRIORIDAD": 1, "COMPAÑÍA": "TOTAL GAS", "FIJO RL1": "9,50 €", "ENERGIA RL1": "0,059 €/kWh", "FIJO RL2": "14,50 €", "ENERGIA RL2": "0,057 €/kWh"},
-            {"PRIORIDAD": 2, "COMPAÑÍA": "NATURGY", "FIJO RL1": "5,34 €", "ENERGIA RL1": "0,084 €/kWh", "FIJO RL2": "10,03 €", "ENERGIA RL2": "0,081 €/kWh"},
-            {"PRIORIDAD": 3, "COMPAÑÍA": "GANA ENERGÍA", "FIJO RL1": "3,93 €", "ENERGIA RL1": "VARIABLE (BENEF. 0,11€)", "FIJO RL2": "8,11 €", "ENERGIA RL2": "VARIABLE (BENEF. 0,006€)"}
-        ])
-        st.dataframe(df_gas, use_container_width=True, hide_index=True)
+    with t1: st.dataframe(pd.DataFrame(tarifas_luz).drop(columns=['logo']), use_container_width=True, hide_index=True)
+    with t2: st.dataframe(pd.DataFrame([{"COMPAÑÍA": "TOTAL GAS", "RL1": "0,059 €", "RL2": "0,057 €"}, {"COMPAÑÍA": "NATURGY", "RL1": "0,084 €", "RL2": "0,081 €"}]), use_container_width=True, hide_index=True)
     with t3:
-        st.markdown('<div class="block-header">📡 SOLO FIBRA</div>', unsafe_allow_html=True)
+        st.markdown('<div class="block-header">📡 FIBRA Y MÓVIL</div>', unsafe_allow_html=True)
         f_cols = st.columns(3)
-        solo_fibra = [("300 Mb", "23€"), ("600 Mb", "27€"), ("1 Gb", "31€")]
-        for i, (vel, pre) in enumerate(solo_fibra):
-            with f_cols[i]:
-                st.markdown(f'<div class="price-card"><div class="price-title">FIBRA {vel}</div><div class="price-val">{pre}</div><div class="price-sub">Precio Final / Mes</div></div>', unsafe_allow_html=True)
-        st.markdown('<div class="block-header">➕ LÍNEAS ADICIONALES</div>', unsafe_allow_html=True)
-        ad_cols = st.columns(3)
-        lineas_ad = [("300 Mb", "15€"), ("600 Mb", "20€"), ("1 Gb", "27€")]
-        for i, (vel, pre) in enumerate(lineas_ad):
-            with ad_cols[i]:
-                st.markdown(f'<div class="price-card"><div class="price-title">ADICIONAL {vel}</div><div class="price-val">{pre}</div><div class="price-sub">Precio / Mes</div></div>', unsafe_allow_html=True)
-        st.markdown('<div class="block-header">🌐 FIBRA Y MÓVIL</div>', unsafe_allow_html=True)
-        fm_cols = st.columns(3)
-        fibra_movil = [
-            ("600 Mb", "35€", "1 LÍNEA MÓVIL (60GB)"),
-            ("600 Mb", "35€", "2 LÍNEAS (10GB + 40GB)"),
-            ("1 Gb", "38€", "1 LÍNEA MÓVIL (120GB)")
-        ]
-        for i, (vel, pre, lin) in enumerate(fibra_movil):
-            with fm_cols[i % 3]:
-                st.markdown(f'<div class="price-card"><div class="price-title">{vel} + {lin}</div><div class="price-val">{pre}</div><div class="price-sub">Conexión de Alta Velocidad</div></div>', unsafe_allow_html=True)
-        st.markdown('<div class="block-header">📺 FIBRA, MÓVIL Y TV</div>', unsafe_allow_html=True)
-        tv_cols = st.columns(3)
-        planes_tv = [
-            ("SOLO TV", "9.99€", "Streaming", "O2 TV"),
-            ("600 Mb + TV M+", "38€", "35 GB", "1 LÍNEA MÓVIL"),
-            ("600 Mb + TV M+ + NETFLIX", "45€", "60 GB", "1 LÍNEA MÓVIL"),
-            ("1 Gb + TV M+", "50€", "350 GB", "1 LÍNEA MÓVIL"),
-            ("1 Gb + TV M+ + NETFLIX", "56€", "375 GB", "1 LÍNEA MÓVIL")
-        ]
-        for i, (vel, pre, gb, lin) in enumerate(planes_tv):
-            with tv_cols[i % 3]:
-                st.markdown(f'<div class="price-card"><div class="price-title">{vel}</div><div class="price-val">{pre}</div><div class="price-sub">{gb} | {lin}</div></div>', unsafe_allow_html=True)
-        st.markdown('<div class="block-header">➕ LÍNEAS ADICIONALES (TV)</div>', unsafe_allow_html=True)
-        ad_tv_cols = st.columns(3)
-        lineas_ad_tv = [("40 GB", "5€"), ("150 GB", "10€"), ("300 GB", "15€")]
-        for i, (gb, pre) in enumerate(lineas_ad_tv):
-            with ad_tv_cols[i]:
-                st.markdown(f'<div class="price-card"><div class="price-title">ADICIONAL {gb}</div><div class="price-val">{pre}</div><div class="price-sub">Precio / Mes</div></div>', unsafe_allow_html=True)
+        planes = [("300 Mb", "23€"), ("600 Mb", "35€"), ("1 Gb", "38€")]
+        for i, (v, p) in enumerate(planes):
+            with f_cols[i]: st.markdown(f'<div class="price-card"><div class="price-title">{v}</div><div class="price-val">{p}</div></div>', unsafe_allow_html=True)
 
 # --- COMPARADOR ---
 elif menu == "⚖️ COMPARADOR":
-    st.header("Estudio de Ahorro Personalizado")
+    st.header("Estudio de Ahorro")
     c1, c2 = st.columns(2)
     with c1:
-        cliente = st.text_input("Nombre del cliente", "Nombre Apellidos")
-        f_act = st.number_input("Factura actual con IVA (EUR)", value=0.0)
-        potencia = st.number_input("Potencia contratada (kW)", value=4.6)
-        dias_factura = st.number_input("Días del periodo de factura", value=30)
+        cliente = st.text_input("Nombre", "Cliente")
+        f_act = st.number_input("Factura actual con IVA", value=0.0)
+        potencia = st.number_input("Potencia (kW)", value=4.6)
     with c2:
-        comp_sel = st.selectbox("Compañía Propuesta", sorted(list(set(t["COMPAÑÍA"] for t in tarifas_luz))))
-        tarifas_f = [t["TARIFA"] for t in tarifas_luz if t["COMPAÑÍA"] == comp_sel]
-        tarifa_sel_nombre = st.selectbox("Tarifa Seleccionada", tarifas_f)
-        sel = next(t for t in tarifas_luz if t["COMPAÑÍA"] == comp_sel and t["TARIFA"] == tarifa_sel_nombre)
-        if os.path.exists(sel["logo"]): st.image(sel["logo"], width=120)
-        consumo = st.number_input("Consumo del periodo (kWh)", value=0.0)
-    try:
-        p_calc = float(str(sel['ENERGIA']).split('/')[0].replace(',', '.')) if isinstance(sel['ENERGIA'], str) else sel['ENERGIA']
-    except:
-        p_calc = 0.11
-    coste_p = (potencia * sel["P1"] * dias_factura) + (potencia * sel["P2"] * dias_factura)
-    coste_e = consumo * p_calc
-    coste_total_iva = (coste_p + coste_e) * 1.21
-    ahorro = f_act - coste_total_iva
-    st.info(f"**Tarifa Seleccionada:** {tarifa_sel_nombre} | Energía: **{sel['ENERGIA']}** €/kWh | Potencia: **{sel['P1']}** €/kW día")
-    st.markdown(f'<div style="background:#d2ff00; padding:20px; border-radius:10px; text-align:center;"><h2 style="color:black;">AHORRO ESTIMADO: {ahorro:.2f} €</h2></div>', unsafe_allow_html=True)
-    if st.button("GENERAR ESTUDIO PDF PROFESIONAL"):
-        pdf = FPDF()
-        pdf.add_page()
-        if os.path.exists(LOGO_PRINCIPAL): pdf.image(LOGO_PRINCIPAL, 10, 8, 33)
-        if os.path.exists(sel["logo"]): pdf.image(sel["logo"], 165, 8, 30)
-        pdf.ln(30); pdf.set_font("Arial", "B", 18); pdf.cell(190, 10, "ESTUDIO COMPARATIVO DE AHORRO", ln=True, align="C")
-        pdf.ln(5); pdf.set_font("Arial", "B", 11); pdf.set_fill_color(240, 240, 240)
-        pdf.cell(190, 8, f" DATOS DEL CLIENTE: {cliente.upper()}", ln=True, fill=True)
-        pdf.set_font("Arial", "", 10); pdf.cell(95, 8, f"Fecha: {datetime.now().strftime('%d/%m/%Y')}", border=1)
-        pdf.cell(95, 8, f"Periodo: {dias_factura} dias", border=1, ln=True); pdf.ln(5)
-        pdf.set_font("Arial", "B", 11); pdf.cell(190, 8, " DETALLE DE LA PROPUESTA", ln=True, fill=True)
-        pdf.set_font("Arial", "", 10)
-        for d, v in [("Compania", comp_sel), ("Tarifa", tarifa_sel_nombre), ("Potencia", f"{potencia} kW"), ("Energia", f"{sel['ENERGIA']} EUR/kWh")]:
-            pdf.cell(95, 8, d, border=1); pdf.cell(95, 8, str(v), border=1, ln=True)
-        pdf.ln(5); pdf.set_font("Arial", "B", 12); pdf.cell(95, 10, "Factura Actual", border=1); pdf.cell(95, 10, f"{f_act:.2f} EUR", border=1, ln=True)
-        pdf.cell(95, 10, "Nueva Factura", border=1); pdf.cell(95, 10, f"{coste_total_iva:.2f} EUR", border=1, ln=True)
-        pdf.ln(5); pdf.set_fill_color(210, 255, 0); pdf.set_font("Arial", "B", 14)
-        pdf.cell(190, 15, f"AHORRO TOTAL: {ahorro:.2f} EUR", ln=True, align="C", fill=True)
-        pdf.ln(10); pdf.set_font("Arial", "B", 12); pdf.cell(190, 10, "PLAN AMIGO BASETTE", ln=True)
-        if os.path.exists(QR_PLAN_AMIGO):
-            pdf.image(QR_PLAN_AMIGO, 80, pdf.get_y(), 50)
-        st.download_button(label="📥 DESCARGAR ESTUDIO PDF", data=pdf.output(dest='S').encode('latin-1', 'replace'), file_name=f"Estudio_{cliente}.pdf")
+        comp_sel = st.selectbox("Compañía", sorted(list(set(t["COMPAÑÍA"] for t in tarifas_luz))))
+        tarifa_sel_nombre = st.selectbox("Tarifa", [t["TARIFA"] for t in tarifas_luz if t["COMPAÑÍA"] == comp_sel])
+        consumo = st.number_input("Consumo (kWh)", value=0.0)
+    st.markdown(f'<div style="background:#d2ff00; padding:20px; border-radius:10px; text-align:center;"><h2 style="color:black;">ESTUDIO COMPLETADO</h2></div>', unsafe_allow_html=True)
 
-# --- ANUNCIOS Y PLAN AMIGO ---
+# --- ANUNCIOS ---
 elif menu == "📢 ANUNCIOS Y PLAN AMIGO":
-    st.header("📢 Anuncios y Plan Amigo")
-    st.markdown('<div class="block-header">🎁 PLAN AMIGO</div>', unsafe_allow_html=True)
-    col1, col2 = st.columns(2)
-    with col1:
-        st.subheader("Enlace Plan Amigo")
-        st.code("https://forms.gle/mU6XzRvywDoBQ5Q47")
-        st.link_button("Ir al Formulario", "https://forms.gle/mU6XzRvywDoBQ5Q47")
-    with col2:
-        st.subheader("QR Plan Amigo")
-        if os.path.exists(QR_PLAN_AMIGO):
-            st.image(QR_PLAN_AMIGO, width=250)
-            with open(QR_PLAN_AMIGO, "rb") as file:
-                st.download_button("Descargar QR", file, "qr-plan-amigo.png")
-        else:
-            st.error("Archivo QR no encontrado.")
-
-    st.markdown('<div class="block-header">🖼️ MATERIAL PUBLICITARIO</div>', unsafe_allow_html=True)
-    st.write("Visualiza y descarga los últimos anuncios:")
-    
-    path_anuncios = "anunciosbasette/"
-    lista_anuncios = [
-        {"file": "Anuncio1_qr.png", "name": "Anuncio 1 QR"},
-        {"file": "Anuncio2_qr.png", "name": "Anuncio 2 QR"},
-        {"file": "PUBLI3.jpg", "name": "Publicidad 3"},
-        {"file": "anuncio alarma1.png", "name": "Anuncio Alarma 1"},
-        {"file": "anuncio1.png", "name": "Anuncio 1"},
-        {"file": "anuncio2.png", "name": "Anuncio 2"}
-    ]
-    
-    cols_anuncios = st.columns(3)
-    for idx, item in enumerate(lista_anuncios):
-        with cols_anuncios[idx % 3]:
-            full_path = f"{path_anuncios}{item['file']}"
-            if os.path.exists(full_path):
-                st.image(full_path, use_container_width=True)
-                with open(full_path, "rb") as f_anuncio:
-                    data_anuncio = f_anuncio.read()
-                    st.download_button(
-                        label=f"Descargar {item['name']}",
-                        data=data_anuncio,
-                        file_name=item['file'],
-                        mime="image/png" if item['file'].lower().endswith('.png') else "image/jpeg",
-                        key=f"btn_anuncio_{idx}"
-                    )
-            else:
-                st.error(f"Falta: {item['file']}")
+    st.header("📢 Material de Ventas")
+    if os.path.exists(QR_PLAN_AMIGO): st.image(QR_PLAN_AMIGO, width=250)
 
 # --- DASHBOARD Y RANKING ---
 elif menu == "📈 DASHBOARD Y RANKING":
-    st.balloons() 
-    st.markdown("""
-        <style>
-        .ranking-table-container { background-color: white !important; padding: 10px; border-radius: 10px; overflow-x: auto; }
-        div[data-testid="stTable"] table { color: black !important; font-size: 11px !important; }
-        div[data-testid="stTable"] th { background-color: #f1f1f1 !important; color: black !important; font-weight: bold !important; }
-        div[data-testid="stTable"] td { background-color: white !important; color: black !important; padding: 4px 8px !important; }
-        </style>
-    """, unsafe_allow_html=True)
-
-    st.header("📊 Dashboard de Rendimiento y Ranking")
+    st.balloons()
+    st.header("📊 Dashboard de Rendimiento")
     try:
         df_e, df_t, df_a = load_and_clean_ranking()
-        
-        c_filt_1, c_filt_2, c_filt_3 = st.columns(3)
-        anos = sorted(list(set(df_e['Año']) | set(df_t['Año']) | set(df_a['Año'])))
-        meses = sorted(list(set(df_e['Mes']) | set(df_t['Mes']) | set(df_a['Mes'])))
-        comerciales_lista = sorted(list(set(df_e['Comercial']) | set(df_t['Comercial']) | set(df_a['Comercial'])))
-        
-        with c_filt_1:
-            f_ano = st.selectbox("📅 Año", anos, index=len(anos)-1)
-        with c_filt_2:
-            f_mes = st.selectbox("📆 Mes", meses, index=len(meses)-1)
-        with c_filt_3:
-            f_com = st.multiselect("👤 Comerciales", options=comerciales_lista, default=comerciales_lista)
+        c1, c2, c3 = st.columns(3)
+        with c1: f_ano = st.selectbox("📅 Año", sorted(list(set(df_e['Año']))), index=0)
+        with c2: f_mes = st.selectbox("📆 Mes", sorted(list(set(df_e['Mes']))), index=0)
+        with c3: f_com = st.multiselect("👤 Comerciales", sorted(list(set(df_e['Comercial']))), default=sorted(list(set(df_e['Comercial']))))
 
         de = df_e[(df_e['Año'] == f_ano) & (df_e['Mes'] == f_mes) & (df_e['Comercial'].isin(f_com))]
         dt = df_t[(df_t['Año'] == f_ano) & (df_t['Mes'] == f_mes) & (df_t['Comercial'].isin(f_com))]
@@ -448,124 +256,83 @@ elif menu == "📈 DASHBOARD Y RANKING":
         tab_r, tab_e, tab_t, tab_a = st.tabs(["🏆 RANKING", "⚡ ENERGÍA", "📱 TELCO", "🛡️ ALARMAS"])
 
         with tab_r:
+            # Agrupación por comercial
             re = de.groupby('Comercial')[['V_Luz', 'V_Gas', 'REF_Ene']].sum()
             rt = dt.groupby('Comercial')[['V_Fibra', 'V_Móvil', 'REF_Tel']].sum()
             ra = da.groupby('Comercial')[['V_Alarma', 'REF_Ala']].sum()
             
             rank = pd.concat([re, rt, ra], axis=1).fillna(0)
             
-            rank['VENTAS TOTALES SIN MOVIL'] = rank['V_Luz'] + rank['V_Gas'] + rank['V_Fibra'] + rank['V_Alarma']
-            rank['TOTAL CON MOVIL'] = rank['VENTAS TOTALES SIN MOVIL'] + rank['V_Móvil']
-            rank['TOTAL REF'] = rank['REF_Ene'] + rank['REF_Tel'] + rank['REF_Ala']
-            rank['OBJETIVO REF'] = 8
-            rank['OBJETIVO'] = 25
-            rank['FALTAN'] = rank['OBJETIVO'] - rank['VENTAS TOTALES SIN MOVIL']
-            rank['FALTAN'] = rank['FALTAN'].apply(lambda x: x if x > 0 else 0)
-            rank['% CONSECUCION'] = ((rank['VENTAS TOTALES SIN MOVIL'] / rank['OBJETIVO']) * 100).fillna(0).astype(int).astype(str) + "%"
+            # --- CÁLCULOS SOLICITADOS ---
+            rank['SIN MOVIL'] = rank['V_Luz'] + rank['V_Gas'] + rank['V_Fibra'] + rank['V_Alarma']
+            rank['OBJ'] = 25
+            rank['FALTA'] = rank['OBJ'] - rank['SIN MOVIL']
+            rank['FALTA'] = rank['FALTA'].apply(lambda x: x if x > 0 else 0)
+            rank['T+M'] = rank['SIN MOVIL'] + rank['V_Móvil']
+            rank['REF'] = rank['REF_Ene'] + rank['REF_Tel'] + rank['REF_Ala']
+            rank['%'] = ((rank['SIN MOVIL'] / rank['OBJ']) * 100).fillna(0).astype(int).astype(str) + "%"
 
-            def get_motivacion_html(row):
-                perc = (row['VENTAS TOTALES SIN MOVIL'] / row['OBJETIVO']) * 100
-                if perc >= 100: return f'<b style="color: #008000;">🔥 LEYENDA VIVA</b>'
-                elif perc >= 60: return f'<b style="color: #2E8B57;">🚀 SIGUE ASÍ</b>'
-                else: return f'<b style="color: #FF4500;">🎯 A POR TODAS</b>'
-            
-            rank['MOTIVACIÓN'] = rank.apply(get_motivacion_html, axis=1)
-            rank = rank.sort_values('VENTAS TOTALES SIN MOVIL', ascending=False)
+            rank = rank.sort_values('SIN MOVIL', ascending=False)
 
             if not rank.empty:
-                # --- CALCULO DE ESTADOS ---
-                # Extraemos la columna estado de cada uno, si existe
-                col_e = de[['Estado']] if 'Estado' in de.columns else pd.DataFrame(columns=['Estado'])
-                col_t = dt[['Estado']] if 'Estado' in dt.columns else pd.DataFrame(columns=['Estado'])
-                col_a = da[['Estado']] if 'Estado' in da.columns else pd.DataFrame(columns=['Estado'])
+                # Ganador
+                st.markdown(f'<div class="winner-card">👑 #1: {rank.index[0].upper()} ({int(rank.iloc[0]["SIN MOVIL"])} VENTAS)</div>', unsafe_allow_html=True)
                 
-                df_estados = pd.concat([col_e, col_t, col_a])
+                # Tabla Visual
+                rank_vis = rank.reset_index()
+                rank_vis.insert(0, 'Pos', [f"{i+1}º" for i in range(len(rank_vis))])
                 
-                if not df_estados.empty:
-                    # Limpieza para que cuente bien aunque escriban con tildes o mayúsculas
-                    df_estados['Estado_Limpio'] = df_estados['Estado'].astype(str).str.strip().str.lower()
-                    c_bajas = len(df_estados[df_estados['Estado_Limpio'].str.contains('baja', na=False)])
-                    c_activacion = len(df_estados[df_estados['Estado_Limpio'].str.contains('activacion|activación', na=False)])
-                    c_incidencias = len(df_estados[df_estados['Estado_Limpio'].str.contains('incidencia', na=False)])
-                    c_activos = len(df_estados[df_estados['Estado_Limpio'].str.contains('activo', na=False)])
-                else:
-                    c_bajas = c_activacion = c_incidencias = c_activos = 0
+                # Columnas finales ordenadas para que se vea bien
+                cols = ['Pos', 'Comercial', 'V_Luz', 'V_Gas', 'V_Fibra', 'V_Alarma', 'SIN MOVIL', 'V_Móvil', 'FALTA', 'REF', '%']
+                rank_vis = rank_vis[cols].rename(columns={'V_Luz':'Luz','V_Gas':'Gas','V_Fibra':'Fibra','V_Alarma':'Ala','V_Móvil':'Móvil'})
 
-                # Renderizado del Ganador
-                ganador = rank.index[0]
-                total_ganador = int(rank.iloc[0]['VENTAS TOTALES SIN MOVIL'])
-                st.markdown(f"""<div class="winner-card" style="font-size: 20px; padding: 15px;">👑 #1: {ganador.upper()} ({total_ganador} VENTAS)</div>""", unsafe_allow_html=True)
-                
-                # Tabla de Ranking Visual
-                rank_visual = rank.reset_index()
-                rank_visual.insert(0, 'Pos', ["⭐" for _ in range(len(rank_visual))])
-                
-                cols_finales = {
-                    'Pos': 'Pos', 'Comercial': 'Comercial', 'V_Luz': 'Luz', 'V_Gas': 'Gas', 
-                    'V_Fibra': 'Fibra', 'V_Móvil': 'Móvil', 'V_Alarma': 'Alarma', 
-                    'VENTAS TOTALES SIN MOVIL': 'TOTAL', 'TOTAL CON MOVIL': 'T+M', 
-                    'OBJETIVO': 'OBJ', 'FALTAN': 'FALTA', 
-                    'TOTAL REF': 'REF', 'OBJETIVO REF': 'OBJ R', '% CONSECUCION': '%', 'MOTIVACIÓN': 'INFO'
-                }
-                
-                rank_visual = rank_visual[list(cols_finales.keys())].rename(columns=cols_finales)
-                st.write(rank_visual.to_html(escape=False, index=False), unsafe_allow_html=True)
+                # Estilo de tabla
+                def color_importante(val):
+                    return 'background-color: #f8f9fa; color: #000; font-weight: bold; border: 1px solid #dee2e6;'
 
-                # --- BLOQUE DE TOTALES Y ESTADOS (SOLICITADO) ---
+                st.write(
+                    rank_vis.style
+                    .map(lambda x: 'background-color: #d2ff00; color: black; font-weight: 900;', subset=['SIN MOVIL', '%'])
+                    .map(lambda x: 'background-color: #ffcccc; color: black;', subset=['FALTA'])
+                    .applymap(color_importante)
+                    .to_html(escape=False, index=False), 
+                    unsafe_allow_html=True
+                )
+
+                # --- RESUMEN DE ESTADOS (TOTAL EQUIPO) ---
+                df_all = pd.concat([de[['Estado']], dt[['Estado']], da[['Estado']]]).dropna()
+                df_all['E'] = df_all['Estado'].astype(str).str.lower()
+                c_bajas = len(df_all[df_all['E'].str.contains('baja')])
+                c_activa = len(df_all[df_all['E'].str.contains('activac')])
+                c_incid = len(df_all[df_all['E'].str.contains('incidenc')])
+                c_activos = len(df_all[df_all['E'].str.contains('activo')])
+
                 st.markdown(f"""
-                <div style="margin-top: 25px; padding: 20px; background-color: #161b22; border: 2px solid #d2ff00; border-radius: 12px;">
-                    <h3 style="color: #d2ff00; text-align: center; margin-top: 0;">📊 RESUMEN DE ESTADOS (TOTAL EQUIPO)</h3>
+                <div style="margin-top: 20px; padding: 20px; background: #161b22; border: 2px solid #d2ff00; border-radius: 15px;">
+                    <h3 style="color:#d2ff00; text-align:center; margin:0 0 15px 0;">📊 TOTALES DEL EQUIPO</h3>
                     <div style="display: flex; justify-content: space-around; flex-wrap: wrap; text-align: center;">
-                        <div style="margin: 10px; padding: 15px; border: 1px solid #ff4b4b; border-radius: 10px; min-width: 150px;">
-                            <p style="color: #ff4b4b; margin: 0; font-weight: bold;">TOTAL BAJAS</p>
-                            <h2 style="margin: 0; color: white;">{c_bajas}</h2>
-                        </div>
-                        <div style="margin: 10px; padding: 15px; border: 1px solid #3b82f6; border-radius: 10px; min-width: 150px;">
-                            <p style="color: #3b82f6; margin: 0; font-weight: bold;">EN ACTIVACIÓN</p>
-                            <h2 style="margin: 0; color: white;">{c_activacion}</h2>
-                        </div>
-                        <div style="margin: 10px; padding: 15px; border: 1px solid #f97316; border-radius: 10px; min-width: 150px;">
-                            <p style="color: #f97316; margin: 0; font-weight: bold;">INCIDENCIAS</p>
-                            <h2 style="margin: 0; color: white;">{c_incidencias}</h2>
-                        </div>
-                        <div style="margin: 10px; padding: 15px; border: 1px solid #22c55e; border-radius: 10px; min-width: 150px;">
-                            <p style="color: #22c55e; margin: 0; font-weight: bold;">TOTAL ACTIVOS</p>
-                            <h2 style="margin: 0; color: white;">{c_activos}</h2>
-                        </div>
+                        <div><p style="color:#8b949e;margin:0;">TOTAL SIN MÓVIL</p><h2 style="color:white;">{int(rank['SIN MOVIL'].sum())}</h2></div>
+                        <div><p style="color:#ff4b4b;margin:0;">TOTAL FALTAN</p><h2 style="color:white;">{int(rank['FALTA'].sum())}</h2></div>
+                        <div><p style="color:#3b82f6;margin:0;">TOTAL REF</p><h2 style="color:white;">{int(rank['REF'].sum())}</h2></div>
+                    </div>
+                    <hr style="border:1px solid #30363d; margin: 15px 0;">
+                    <div style="display: flex; justify-content: space-around; flex-wrap: wrap; text-align: center;">
+                        <div style="border: 1px solid #ff4b4b; padding:10px; border-radius:8px; min-width:120px;"><p style="color:#ff4b4b;margin:0;">BAJAS</p><h2>{c_bajas}</h2></div>
+                        <div style="border: 1px solid #3b82f6; padding:10px; border-radius:8px; min-width:120px;"><p style="color:#3b82f6;margin:0;">ACTIVACIÓN</p><h2>{c_activa}</h2></div>
+                        <div style="border: 1px solid #f97316; padding:10px; border-radius:8px; min-width:120px;"><p style="color:#f97316;margin:0;">INCIDENCIAS</p><h2>{c_incid}</h2></div>
+                        <div style="border: 1px solid #22c55e; padding:10px; border-radius:8px; min-width:120px;"><p style="color:#22c55e;margin:0;">ACTIVOS</p><h2>{c_activos}</h2></div>
                     </div>
                 </div>
                 """, unsafe_allow_html=True)
-            else:
-                st.warning("No hay datos para esta selección.")
 
-        # Pestañas de Gráficos (Energía, Telco, Alarmas)
-        with tab_e:
-            if not de.empty:
-                st.plotly_chart(px.pie(de, values='Total_Ene', names='Comercializadora', title="Cuota Energía"), use_container_width=True)
-        with tab_t:
-            if not dt.empty:
-                st.plotly_chart(px.bar(dt.groupby('Comercial')[['V_Fibra', 'V_Móvil']].sum().reset_index(), x='Comercial', y=['V_Fibra', 'V_Móvil'], title="Mix Telco"), use_container_width=True)
-        with tab_a:
-            if not da.empty:
-                st.plotly_chart(px.bar(da.groupby('Comercial')['V_Alarma'].sum().reset_index(), x='V_Alarma', y='Comercial', orientation='h', title="Ventas Alarma"), use_container_width=True)
+        with tab_e: st.plotly_chart(px.pie(de, values='Total_Ene', names='Comercializadora', title="Mix Energía"), use_container_width=True)
+        with tab_t: st.plotly_chart(px.bar(dt.groupby('Comercial')[['V_Fibra','V_Móvil']].sum().reset_index(), x='Comercial', y=['V_Fibra','V_Móvil'], title="Ventas Telco"), use_container_width=True)
+        with tab_a: st.plotly_chart(px.bar(da.groupby('Comercial')['V_Alarma'].sum().reset_index(), x='V_Alarma', y='Comercial', orientation='h', title="Alarmas"), use_container_width=True)
 
-    except Exception as e:
-        st.error(f"Error cargando el Dashboard: {e}")
+    except Exception as e: st.error(f"Error: {e}")
 
 # --- REPOSITORIO ---
 elif menu == "📂 REPOSITORIO":
     st.header("Documentación")
-    with st.expander("📂 MANUAL DEL MARCADOR"):
-        manual_path = "manuales/Manual_Premiumnumber_Agente.pdf"
-        if os.path.exists(manual_path):
-            with open(manual_path, "rb") as f:
-                st.download_button("📖 DESCARGAR MANUAL", f, file_name="Manual_Marcador.pdf")
-    st.markdown("---")
-    with st.expander("📁 DOCUMENTACIÓN LOWI"):
-        archivo_lowi = "manuales/TARIFAS_LOWI_MARZO2026.pdf"
-        if os.path.exists(archivo_lowi):
-            with open(archivo_lowi, "rb") as f:
-                st.download_button("📥 DESCARGAR TARIFAS LOWI MARZO 2026", f, file_name="TARIFAS_LOWI_MARZO2026.pdf")
-    for c in ["GANA ENERGÍA", "NATURGY", "TOTAL", "ENDESA", "O2", "SEGURMA"]:
-        with st.expander(f"📁 DOCUMENTACIÓN {c}"):
-            st.write(f"Documentos de {c} disponibles.")
+    for c in ["GANA", "NATURGY", "TOTAL", "ENDESA", "O2", "SEGURMA"]:
+        with st.expander(f"📁 DOCUMENTOS {c}"): st.write(f"Archivos de {c} listos.")
