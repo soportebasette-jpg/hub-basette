@@ -465,77 +465,40 @@ elif menu == "📈 DASHBOARD Y RANKING":
 
             def get_motivacion_html(row):
                 perc = (row['VENTAS TOTALES SIN MOVIL'] / row['OBJETIVO']) * 100
-                if perc >= 100: 
-                    msg = random.choice(["¡LEYENDA VIVA!", "NIVEL DIOS", "INTRATABLE", "REVENTANDO EL PANEL"])
-                    return f'<b style="color: #008000;">🔥 {msg}</b>'
-                elif perc >= 80: 
-                    msg = random.choice(["ESTÁS IMPARABLE", "MÁQUINA TOTAL", "A OTRO NIVEL", "VA SOBRADO"])
-                    return f'<b style="color: #2E8B57;">🚀 {msg}</b>'
-                elif perc >= 60: 
-                    msg = random.choice(["VAS MUY BIEN", "SIGUE ASÍ", "BUEN RITMO", "EL ÉXITO LLEGA"])
-                    return f'<b style="color: #B8860B;">💪 {msg}</b>'
-                elif perc >= 40: 
-                    msg = random.choice(["MÁS GAS", "DALE CAÑA", "APRIETA UN POCO", "NO TE RINDAS"])
-                    return f'<b style="color: #D2691E;">📈 {msg}</b>'
-                elif perc >= 20: 
-                    msg = random.choice(["ARRANCANDO", "VAMOS ARRIBA", "CALENTANDO MOTORES", "PASO A PASO"])
-                    return f'<b style="color: #FF8C00;">🎈 {msg}</b>'
-                else: 
-                    msg = random.choice(["OBJETIVO EN MIRA", "A POR TODAS", "CONCENTRACIÓN", "DALE FUERTE"])
-                    return f'<b style="color: #FF4500;">🎯 {msg}</b>'
+                if perc >= 100: return f'<b style="color: #008000;">🔥 LEYENDA VIVA</b>'
+                elif perc >= 60: return f'<b style="color: #2E8B57;">🚀 SIGUE ASÍ</b>'
+                else: return f'<b style="color: #FF4500;">🎯 A POR TODAS</b>'
             
             rank['MOTIVACIÓN'] = rank.apply(get_motivacion_html, axis=1)
             rank = rank.sort_values('VENTAS TOTALES SIN MOVIL', ascending=False)
 
             if not rank.empty:
-                total_luz = rank['V_Luz'].sum()
-                total_gas = rank['V_Gas'].sum()
-                total_fibra = rank['V_Fibra'].sum()
-                total_movil = rank['V_Móvil'].sum()
-                total_alarma = rank['V_Alarma'].sum()
-                total_v_sin_m = rank['VENTAS TOTALES SIN MOVIL'].sum()
-                total_v_con_m = rank['TOTAL CON MOVIL'].sum()
-                total_faltan = rank['FALTAN'].sum()
-                total_ref = rank['TOTAL REF'].sum()
-                
                 # --- CALCULO DE ESTADOS ---
-                # Unificamos todos los dataframes filtrados para contar estados
-                df_unificado = pd.concat([
-                    de[['Estado']] if 'Estado' in de.columns else pd.DataFrame(columns=['Estado']),
-                    dt[['Estado']] if 'Estado' in dt.columns else pd.DataFrame(columns=['Estado']),
-                    da[['Estado']] if 'Estado' in da.columns else pd.DataFrame(columns=['Estado'])
-                ])
+                # Extraemos la columna estado de cada uno, si existe
+                col_e = de[['Estado']] if 'Estado' in de.columns else pd.DataFrame(columns=['Estado'])
+                col_t = dt[['Estado']] if 'Estado' in dt.columns else pd.DataFrame(columns=['Estado'])
+                col_a = da[['Estado']] if 'Estado' in da.columns else pd.DataFrame(columns=['Estado'])
                 
-                # Normalización de texto para asegurar el conteo (quitamos espacios y pasamos a minúsculas)
-                if not df_unificado.empty:
-                    df_unificado['Estado_Norm'] = df_unificado['Estado'].astype(str).str.strip().str.lower()
-                    c_bajas = len(df_unificado[df_unificado['Estado_Norm'].str.contains('baja', na=False)])
-                    c_activacion = len(df_unificado[df_unificado['Estado_Norm'].str.contains('activacion|activación', na=False)])
-                    c_incidencias = len(df_unificado[df_unificado['Estado_Norm'].str.contains('incidencia', na=False)])
-                    c_activos = len(df_unificado[df_unificado['Estado_Norm'].str.contains('activo', na=False)])
+                df_estados = pd.concat([col_e, col_t, col_a])
+                
+                if not df_estados.empty:
+                    # Limpieza para que cuente bien aunque escriban con tildes o mayúsculas
+                    df_estados['Estado_Limpio'] = df_estados['Estado'].astype(str).str.strip().str.lower()
+                    c_bajas = len(df_estados[df_estados['Estado_Limpio'].str.contains('baja', na=False)])
+                    c_activacion = len(df_estados[df_estados['Estado_Limpio'].str.contains('activacion|activación', na=False)])
+                    c_incidencias = len(df_estados[df_estados['Estado_Limpio'].str.contains('incidencia', na=False)])
+                    c_activos = len(df_estados[df_estados['Estado_Limpio'].str.contains('activo', na=False)])
                 else:
                     c_bajas = c_activacion = c_incidencias = c_activos = 0
 
+                # Renderizado del Ganador
                 ganador = rank.index[0]
                 total_ganador = int(rank.iloc[0]['VENTAS TOTALES SIN MOVIL'])
                 st.markdown(f"""<div class="winner-card" style="font-size: 20px; padding: 15px;">👑 #1: {ganador.upper()} ({total_ganador} VENTAS)</div>""", unsafe_allow_html=True)
                 
-                def asignar_medalla(n):
-                    if n == 0: return "🥇"
-                    elif n == 1: return "🥈"
-                    elif n == 2: return "🥉"
-                    else: return "⭐"
-                
-                def style_semaforo_faltan(val):
-                    if val == 0: return 'background-color: #90EE90; font-weight: bold;'
-                    elif val <= 10: return 'background-color: #FFF9C4; font-weight: bold;'
-                    else: return 'background-color: #FFCDD2; font-weight: bold;'
-
-                def style_celdas_destacadas(val):
-                    return 'background-color: #F0F4F8; color: black; font-weight: bold;'
-
+                # Tabla de Ranking Visual
                 rank_visual = rank.reset_index()
-                rank_visual.insert(0, 'Pos', [asignar_medalla(i) for i in range(len(rank_visual))])
+                rank_visual.insert(0, 'Pos', ["⭐" for _ in range(len(rank_visual))])
                 
                 cols_finales = {
                     'Pos': 'Pos', 'Comercial': 'Comercial', 'V_Luz': 'Luz', 'V_Gas': 'Gas', 
@@ -546,81 +509,28 @@ elif menu == "📈 DASHBOARD Y RANKING":
                 }
                 
                 rank_visual = rank_visual[list(cols_finales.keys())].rename(columns=cols_finales)
-                cols_to_int = ['Luz', 'Gas', 'Fibra', 'Móvil', 'Alarma', 'TOTAL', 'T+M', 'OBJ', 'FALTA', 'REF', 'OBJ R']
-                for c in cols_to_int:
-                    rank_visual[c] = rank_visual[c].astype(int)
+                st.write(rank_visual.to_html(escape=False, index=False), unsafe_allow_html=True)
 
-                st.write(
-                    rank_visual.style
-                    .map(style_semaforo_faltan, subset=['FALTA'])
-                    .map(style_celdas_destacadas, subset=['TOTAL', 'T+M', '%'])
-                    .set_properties(**{'border-color': '#eeeeee', 'text-align': 'center'})
-                    .to_html(escape=False, index=False), 
-                    unsafe_allow_html=True
-                )
-
+                # --- BLOQUE DE TOTALES Y ESTADOS (SOLICITADO) ---
                 st.markdown(f"""
                 <div style="margin-top: 25px; padding: 20px; background-color: #161b22; border: 2px solid #d2ff00; border-radius: 12px;">
-                    <h3 style="color: #d2ff00; margin-top: 0; text-align: center; font-weight: 900;">📊 RESUMEN TOTAL EQUIPO</h3>
+                    <h3 style="color: #d2ff00; text-align: center; margin-top: 0;">📊 RESUMEN DE ESTADOS (TOTAL EQUIPO)</h3>
                     <div style="display: flex; justify-content: space-around; flex-wrap: wrap; text-align: center;">
-                        <div style="margin: 10px; min-width: 80px;">
-                            <p style="color: #8b949e; margin-bottom: 5px; font-size: 0.9rem;">LUZ</p>
-                            <h2 style="margin: 0; color: white;">{int(total_luz)}</h2>
-                        </div>
-                        <div style="margin: 10px; min-width: 80px;">
-                            <p style="color: #8b949e; margin-bottom: 5px; font-size: 0.9rem;">GAS</p>
-                            <h2 style="margin: 0; color: white;">{int(total_gas)}</h2>
-                        </div>
-                        <div style="margin: 10px; min-width: 80px;">
-                            <p style="color: #8b949e; margin-bottom: 5px; font-size: 0.9rem;">FIBRA</p>
-                            <h2 style="margin: 0; color: white;">{int(total_fibra)}</h2>
-                        </div>
-                        <div style="margin: 10px; min-width: 80px;">
-                            <p style="color: #8b949e; margin-bottom: 5px; font-size: 0.9rem;">ALARMAS</p>
-                            <h2 style="margin: 0; color: white;">{int(total_alarma)}</h2>
-                        </div>
-                        <div style="margin: 10px; min-width: 80px;">
-                            <p style="color: #8b949e; margin-bottom: 5px; font-size: 0.9rem;">REF</p>
-                            <h2 style="margin: 0; color: #d2ff00;">{int(total_ref)}</h2>
-                        </div>
-                    </div>
-                    
-                    <hr style="border: 1px solid #30363d; margin: 20px 0;">
-                    
-                    <h4 style="color: #ffffff; text-align: center; margin-bottom: 15px;">🔍 DESGLOSE POR ESTADOS</h4>
-                    <div style="display: flex; justify-content: space-around; flex-wrap: wrap; text-align: center; margin-bottom: 20px;">
-                        <div style="margin: 10px; padding: 10px; border: 1px solid #ff4b4b; border-radius: 8px; min-width: 120px;">
-                            <p style="color: #ff4b4b; margin: 0; font-size: 0.8rem; font-weight: bold;">BAJAS</p>
+                        <div style="margin: 10px; padding: 15px; border: 1px solid #ff4b4b; border-radius: 10px; min-width: 150px;">
+                            <p style="color: #ff4b4b; margin: 0; font-weight: bold;">TOTAL BAJAS</p>
                             <h2 style="margin: 0; color: white;">{c_bajas}</h2>
                         </div>
-                        <div style="margin: 10px; padding: 10px; border: 1px solid #3b82f6; border-radius: 8px; min-width: 120px;">
-                            <p style="color: #3b82f6; margin: 0; font-size: 0.8rem; font-weight: bold;">EN ACTIVACIÓN</p>
+                        <div style="margin: 10px; padding: 15px; border: 1px solid #3b82f6; border-radius: 10px; min-width: 150px;">
+                            <p style="color: #3b82f6; margin: 0; font-weight: bold;">EN ACTIVACIÓN</p>
                             <h2 style="margin: 0; color: white;">{c_activacion}</h2>
                         </div>
-                        <div style="margin: 10px; padding: 10px; border: 1px solid #f97316; border-radius: 8px; min-width: 120px;">
-                            <p style="color: #f97316; margin: 0; font-size: 0.8rem; font-weight: bold;">INCIDENCIAS</p>
+                        <div style="margin: 10px; padding: 15px; border: 1px solid #f97316; border-radius: 10px; min-width: 150px;">
+                            <p style="color: #f97316; margin: 0; font-weight: bold;">INCIDENCIAS</p>
                             <h2 style="margin: 0; color: white;">{c_incidencias}</h2>
                         </div>
-                        <div style="margin: 10px; padding: 10px; border: 1px solid #22c55e; border-radius: 8px; min-width: 120px;">
-                            <p style="color: #22c55e; margin: 0; font-size: 0.8rem; font-weight: bold;">ACTIVOS</p>
+                        <div style="margin: 10px; padding: 15px; border: 1px solid #22c55e; border-radius: 10px; min-width: 150px;">
+                            <p style="color: #22c55e; margin: 0; font-weight: bold;">TOTAL ACTIVOS</p>
                             <h2 style="margin: 0; color: white;">{c_activos}</h2>
-                        </div>
-                    </div>
-
-                    <hr style="border: 1px solid #30363d; margin: 20px 0;">
-                    
-                    <div style="display: flex; justify-content: space-around; flex-wrap: wrap;">
-                        <div style="background: #d2ff00; padding: 15px; border-radius: 10px; min-width: 200px; text-align: center; margin: 5px;">
-                            <p style="margin: 0; color: black !important; font-weight: bold; font-size: 0.9rem;">TOTAL SIN MÓVILES</p>
-                            <h1 style="margin: 0; color: black !important; font-weight: 900;">{int(total_v_sin_m)}</h1>
-                        </div>
-                        <div style="background: #ff4b4b; padding: 15px; border-radius: 10px; min-width: 200px; text-align: center; margin: 5px;">
-                            <p style="margin: 0; color: white; font-weight: bold; font-size: 0.9rem;">FALTAN PARA OBJETIVOS</p>
-                            <h1 style="margin: 0; color: white; font-weight: 900;">{int(total_faltan)}</h1>
-                        </div>
-                        <div style="background: #3b82f6; padding: 15px; border-radius: 10px; min-width: 200px; text-align: center; margin: 5px;">
-                            <p style="margin: 0; color: black !important; font-weight: bold; font-size: 0.9rem;">TOTAL CON MÓVILES</p>
-                            <h1 style="margin: 0; color: black !important; font-weight: 900;">{int(total_v_con_m)}</h1>
                         </div>
                     </div>
                 </div>
@@ -628,41 +538,16 @@ elif menu == "📈 DASHBOARD Y RANKING":
             else:
                 st.warning("No hay datos para esta selección.")
 
+        # Pestañas de Gráficos (Energía, Telco, Alarmas)
         with tab_e:
-            col_e1, col_e2 = st.columns([1, 1.2])
-            with col_e1:
-                if not de.empty and 'Comercializadora' in de.columns:
-                    fig_e = px.pie(de, values='Total_Ene', names='Comercializadora', hole=0.5, title="Cuota de Energía")
-                    fig_e.update_traces(textposition='outside', textinfo='label+percent')
-                    st.plotly_chart(fig_e, use_container_width=True)
-            with col_e2:
-                if not de.empty:
-                    fig_eb = px.bar(de.groupby('Comercial')['Total_Ene'].sum().reset_index().sort_values('Total_Ene'), x='Total_Ene', y='Comercial', orientation='h', text_auto=True, title="Ventas Energía")
-                    st.plotly_chart(fig_eb, use_container_width=True)
-
+            if not de.empty:
+                st.plotly_chart(px.pie(de, values='Total_Ene', names='Comercializadora', title="Cuota Energía"), use_container_width=True)
         with tab_t:
-            col_t1, col_t2 = st.columns([1, 1.2])
-            with col_t1:
-                if not dt.empty and 'Operadora' in dt.columns:
-                    fig_t = px.pie(dt, values='Total_Tel', names='Operadora', hole=0.5, title="Cuota de Telco")
-                    fig_t.update_traces(textposition='outside', textinfo='label+percent')
-                    st.plotly_chart(fig_t, use_container_width=True)
-            with col_t2:
-                if not dt.empty:
-                    fig_tb = px.bar(dt.groupby('Comercial')[['V_Fibra', 'V_Móvil']].sum().reset_index(), x='Comercial', y=['V_Fibra', 'V_Móvil'], barmode='group', title="Mix de Telco")
-                    st.plotly_chart(fig_tb, use_container_width=True)
-
+            if not dt.empty:
+                st.plotly_chart(px.bar(dt.groupby('Comercial')[['V_Fibra', 'V_Móvil']].sum().reset_index(), x='Comercial', y=['V_Fibra', 'V_Móvil'], title="Mix Telco"), use_container_width=True)
         with tab_a:
-            col_a1, col_a2 = st.columns([1, 1.2])
-            with col_a1:
-                if not da.empty:
-                    fig_a_pie = px.pie(da, values='V_Alarma', names='Comercial', hole=0.5, title="Cuota de Alarmas", color_discrete_sequence=px.colors.sequential.Blues_r)
-                    fig_a_pie.update_traces(textposition='outside', textinfo='label+percent')
-                    st.plotly_chart(fig_a_pie, use_container_width=True)
-            with col_a2:
-                if not da.empty:
-                    fig_a_bar = px.bar(da.groupby('Comercial')['V_Alarma'].sum().reset_index().sort_values('V_Alarma'), x='V_Alarma', y='Comercial', orientation='h', text_auto=True, title="Ventas de Alarmas", color_discrete_sequence=['#0000FF']) 
-                    st.plotly_chart(fig_a_bar, use_container_width=True)
+            if not da.empty:
+                st.plotly_chart(px.bar(da.groupby('Comercial')['V_Alarma'].sum().reset_index(), x='V_Alarma', y='Comercial', orientation='h', title="Ventas Alarma"), use_container_width=True)
 
     except Exception as e:
         st.error(f"Error cargando el Dashboard: {e}")
@@ -683,4 +568,4 @@ elif menu == "📂 REPOSITORIO":
                 st.download_button("📥 DESCARGAR TARIFAS LOWI MARZO 2026", f, file_name="TARIFAS_LOWI_MARZO2026.pdf")
     for c in ["GANA ENERGÍA", "NATURGY", "TOTAL", "ENDESA", "O2", "SEGURMA"]:
         with st.expander(f"📁 DOCUMENTACIÓN {c}"):
-            st.write(f"Ficheros de {c} disponibles para descarga.")
+            st.write(f"Documentos de {c} disponibles.")
