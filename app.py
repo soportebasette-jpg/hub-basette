@@ -2,8 +2,10 @@ import streamlit as st
 import os
 import pandas as pd
 import plotly.express as px
+import random
 import base64
 from datetime import datetime
+from fpdf import FPDF
 
 # 1. CONFIGURACIÓN
 st.set_page_config(
@@ -12,6 +14,7 @@ st.set_page_config(
     initial_sidebar_state="expanded" 
 )
 
+# Función para convertir imagen a base64 y que se vea en el HTML
 def get_base64_of_bin_file(bin_file):
     if os.path.exists(bin_file):
         with open(bin_file, 'rb') as f:
@@ -19,24 +22,56 @@ def get_base64_of_bin_file(bin_file):
         return base64.b64encode(data).decode()
     return ""
 
+# Preparamos la imagen de Rosco
 img_base64 = get_base64_of_bin_file("rosco.jpg")
 
-# 2. CSS DE ALTA VISIBILIDAD
+# 2. CSS DE ALTA VISIBILIDAD (GENERAL)
 st.markdown("""
     <style>
     .stApp { background-color: #0d1117; color: #ffffff; }
     header { visibility: hidden; }
-    label[data-testid="stWidgetLabel"] p { color: #d2ff00 !important; font-weight: 900 !important; font-size: 1.25rem !important; }
-    .stTable { background-color: white !important; border-radius: 10px; }
+    label[data-testid="stWidgetLabel"] p {
+        color: #d2ff00 !important;
+        font-weight: 900 !important;
+        font-size: 1.25rem !important;
+    }
+    button p, .stDownloadButton button p { color: black !important; font-weight: bold !important; }
+    .stDownloadButton button {
+        background-color: #d2ff00 !important;
+        color: black !important;
+        border: none !important;
+        padding: 10px 20px !important;
+        border-radius: 5px !important;
+        font-weight: bold !important;
+        width: 100%;
+    }
+    .stTable { background-color: white !important; border-radius: 10px; overflow: hidden; }
     .stTable td, .stTable th { color: #000000 !important; text-align: center !important; }
-    .block-header { background-color: #d2ff00; color: black; padding: 8px 20px; border-radius: 5px; font-weight: bold; margin-bottom: 20px; margin-top: 25px; display: inline-block; font-size: 1.1rem; }
-    .status-box { padding: 15px; border-radius: 10px; text-align: center; margin-bottom: 10px; border: 1px solid #30363d; }
-    .status-label { font-size: 0.8rem; color: #8b949e; margin-bottom: 2px; text-transform: uppercase; }
-    .status-value { font-size: 1.5rem; font-weight: 900; color: white; }
+    .block-header {
+        background-color: #d2ff00;
+        color: black;
+        padding: 8px 20px;
+        border-radius: 5px;
+        font-weight: bold;
+        margin-bottom: 20px;
+        margin-top: 25px;
+        display: inline-block;
+        font-size: 1.1rem;
+    }
+    .status-box {
+        padding: 15px;
+        border-radius: 10px;
+        text-align: center;
+        margin-bottom: 10px;
+        border: 1px solid #30363d;
+    }
+    .status-label { font-size: 0.8rem; color: #8b949e; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 1px; }
+    .status-value { font-size: 1.8rem; font-weight: 900; color: white; }
+    div[data-testid="stExpander"] { background-color: #161b22 !important; border: 1px solid #30363d !important; }
     </style>
     """, unsafe_allow_html=True)
 
-# 3. CARGA DE DATOS CON LIMPIEZA EXTREMA
+# 3. CARGA DE DATOS (GOOGLE SHEETS)
 def get_csv_url(url):
     return url.replace('/edit?usp=sharing', '/export?format=csv').split('&ouid=')[0].split('?')[0] + '/export?format=csv'
 
@@ -46,126 +81,183 @@ URL_ALA = get_csv_url("https://docs.google.com/spreadsheets/d/17o4HSJ4DZBwMgp9AA
 
 @st.cache_data(ttl=60)
 def load_and_clean_ranking():
-    def process(url):
+    def process_df(url, type_label):
         try:
             df = pd.read_csv(url)
-            # LIMPIEZA DE COLUMNAS: Quita espacios y asegura nombres estándar
-            df.columns = [str(c).strip() for c in df.columns]
+            df.columns = df.columns.str.strip()
             df['Fecha Creación'] = pd.to_datetime(df['Fecha Creación'], dayfirst=True, errors='coerce')
             df = df.dropna(subset=['Fecha Creación', 'Comercial'])
             df['Año'] = df['Fecha Creación'].dt.year.astype(str)
             df['Mes'] = df['Fecha Creación'].dt.strftime('%m - %B')
+            if type_label == 'ENE':
+                df['V_Luz'] = df['CUPS Luz'].apply(lambda x: 1 if pd.notnull(x) and str(x).strip() != "" else 0)
+                df['V_Gas'] = df['CUPS Gas'].apply(lambda x: 1 if pd.notnull(x) and str(x).strip() != "" else 0)
+            elif type_label == 'TEL':
+                df['V_Fibra'] = df['Tipo Tarifa'].apply(lambda x: 1 if 'fibra' in str(x).lower() else 0)
+                df['V_Movil'] = df['Tipo Tarifa'].apply(lambda x: 1 if 'movil' in str(x).lower() or 'móvil' in str(x).lower() else 0)
+            elif type_label == 'ALA':
+                df['V_Alarma'] = 1
             return df
         except: return pd.DataFrame()
-    return process(URL_ENE), process(URL_TEL), process(URL_ALA)
+    return process_df(URL_ENE, 'ENE'), process_df(URL_TEL, 'TEL'), process_df(URL_ALA, 'ALA')
 
-# --- LOGIN ---
-if "password_correct" not in st.session_state: st.session_state["password_correct"] = False
+# --- AUTENTICACIÓN ---
+if "password_correct" not in st.session_state:
+    st.session_state["password_correct"] = False
+
 if not st.session_state["password_correct"]:
     _, col_auth, _ = st.columns([1, 1.2, 1])
     with col_auth:
-        st.image("1000233813.jpg") if os.path.exists("1000233813.jpg") else None
-        pwd = st.text_input("Clave:", type="password")
-        if st.button("ACCEDER"):
+        if os.path.exists("1000233813.jpg"): st.image("1000233813.jpg")
+        st.markdown("<h3 style='text-align:center; color:#d2ff00;'>HUB COMERCIAL</h3>", unsafe_allow_html=True)
+        pwd = st.text_input("Introduce la clave de acceso:", type="password")
+        if st.button("ACCEDER AL SISTEMA"):
             if pwd == "Ventas2024*":
                 st.session_state["password_correct"] = True
                 st.rerun()
+            else: st.error("Clave incorrecta")
     st.stop()
 
-# --- NAVEGACIÓN ---
+# --- SIDEBAR ---
 with st.sidebar:
-    st.image("1000233813.jpg") if os.path.exists("1000233813.jpg") else None
-    menu = st.radio("MENÚ", ["🚀 CRM", "📊 PRECIOS", "⚖️ COMPARADOR", "📢 ANUNCIOS", "📈 DASHBOARD Y RANKING", "📂 REPOSITORIO"])
+    if os.path.exists("1000233813.jpg"): st.image("1000233813.jpg")
+    st.markdown("---")
+    menu = st.radio("MENÚ PRINCIPAL:", ["🚀 CRM Y GESTIÓN", "📊 PRECIOS", "⚖️ COMPARADOR", "📢 ANUNCIOS", "📈 DASHBOARD Y RANKING", "📂 REPOSITORIO"])
+    st.markdown("---")
+    st.caption("v2.5 | Basette Group Systems")
 
-# --- DASHBOARD Y RANKING ---
-if menu == "📈 DASHBOARD Y RANKING":
+# --- LÓGICA DE NAVEGACIÓN ---
+
+if menu == "🚀 CRM Y GESTIÓN":
+    st.markdown('<div class="block-header">ACCESOS DIRECTOS</div>', unsafe_allow_html=True)
+    c1, c2 = st.columns(2)
+    with c1: st.link_button("🔥 MARCADOR VOZ CENTER", "https://grupobasette.vozipcenter.com/", use_container_width=True)
+    with c2: st.link_button("💎 CRM BASETTE (CLIENTES)", "https://crm.grupobasette.eu/login", use_container_width=True)
+
+elif menu == "📊 PRECIOS":
+    st.markdown('<div class="block-header">TABLAS DE PRECIOS ACTUALIZADAS</div>', unsafe_allow_html=True)
+    st.info("Consulte la sección 'REPOSITORIO' para descargar los PDFs de precios vigentes.")
+
+elif menu == "⚖️ COMPARADOR":
+    st.markdown('<div class="block-header">ESTUDIO DE AHORRO</div>', unsafe_allow_html=True)
+    st.warning("Módulo en mantenimiento - Contacte con soporte para estudios manuales.")
+
+elif menu == "📢 ANUNCIOS":
+    st.markdown('<div class="block-header">MATERIAL DE MARKETING</div>', unsafe_allow_html=True)
+    if os.path.exists("anunciosbasette/qr-plan amigo.png"):
+        st.image("anunciosbasette/qr-plan amigo.png", caption="QR Plan Amigo")
+
+elif menu == "📈 DASHBOARD Y RANKING":
     try:
         de, dt, da = load_and_clean_ranking()
+        
         all_anos = sorted(list(set(de['Año']) | set(dt['Año']) | set(da['Año'])))
         all_meses = sorted(list(set(de['Mes']) | set(dt['Mes']) | set(da['Mes'])))
         all_coms = sorted(list(set(de['Comercial']) | set(dt['Comercial']) | set(da['Comercial'])))
 
         c1, c2, c3 = st.columns([1, 2, 2])
-        with c1: f_ano = st.selectbox("Año", all_anos, index=len(all_anos)-1 if all_anos else 0)
-        with c2: f_meses = st.multiselect("Meses", all_meses, default=[all_meses[-1]] if all_meses else [])
-        with c3: f_coms = st.multiselect("Comerciales", all_coms, default=all_coms)
+        with c1: f_ano = st.selectbox("📅 Año", all_anos, index=len(all_anos)-1 if all_anos else 0)
+        with c2: f_meses = st.multiselect("📆 Meses", all_meses, default=[all_meses[-1]] if all_meses else [])
+        with c3: f_coms = st.multiselect("👤 Filtrar Comerciales", all_coms, default=all_coms)
 
-        f_de = de[(de['Año']==f_ano) & (de['Mes'].isin(f_meses)) & (de['Comercial'].isin(f_coms))] if not de.empty else pd.DataFrame()
-        f_dt = dt[(dt['Año']==f_ano) & (dt['Mes'].isin(f_meses)) & (dt['Comercial'].isin(f_coms))] if not dt.empty else pd.DataFrame()
-        f_da = da[(da['Año']==f_ano) & (da['Mes'].isin(f_meses)) & (da['Comercial'].isin(f_coms))] if not da.empty else pd.DataFrame()
+        f_de = de[(de['Año']==f_ano) & (de['Mes'].isin(f_meses)) & (de['Comercial'].isin(f_coms))] if not de.empty else de
+        f_dt = dt[(dt['Año']==f_ano) & (dt['Mes'].isin(f_meses)) & (dt['Comercial'].isin(f_coms))] if not dt.empty else dt
+        f_da = da[(da['Año']==f_ano) & (da['Mes'].isin(f_meses)) & (da['Comercial'].isin(f_coms))] if not da.empty else da
 
         t_rank, t_ene, t_tel, t_ala = st.tabs(["🏆 RANKING", "⚡ ENERGÍA", "📱 TELCO", "🛡️ ALARMAS"])
 
         with t_rank:
-            st.markdown('<div class="block-header">RANKING GLOBAL CON ESTADOS DRIVE</div>', unsafe_allow_html=True)
-            rank = pd.DataFrame(index=f_coms)
-            for col in ['Luz', 'Gas', 'Fibra', 'Móvil', 'Alarma', 'Activos', 'Bajas', 'Cancelados']: rank[col] = 0
+            st.markdown('<div class="block-header">RANKING DE PRODUCTIVIDAD</div>', unsafe_allow_html=True)
+            r1 = f_de.groupby('Comercial')[['V_Luz', 'V_Gas']].sum() if not f_de.empty else pd.DataFrame(columns=['V_Luz', 'V_Gas'])
+            r2 = f_dt.groupby('Comercial')[['V_Fibra', 'V_Movil']].sum() if not f_dt.empty else pd.DataFrame(columns=['V_Fibra', 'V_Movil'])
+            r3 = f_da.groupby('Comercial')[['V_Alarma']].sum() if not f_da.empty else pd.DataFrame(columns=['V_Alarma'])
+            
+            rank = pd.concat([r1, r2, r3], axis=1).fillna(0).astype(int)
+            rank['TOTAL'] = rank.sum(axis=1)
+            rank = rank.sort_values('TOTAL', ascending=False)
+            st.table(rank)
 
-            # Conteo Blindado
-            for df_actual, tipo in [(f_de, 'E'), (f_dt, 'T'), (f_da, 'A')]:
-                if not df_actual.empty:
-                    for _, r in df_actual.iterrows():
-                        com = r['Comercial']
-                        # Productos
-                        if tipo == 'E':
-                            if 'CUPS Luz' in r and pd.notnull(r['CUPS Luz']): rank.at[com, 'Luz'] += 1
-                            if 'CUPS Gas' in r and pd.notnull(r['CUPS Gas']): rank.at[com, 'Gas'] += 1
-                        elif tipo == 'T':
-                            tipo_t = str(r.get('Tipo Tarifa', '')).lower()
-                            if 'fibra' in tipo_t: rank.at[com, 'Fibra'] += 1
-                            if 'movil' in tipo_t: rank.at[com, 'Móvil'] += 1
-                        elif tipo == 'A': rank.at[com, 'Alarma'] += 1
-                        
-                        # Estados (Usando .get para evitar KeyError)
-                        est = str(r.get('Estado', '')).upper()
-                        if "ACTIVO" in est: rank.at[com, 'Activos'] += 1
-                        elif "BAJA" in est: rank.at[com, 'Bajas'] += 1
-                        elif "CANCELADO" in est: rank.at[com, 'Cancelados'] += 1
+        with t_ene:
+            if not f_de.empty:
+                col_e1, col_e2 = st.columns(2)
+                with col_e1:
+                    fig_e_pie = px.pie(f_de, names='Comercial', values='V_Luz', title="Distribución Luz", hole=0.4, color_discrete_sequence=px.colors.sequential.YlOrBr)
+                    st.plotly_chart(fig_e_pie, use_container_width=True)
+                with col_e2:
+                    fig_e_bar = px.bar(f_de.groupby('Comercial')[['V_Luz', 'V_Gas']].sum().reset_index(), x='Comercial', y=['V_Luz', 'V_Gas'], title="Detalle Energía", barmode='group')
+                    st.plotly_chart(fig_e_bar, use_container_width=True)
 
-            rank['TOTAL_V'] = rank['Luz'] + rank['Gas'] + rank['Fibra'] + rank['Alarma']
-            rank['% B+C'] = rank.apply(lambda x: f"{(round(((x['Bajas']+x['Cancelados'])/x['TOTAL_V'])*100,1)) if x['TOTAL_V']>0 else 0.0}%", axis=1)
-            rank = rank.sort_values('TOTAL_V', ascending=False).reset_index().rename(columns={'index':'Comercial'})
+        with t_tel:
+            if not f_dt.empty:
+                col_t1, col_t2 = st.columns(2)
+                with col_t1:
+                    fig_t_pie = px.pie(f_dt, names='Comercial', values='V_Fibra', title="Distribución Fibra")
+                    st.plotly_chart(fig_t_pie, use_container_width=True)
+                with col_t2:
+                    fig_t_bar = px.bar(f_dt.groupby('Comercial')[['V_Fibra', 'V_Movil']].sum().reset_index(), x='Comercial', y=['V_Fibra', 'V_Movil'], title="Detalle Telco")
+                    st.plotly_chart(fig_t_bar, use_container_width=True)
 
-            def style_r(s):
-                if s.name in ['Bajas', 'Cancelados', '% B+C']: return ['background-color: #ffcccc; color: #cc0000; font-weight: bold']*len(s)
-                if s.name == 'Activos': return ['background-color: #e6ffed; color: #28a745; font-weight: bold']*len(s)
-                if s.name == 'TOTAL_V': return ['background-color: #d2ff00; color: black; font-weight: bold']*len(s)
-                return ['']*len(s)
+        with t_ala:
+            if not f_da.empty:
+                col_a1, col_a2 = st.columns(2)
+                with col_a1:
+                    fig_a_pie = px.pie(f_da, names='Comercial', values='V_Alarma', title="Cuota Alarmas")
+                    st.plotly_chart(fig_a_pie, use_container_width=True)
+                with col_a2:
+                    fig_a_bar = px.bar(f_da.groupby('Comercial')['V_Alarma'].sum().reset_index(), x='V_Alarma', y='Comercial', orientation='h', title="Ventas Alarma")
+                    st.plotly_chart(fig_a_bar, use_container_width=True)
 
-            st.write(rank.style.apply(style_r).to_html(), unsafe_allow_html=True)
+    except Exception as e:
+        st.error(f"Error cargando el Dashboard: {e}")
 
-        for tab, df_i, tit in zip([t_ene, t_tel, t_ala], [f_de, f_dt, f_da], ["ENERGÍA", "TELCO", "ALARMAS"]):
-            with tab:
-                if not df_i.empty and 'Estado' in df_i.columns:
-                    st.markdown(f'<div class="block-header">ESTADOS {tit}</div>', unsafe_allow_html=True)
-                    e_ser = df_i['Estado'].fillna('').str.upper()
-                    sa, sb, sc = (e_ser=="ACTIVO").sum(), (e_ser=="BAJA").sum(), (e_ser=="CANCELADO").sum()
-                    cl1, cl2, cl3 = st.columns(3)
-                    cl1.markdown(f'<div class="status-box" style="background: #1b4d3e;"><div class="status-label">ACTIVOS</div><div class="status-value">{sa}</div></div>', unsafe_allow_html=True)
-                    cl2.markdown(f'<div class="status-box" style="background: #990000;"><div class="status-label">BAJAS</div><div class="status-value">{sb}</div></div>', unsafe_allow_html=True)
-                    cl3.markdown(f'<div class="status-box" style="background: #000000;"><div class="status-label">CANCELADOS</div><div class="status-value">{sc}</div></div>', unsafe_allow_html=True)
-
-    except Exception as e: st.error(f"Error: {e}")
-
-# --- REPOSITORIO ---
+# --- REPOSITORIO (ARREGLADO) ---
 elif menu == "📂 REPOSITORIO":
-    st.header("Descargas")
-    with st.expander("📂 NATURGY"):
-        if os.path.exists("manuales/naturgy"):
-            for f_n in os.listdir("manuales/naturgy"):
-                if f_n.endswith(".pdf"):
-                    with open(f"manuales/naturgy/{f_n}", "rb") as f:
-                        st.download_button(f"📄 {f_n}", f, file_name=f_n, key=f_n)
-    with st.expander("📂 MANUAL MARCADOR"):
-        if os.path.exists("manuales/Manual_Premiumnumber_Agente.pdf"):
-            with open("manuales/Manual_Premiumnumber_Agente.pdf", "rb") as f:
-                st.download_button("📖 DESCARGAR MANUAL", f, file_name="Manual.pdf")
+    st.markdown('<div class="block-header">CENTRO DE DOCUMENTACIÓN Y DESCARGAS</div>', unsafe_allow_html=True)
+    
+    # --- NATURGY ---
+    with st.expander("📂 NATURGY - DOCUMENTACIÓN OFICIAL"):
+        nat_path = "manuales/naturgy"
+        if os.path.exists(nat_path):
+            files = [f for f in os.listdir(nat_path) if f.endswith(".pdf")]
+            if files:
+                for filename in files:
+                    full_path = os.path.join(nat_path, filename)
+                    with open(full_path, "rb") as f:
+                        st.download_button(
+                            label=f"📄 Descargar: {filename}",
+                            data=f,
+                            file_name=filename,
+                            key=f"nat_{filename}" # Key única para cada archivo
+                        )
+            else:
+                st.info("No se encontraron archivos PDF en la carpeta de Naturgy.")
+        else:
+            st.error(f"La carpeta '{nat_path}' no existe.")
 
-# --- OTROS ---
-elif menu == "🚀 CRM":
-    st.link_button("🔥 MARCADOR", "https://grupobasette.vozipcenter.com/", use_container_width=True)
-    st.link_button("💎 CRM", "https://crm.grupobasette.eu/login", use_container_width=True)
-elif menu == "📊 PRECIOS": st.info("Ver Repositorio")
-elif menu == "⚖️ COMPARADOR": st.header("Estudio Ahorro")
-elif menu == "📢 ANUNCIOS":
-    if os.path.exists("anunciosbasette/qr-plan amigo.png"): st.image("anunciosbasette/qr-plan amigo.png")
+    # --- MANUAL MARCADOR ---
+    with st.expander("📂 MANUAL DEL MARCADOR"):
+        manual_path = "manuales/Manual_Premiumnumber_Agente.pdf"
+        if os.path.exists(manual_path):
+            with open(manual_path, "rb") as f:
+                st.download_button(
+                    label="📖 DESCARGAR MANUAL DEL AGENTE",
+                    data=f,
+                    file_name="Manual_Marcador.pdf",
+                    key="manual_marcador_btn"
+                )
+        else:
+            st.warning("El archivo del manual no se encuentra en la ruta especificada.")
+
+    # --- DOCUMENTACIÓN LOWI ---
+    with st.expander("📁 DOCUMENTACIÓN LOWI"):
+        lowi_path = "manuales/TARIFAS_LOWI_MARZO2026.pdf"
+        if os.path.exists(lowi_path):
+            with open(lowi_path, "rb") as f:
+                st.download_button(
+                    label="📄 DESCARGAR TARIFAS LOWI",
+                    data=f,
+                    file_name="Tarifas_Lowi_Marzo2026.pdf",
+                    key="lowi_btn"
+                )
+        else:
+            st.warning("El archivo de Lowi no se encuentra en la ruta especificada.")
