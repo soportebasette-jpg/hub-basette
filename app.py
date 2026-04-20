@@ -23,7 +23,7 @@ def get_base64_of_bin_file(bin_file):
 
 img_base64 = get_base64_of_bin_file("rosco.jpg")
 
-# 2. CSS DE ALTA VISIBILIDAD (MANTENIDO)
+# 2. CSS DE ALTA VISIBILIDAD (IDÉNTICO AL ORIGINAL)
 st.markdown("""
     <style>
     .stApp { background-color: #0d1117; color: #ffffff; }
@@ -87,32 +87,32 @@ if not st.session_state["password_correct"]:
     _, col_auth, _ = st.columns([1, 1.2, 1])
     with col_auth:
         st.image("1000233813.jpg") if os.path.exists("1000233813.jpg") else None
-        pwd = st.text_input("Introduce Clave Comercial:", type="password")
-        if st.button("ACCEDER AL HUB"):
+        pwd = st.text_input("Clave Comercial:", type="password")
+        if st.button("ACCEDER"):
             if pwd == "Ventas2024*":
                 st.session_state["password_correct"] = True
                 st.rerun()
-            else: st.error("Clave incorrecta")
+            else: st.error("Incorrecto")
     st.stop()
 
 # --- SIDEBAR ---
 with st.sidebar:
     st.image("1000233813.jpg") if os.path.exists("1000233813.jpg") else None
-    menu = st.radio("Secciones:", ["🚀 CRM Y GESTIÓN", "📊 PRECIOS", "⚖️ COMPARADOR", "📢 ANUNCIOS", "📈 DASHBOARD Y RANKING", "📂 REPOSITORIO"])
+    menu = st.radio("MENÚ", ["🚀 CRM", "📊 PRECIOS", "⚖️ COMPARADOR", "📢 ANUNCIOS", "📈 DASHBOARD Y RANKING", "📂 REPOSITORIO"])
 
 # --- DASHBOARD Y RANKING ---
 if menu == "📈 DASHBOARD Y RANKING":
     try:
         de, dt, da = load_and_clean_ranking()
         
-        all_anos = sorted(list(set(de['Año']) | set(dt['Año']) | set(da['Año'])))
-        all_meses = sorted(list(set(de['Mes']) | set(dt['Mes']) | set(da['Mes'])))
-        all_coms = sorted(list(set(de['Comercial']) | set(dt['Comercial']) | set(da['Comercial'])))
+        anos = sorted(list(set(de['Año']) | set(dt['Año']) | set(da['Año'])))
+        meses = sorted(list(set(de['Mes']) | set(dt['Mes']) | set(da['Mes'])))
+        coms = sorted(list(set(de['Comercial']) | set(dt['Comercial']) | set(da['Comercial'])))
 
         c1, c2, c3 = st.columns([1, 2, 2])
-        with c1: f_ano = st.selectbox("📅 Año", all_anos, index=len(all_anos)-1 if all_anos else 0)
-        with c2: f_meses = st.multiselect("📆 Meses", all_meses, default=[all_meses[-1]] if all_meses else [])
-        with c3: f_coms = st.multiselect("👤 Filtrar Comerciales", all_coms, default=all_coms)
+        with c1: f_ano = st.selectbox("Año", anos, index=len(anos)-1 if anos else 0)
+        with c2: f_meses = st.multiselect("Meses", meses, default=[meses[-1]] if meses else [])
+        with c3: f_coms = st.multiselect("Comerciales", coms, default=coms)
 
         f_de = de[(de['Año']==f_ano) & (de['Mes'].isin(f_meses)) & (de['Comercial'].isin(f_coms))] if not de.empty else pd.DataFrame()
         f_dt = dt[(dt['Año']==f_ano) & (dt['Mes'].isin(f_meses)) & (dt['Comercial'].isin(f_coms))] if not dt.empty else pd.DataFrame()
@@ -121,56 +121,52 @@ if menu == "📈 DASHBOARD Y RANKING":
         t_rank, t_ene, t_tel, t_ala = st.tabs(["🏆 RANKING", "⚡ ENERGÍA", "📱 TELCO", "🛡️ ALARMAS"])
 
         with t_rank:
-            st.markdown('<div class="block-header">RANKING GLOBAL DE PRODUCTIVIDAD</div>', unsafe_allow_html=True)
-            
-            # Inicialización de matriz blindada para evitar KeyError
+            st.markdown('<div class="block-header">RANKING GLOBAL CON ESTADOS</div>', unsafe_allow_html=True)
             rank = pd.DataFrame(index=f_coms)
-            for col in ['Luz', 'Gas', 'Fibra', 'Móvil', 'Alarma', 'Activos', 'Bajas', 'Cancelados']:
-                rank[col] = 0
+            for c in ['Luz', 'Gas', 'Fibra', 'Móvil', 'Alarma', 'Activos', 'Bajas', 'Cancelados']: rank[c] = 0
 
-            # Conteo de Energía
+            # Conteo seguro de Energía
             if not f_de.empty:
                 for _, r in f_de.iterrows():
-                    com = r['Comercial']
-                    if 'CUPS Luz' in r and pd.notnull(r['CUPS Luz']) and str(r['CUPS Luz']).strip() != "": rank.at[com, 'Luz'] += 1
-                    if 'CUPS Gas' in r and pd.notnull(r['CUPS Gas']) and str(r['CUPS Gas']).strip() != "": rank.at[com, 'Gas'] += 1
+                    c = r['Comercial']
+                    if 'CUPS Luz' in r and pd.notnull(r['CUPS Luz']): rank.at[c, 'Luz'] += 1
+                    if 'CUPS Gas' in r and pd.notnull(r['CUPS Gas']): rank.at[c, 'Gas'] += 1
                     est = str(r['Estado']).upper()
-                    if "ACTIVO" in est: rank.at[com, 'Activos'] += 1
-                    elif "BAJA" in est: rank.at[com, 'Bajas'] += 1
-                    elif "CANCELADO" in est: rank.at[com, 'Cancelados'] += 1
+                    if "ACTIVO" in est: rank.at[c, 'Activos'] += 1
+                    elif "BAJA" in est: rank.at[c, 'Bajas'] += 1
+                    elif "CANCELADO" in est: rank.at[c, 'Cancelados'] += 1
 
-            # Conteo de Telco
+            # Conteo seguro de Telco
             if not f_dt.empty:
                 for _, r in f_dt.iterrows():
-                    com = r['Comercial']
-                    tipo = str(r.get('Tipo Tarifa', '')).lower()
-                    if 'fibra' in tipo: rank.at[com, 'Fibra'] += 1
-                    if 'movil' in tipo: rank.at[com, 'Móvil'] += 1
+                    c = r['Comercial']
+                    t = str(r.get('Tipo Tarifa', '')).lower()
+                    if 'fibra' in t: rank.at[c, 'Fibra'] += 1
+                    if 'movil' in t: rank.at[c, 'Móvil'] += 1
                     est = str(r['Estado']).upper()
-                    if "ACTIVO" in est: rank.at[com, 'Activos'] += 1
-                    elif "BAJA" in est: rank.at[com, 'Bajas'] += 1
-                    elif "CANCELADO" in est: rank.at[com, 'Cancelados'] += 1
+                    if "ACTIVO" in est: rank.at[c, 'Activos'] += 1
+                    elif "BAJA" in est: rank.at[c, 'Bajas'] += 1
+                    elif "CANCELADO" in est: rank.at[c, 'Cancelados'] += 1
 
-            # Conteo de Alarmas
+            # Conteo seguro de Alarma
             if not f_da.empty:
                 for _, r in f_da.iterrows():
-                    com = r['Comercial']
-                    rank.at[com, 'Alarma'] += 1
+                    c = r['Comercial']
+                    rank.at[c, 'Alarma'] += 1
                     est = str(r['Estado']).upper()
-                    if "ACTIVO" in est: rank.at[com, 'Activos'] += 1
-                    elif "BAJA" in est: rank.at[com, 'Bajas'] += 1
-                    elif "CANCELADO" in est: rank.at[com, 'Cancelados'] += 1
+                    if "ACTIVO" in est: rank.at[c, 'Activos'] += 1
+                    elif "BAJA" in est: rank.at[c, 'Bajas'] += 1
+                    elif "CANCELADO" in est: rank.at[c, 'Cancelados'] += 1
 
             rank['TOTAL_V'] = rank['Luz'] + rank['Gas'] + rank['Fibra'] + rank['Alarma']
             
-            # Cálculo de Porcentaje de Bajas y Cancelados
-            def calc_perc(row):
-                total_bc = row['Bajas'] + row['Cancelados']
+            # Cálculo de % B+C blindado contra división por cero
+            def get_perc(row):
                 if row['TOTAL_V'] == 0: return "0.0%"
+                total_bc = row['Bajas'] + row['Cancelados']
                 return f"{round((total_bc / row['TOTAL_V']) * 100, 1)}%"
             
-            rank['% B+C'] = rank.apply(calc_perc, axis=1)
-            
+            rank['% B+C'] = rank.apply(get_perc, axis=1)
             rank = rank.sort_values('TOTAL_V', ascending=False).reset_index().rename(columns={'index':'Comercial'})
 
             def color_rank(s):
@@ -181,66 +177,61 @@ if menu == "📈 DASHBOARD Y RANKING":
 
             st.write(rank.style.apply(color_rank).to_html(), unsafe_allow_html=True)
 
-        # Tabs individuales (Mantenidos con estilo original)
-        for tab, df_i, tit in zip([t_ene, t_tel, t_ala], [f_de, f_dt, f_da], ["ENERGÍA", "TELCO", "ALARMAS"]):
+        # Tabs de detalles (Se mantienen intactos)
+        for tab, df_f, tit in zip([t_ene, t_tel, t_ala], [f_de, f_dt, f_da], ["ENERGÍA", "TELCO", "ALARMAS"]):
             with tab:
-                if not df_i.empty:
+                if not df_f.empty:
                     st.markdown(f'<div class="block-header">ESTADOS {tit}</div>', unsafe_allow_html=True)
-                    s_a = df_i[df_i['Estado'].str.upper().str.contains("ACTIVO", na=False)].shape[0]
-                    s_b = df_i[df_i['Estado'].str.upper().str.contains("BAJA", na=False)].shape[0]
-                    s_c = df_i[df_i['Estado'].str.upper().str.contains("CANCELADO", na=False)].shape[0]
+                    sa = df_f[df_f['Estado'].str.upper().str.contains("ACTIVO", na=False)].shape[0]
+                    sb = df_f[df_f['Estado'].str.upper().str.contains("BAJA", na=False)].shape[0]
+                    sc = df_f[df_f['Estado'].str.upper().str.contains("CANCELADO", na=False)].shape[0]
                     cs1, cs2, cs3 = st.columns(3)
-                    cs1.markdown(f'<div class="status-box" style="background: #1b4d3e;"><div class="status-label">ACTIVOS</div><div class="status-value">{s_a}</div></div>', unsafe_allow_html=True)
-                    cs2.markdown(f'<div class="status-box" style="background: #990000;"><div class="status-label">BAJAS</div><div class="status-value">{s_b}</div></div>', unsafe_allow_html=True)
-                    cs3.markdown(f'<div class="status-box" style="background: #000000;"><div class="status-label">CANCELADOS</div><div class="status-value">{s_c}</div></div>', unsafe_allow_html=True)
+                    cs1.markdown(f'<div class="status-box" style="background: #1b4d3e;"><div class="status-label">ACTIVOS</div><div class="status-value">{sa}</div></div>', unsafe_allow_html=True)
+                    cs2.markdown(f'<div class="status-box" style="background: #990000;"><div class="status-label">BAJAS</div><div class="status-value">{sb}</div></div>', unsafe_allow_html=True)
+                    cs3.markdown(f'<div class="status-box" style="background: #000000;"><div class="status-label">CANCELADOS</div><div class="status-value">{sc}</div></div>', unsafe_allow_html=True)
 
     except Exception as e:
-        st.error(f"Error cargando el Dashboard: {e}")
+        st.error(f"Error en Dashboard: {e}")
 
-# --- REPOSITORIO ---
+# --- REPOSITORIO (CORREGIDO) ---
 elif menu == "📂 REPOSITORIO":
     st.header("Centro de Documentación")
     
-    with st.expander("📂 NATURGY - DOCUMENTACIÓN OFICIAL"):
-        # Corrección de ruta y lógica de descarga
-        nat_path = "manuales/naturgy"
-        if os.path.exists(nat_path):
-            files = [f for f in os.listdir(nat_path) if f.endswith(".pdf")]
-            if files:
-                for f_name in files:
-                    with open(os.path.join(nat_path, f_name), "rb") as f:
-                        st.download_button(f"📄 Descargar {f_name}", f, file_name=f_name, key=f_name)
-            else: st.info("No hay archivos PDF en Naturgy.")
-        else: st.error("Carpeta manuales/naturgy no encontrada.")
+    with st.expander("📂 NATURGY"):
+        path_nat = "manuales/naturgy"
+        if os.path.exists(path_nat):
+            for file in os.listdir(path_nat):
+                if file.endswith(".pdf"):
+                    with open(os.path.join(path_nat, file), "rb") as f:
+                        st.download_button(f"📄 {file}", f, file_name=file, key=f"nat_{file}")
+        else: st.warning("Carpeta Naturgy no encontrada.")
 
-    with st.expander("📂 MANUAL DEL MARCADOR"):
-        man_path = "manuales/Manual_Premiumnumber_Agente.pdf"
-        if os.path.exists(man_path):
-            with open(man_path, "rb") as f:
-                st.download_button("📖 DESCARGAR MANUAL", f, file_name="Manual_Marcador.pdf")
+    with st.expander("📂 MANUAL MARCADOR"):
+        m_path = "manuales/Manual_Premiumnumber_Agente.pdf"
+        if os.path.exists(m_path):
+            with open(m_path, "rb") as f:
+                st.download_button("📖 DESCARGAR MANUAL", f, file_name="Manual_Agente.pdf")
 
     with st.expander("📁 DOCUMENTACIÓN LOWI"):
-        low_path = "manuales/TARIFAS_LOWI_MARZO2026.pdf"
-        if os.path.exists(low_path):
-            with open(low_path, "rb") as f:
+        l_path = "manuales/TARIFAS_LOWI_MARZO2026.pdf"
+        if os.path.exists(l_path):
+            with open(l_path, "rb") as f:
                 st.download_button("📄 TARIFAS LOWI", f, file_name="Tarifas_Lowi.pdf")
 
-# --- RESTO DE SECCIONES (INTACTAS) ---
-elif menu == "🚀 CRM Y GESTIÓN":
-    st.header("Accesos Directos")
-    col1, col2 = st.columns(2)
-    with col1: st.link_button("🔥 MARCADOR VOZ CENTER", "https://grupobasette.vozipcenter.com/", use_container_width=True)
-    with col2: st.link_button("💎 CRM BASETTE", "https://crm.grupobasette.eu/login", use_container_width=True)
+# --- SECCIONES RESTANTES ---
+elif menu == "🚀 CRM":
+    st.header("Accesos")
+    st.link_button("🔥 MARCADOR", "https://grupobasette.vozipcenter.com/", use_container_width=True)
+    st.link_button("💎 CRM BASETTE", "https://crm.grupobasette.eu/login", use_container_width=True)
 
 elif menu == "📊 PRECIOS":
-    st.header("Tarifas Vigentes")
-    st.info("Consulte la sección Repositorio para descargar las tablas de precios oficiales.")
+    st.header("Tarifas")
+    st.info("Consulte los archivos en el repositorio.")
 
 elif menu == "⚖️ COMPARADOR":
-    st.header("Comparador de Facturas")
-    st.info("Sección para realizar estudios de ahorro (Manteniendo funcionalidad original).")
+    st.header("Comparador")
 
 elif menu == "📢 ANUNCIOS":
-    st.header("Marketing y Publicidad")
+    st.header("Marketing")
     if os.path.exists("anunciosbasette/qr-plan amigo.png"):
         st.image("anunciosbasette/qr-plan amigo.png")
