@@ -31,7 +31,7 @@ def get_base64_of_bin_file(bin_file):
 
 img_base64 = get_base64_of_bin_file("rosco.jpg")
 
-# 2. CSS DE ALTA VISIBILIDAD
+# 2. CSS DE ALTA VISIBILIDAD (Corregido error de unsafe_allow_html)
 st.markdown(f"""
     <style>
     .stApp {{ background-color: #0d1117; color: #ffffff; }}
@@ -41,7 +41,6 @@ st.markdown(f"""
         font-weight: 900 !important;
         font-size: 1.25rem !important;
     }}
-    /* Estilos para el Control Laboral */
     .metric-card {{
         background-color: #161b22;
         padding: 20px;
@@ -89,42 +88,39 @@ def load_laboral_data():
 
 # --- 4. SIDEBAR ---
 with st.sidebar:
-    st.image("rosco.jpg", use_container_width=True)
+    if os.path.exists("rosco.jpg"):
+        st.image("rosco.jpg", use_container_width=True)
     st.markdown("<h2 style='text-align: center; color: #d2ff00;'>BASSETTE GROUP</h2>", unsafe_allow_html=True)
     menu = st.radio(
         "NAVEGACIÓN",
-        ["🏠 INICIO", "📊 DASHBOARD", "📅 CONTROL LABORAL", "📂 REPOSITORIO"],
+        ["🏠 INICIO", "📅 CONTROL LABORAL", "📊 DASHBOARD", "📂 REPOSITORIO"],
         index=0
     )
 
 # --- 5. LÓGICA DE PÁGINAS ---
 
-# --- INICIO ---
 if menu == "🏠 INICIO":
     st.title("Bienvenido al Hub")
     st.write("Selecciona una opción en el menú lateral para comenzar.")
 
-# --- DASHBOARD (TU CÓDIGO ORIGINAL) ---
 elif menu == "📊 DASHBOARD":
     st.title("Dashboard de Ventas")
-    # (Aquí iría el contenido de tu dashboard que ya tienes en app.py)
     st.info("Carga aquí la lógica de tus gráficas de Google Sheets.")
 
-# --- CONTROL LABORAL (NUEVA PESTAÑA) ---
 elif menu == "📅 CONTROL LABORAL":
-    st.markdown("<h1 style='color: #d2ff00;'>Control de Jornada Laboral</h1>", unsafe_allow_html=True)
+    st.markdown("<h1 style='color: #d2ff00;'>📅 Control de Jornada Laboral</h1>", unsafe_allow_html=True)
     
     df_lab = load_laboral_data()
     
     col_sel1, col_sel2 = st.columns(2)
     with col_sel1:
-        comercial_lab = st.selectbox("👤 Comercial", sorted(list(fechas_empresa.keys())))
+        comercial_lab = st.selectbox("👤 Seleccionar Comercial", sorted(list(fechas_empresa.keys())))
     with col_sel2:
         meses_lab = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
-        mes_lab_sel = st.selectbox("📅 Mes", meses_lab, index=3) # Abril
+        mes_lab_sel = st.selectbox("📅 Seleccionar Mes", meses_lab, index=3) # Abril por defecto
         m_num = meses_lab.index(mes_lab_sel) + 1
 
-    # Procesamiento de días
+    # Procesamiento de días laborales
     num_dias = calendar.monthrange(2026, m_num)[1]
     dias_mes = [date(2026, m_num, d) for d in range(1, num_dias + 1) 
                 if date(2026, m_num, d).weekday() < 5 and date(2026, m_num, d).strftime("%Y-%m-%d") not in festivos_2026]
@@ -147,17 +143,17 @@ elif menu == "📅 CONTROL LABORAL":
                 if "ENTRADA" in r['Accion_Norm']: entrada = r['Hora_f']
                 if "SALIDA" in r['Accion_Norm']: salida = r['Hora_f']
 
-        # Horarios Especiales
-        if (date(2026, 4, 20) <= f <= date(2026, 4, 26)): # Semana Feria
-            h_ini, h_fin = time(9, 0), time(13, 30)
-        elif (date(2026, 3, 30) <= f < date(2026, 4, 20)): # Feria antigua / SS
-            h_ini, h_fin = time(9, 30), time(13, 30)
+        # Horarios Especiales Feria Sevilla 2026
+        if (date(2026, 4, 20) <= f <= date(2026, 4, 26)): 
+            h_ini, h_fin_time = time(9, 0), time(13, 30)
+        elif (date(2026, 3, 30) <= f < date(2026, 4, 20)): 
+            h_ini, h_fin_time = time(9, 30), time(13, 30)
         elif comercial_lab == 'RAQUEL GUADALUPE':
-            h_ini, h_fin = time(9, 0), time(14, 30)
+            h_ini, h_fin_time = time(9, 0), time(14, 30)
         else:
-            h_ini, h_fin = time(9, 30), time(14, 30)
+            h_ini, h_fin_time = time(9, 30), time(14, 30)
 
-        # Estado y Excepciones
+        # Lógica de Ausencias
         hoy = date.today()
         excep_com = excepciones_laborales.get(comercial_lab, {})
         
@@ -177,18 +173,26 @@ elif menu == "📅 CONTROL LABORAL":
         return pd.Series([
             entrada.strftime("%H:%M") if isinstance(entrada, time) else "-",
             salida.strftime("%H:%M") if isinstance(salida, time) else "-",
-            estado, retraso, f"{h_ini.strftime('%H:%M')} - {h_fin.strftime('%H:%M')}", es_baja
+            estado, retraso, f"{h_ini.strftime('%H:%M')} - {h_fin_time.strftime('%H:%M')}", es_baja
         ])
 
     df_final_lab[['ENTRADA', 'SALIDA', 'AUSENCIA', 'MIN_RETRASO', 'HORARIO', 'ES_BAJA']] = df_final_lab.apply(procesar_fila_lab, axis=1)
 
-    # KPIs
+    # KPIs superiores
     k1, k2, k3 = st.columns(3)
-    with k1: st.metric("Ausencias/Pendientes", len(df_final_lab[df_final_lab['AUSENCIA'].str.contains("SI", na=False)]))
-    with k2: st.metric("Minutos Retraso", int(df_final_lab['MIN_RETRASO'].sum()))
-    with k3: st.metric("Vacaciones", len(df_final_lab[df_final_lab['AUSENCIA'] == "VACACIONES"]))
+    with k1:
+        ausencias_count = len(df_final_lab[df_final_lab['AUSENCIA'].str.contains("SI", na=False)])
+        st.markdown(f"<div class='metric-card'><h3>Ausencias Reales</h3><h2>{ausencias_count}</h2></div>", unsafe_allow_html=True)
+    with k2:
+        retraso_total = int(df_final_lab['MIN_RETRASO'].sum())
+        st.markdown(f"<div class='metric-card'><h3>Retraso Total</h3><h2>{retraso_total} min</h2></div>", unsafe_allow_html=True)
+    with k3:
+        vaca_count = len(df_final_lab[df_final_lab['AUSENCIA'] == "VACACIONES"])
+        st.markdown(f"<div class='metric-card'><h3>Vacaciones</h3><h2>{vaca_count}</h2></div>", unsafe_allow_html=True)
 
-    # Tabla con estilo
+    st.write("---")
+
+    # Tabla con estilo (Adaptada a tu tema oscuro)
     def style_lab(row):
         val = str(row['AUSENCIA'])
         if "objetivo" in val.lower(): return ['background-color: #1b4332; color: #d4edda'] * len(row)
@@ -206,8 +210,6 @@ elif menu == "📅 CONTROL LABORAL":
         use_container_width=True, hide_index=True
     )
 
-# --- REPOSITORIO ---
 elif menu == "📂 REPOSITORIO":
-    st.header("Documentación y Manuales")
-    # (Aquí va tu lógica de descarga de PDFs original)
-    st.write("Archivos disponibles para descarga.")
+    st.header("📂 Documentación y Manuales")
+    st.write("Sección de descarga de archivos.")
