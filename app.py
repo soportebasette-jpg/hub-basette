@@ -101,7 +101,7 @@ def load_and_clean_ranking():
         except: return pd.DataFrame()
     return process_df(URL_ENE, 'ENE'), process_df(URL_TEL, 'TEL'), process_df(URL_ALA, 'ALA')
 
-# --- AUTENTICACIÓN ---
+# --- LOGIN ---
 if "password_correct" not in st.session_state:
     st.session_state["password_correct"] = False
 
@@ -109,155 +109,138 @@ if not st.session_state["password_correct"]:
     _, col_auth, _ = st.columns([1, 1.2, 1])
     with col_auth:
         if os.path.exists("1000233813.jpg"): st.image("1000233813.jpg")
-        st.markdown("<h3 style='text-align:center; color:#d2ff00;'>HUB COMERCIAL</h3>", unsafe_allow_html=True)
-        pwd = st.text_input("Introduce la clave de acceso:", type="password")
-        if st.button("ACCEDER AL SISTEMA"):
+        pwd = st.text_input("Clave Comercial:", type="password")
+        if st.button("ACCEDER"):
             if pwd == "Ventas2024*":
                 st.session_state["password_correct"] = True
                 st.rerun()
-            else: st.error("Clave incorrecta")
+            else: st.error("Incorrecto")
     st.stop()
 
 # --- SIDEBAR ---
 with st.sidebar:
     if os.path.exists("1000233813.jpg"): st.image("1000233813.jpg")
-    st.markdown("---")
-    menu = st.radio("MENÚ PRINCIPAL:", ["🚀 CRM Y GESTIÓN", "📊 PRECIOS", "⚖️ COMPARADOR", "📢 ANUNCIOS", "📈 DASHBOARD Y RANKING", "📂 REPOSITORIO"])
-    st.markdown("---")
-    st.caption("v2.5 | Basette Group Systems")
+    menu = st.radio("MENÚ", ["🚀 CRM", "📊 PRECIOS", "⚖️ COMPARADOR", "📢 ANUNCIOS", "📈 DASHBOARD Y RANKING", "📂 REPOSITORIO"])
 
 # --- LÓGICA DE NAVEGACIÓN ---
 
-if menu == "🚀 CRM Y GESTIÓN":
-    st.markdown('<div class="block-header">ACCESOS DIRECTOS</div>', unsafe_allow_html=True)
-    c1, c2 = st.columns(2)
-    with c1: st.link_button("🔥 MARCADOR VOZ CENTER", "https://grupobasette.vozipcenter.com/", use_container_width=True)
-    with c2: st.link_button("💎 CRM BASETTE (CLIENTES)", "https://crm.grupobasette.eu/login", use_container_width=True)
+if menu == "🚀 CRM":
+    st.markdown('<div class="block-header">ACCESOS</div>', unsafe_allow_html=True)
+    st.link_button("🔥 MARCADOR", "https://grupobasette.vozipcenter.com/", use_container_width=True)
+    st.link_button("💎 CRM BASETTE", "https://crm.grupobasette.eu/login", use_container_width=True)
 
 elif menu == "📊 PRECIOS":
-    st.markdown('<div class="block-header">TABLAS DE PRECIOS ACTUALIZADAS</div>', unsafe_allow_html=True)
-    st.info("Consulte la sección 'REPOSITORIO' para descargar los PDFs de precios vigentes.")
+    st.header("Tarifas")
+    st.info("Consulte el repositorio para descargar PDFs.")
 
 elif menu == "⚖️ COMPARADOR":
-    st.markdown('<div class="block-header">ESTUDIO DE AHORRO</div>', unsafe_allow_html=True)
-    st.warning("Módulo en mantenimiento - Contacte con soporte para estudios manuales.")
+    st.header("Comparador")
 
 elif menu == "📢 ANUNCIOS":
-    st.markdown('<div class="block-header">MATERIAL DE MARKETING</div>', unsafe_allow_html=True)
+    st.header("Marketing")
     if os.path.exists("anunciosbasette/qr-plan amigo.png"):
-        st.image("anunciosbasette/qr-plan amigo.png", caption="QR Plan Amigo")
+        st.image("anunciosbasette/qr-plan amigo.png")
 
 elif menu == "📈 DASHBOARD Y RANKING":
     try:
         de, dt, da = load_and_clean_ranking()
-        
         all_anos = sorted(list(set(de['Año']) | set(dt['Año']) | set(da['Año'])))
         all_meses = sorted(list(set(de['Mes']) | set(dt['Mes']) | set(da['Mes'])))
         all_coms = sorted(list(set(de['Comercial']) | set(dt['Comercial']) | set(da['Comercial'])))
-
         c1, c2, c3 = st.columns([1, 2, 2])
-        with c1: f_ano = st.selectbox("📅 Año", all_anos, index=len(all_anos)-1 if all_anos else 0)
-        with c2: f_meses = st.multiselect("📆 Meses", all_meses, default=[all_meses[-1]] if all_meses else [])
-        with c3: f_coms = st.multiselect("👤 Filtrar Comerciales", all_coms, default=all_coms)
-
-        f_de = de[(de['Año']==f_ano) & (de['Mes'].isin(f_meses)) & (de['Comercial'].isin(f_coms))] if not de.empty else de
-        f_dt = dt[(dt['Año']==f_ano) & (dt['Mes'].isin(f_meses)) & (dt['Comercial'].isin(f_coms))] if not dt.empty else dt
-        f_da = da[(da['Año']==f_ano) & (da['Mes'].isin(f_meses)) & (da['Comercial'].isin(f_coms))] if not da.empty else da
-
+        with c1: f_ano = st.selectbox("Año", all_anos, index=len(all_anos)-1 if all_anos else 0)
+        with c2: f_meses = st.multiselect("Meses", all_meses, default=[all_meses[-1]] if all_meses else [])
+        with c3: f_coms = st.multiselect("Comerciales", all_coms, default=all_coms)
+        f_de = de[(de['Año']==f_ano) & (de['Mes'].isin(f_meses)) & (de['Comercial'].isin(f_coms))]
+        f_dt = dt[(dt['Año']==f_ano) & (dt['Mes'].isin(f_meses)) & (dt['Comercial'].isin(f_coms))]
+        f_da = da[(da['Año']==f_ano) & (da['Mes'].isin(f_meses)) & (da['Comercial'].isin(f_coms))]
         t_rank, t_ene, t_tel, t_ala = st.tabs(["🏆 RANKING", "⚡ ENERGÍA", "📱 TELCO", "🛡️ ALARMAS"])
-
         with t_rank:
-            st.markdown('<div class="block-header">RANKING DE PRODUCTIVIDAD</div>', unsafe_allow_html=True)
-            r1 = f_de.groupby('Comercial')[['V_Luz', 'V_Gas']].sum() if not f_de.empty else pd.DataFrame(columns=['V_Luz', 'V_Gas'])
-            r2 = f_dt.groupby('Comercial')[['V_Fibra', 'V_Movil']].sum() if not f_dt.empty else pd.DataFrame(columns=['V_Fibra', 'V_Movil'])
-            r3 = f_da.groupby('Comercial')[['V_Alarma']].sum() if not f_da.empty else pd.DataFrame(columns=['V_Alarma'])
-            
+            st.markdown('<div class="block-header">RANKING GLOBAL</div>', unsafe_allow_html=True)
+            r1 = f_de.groupby('Comercial')[['V_Luz', 'V_Gas']].sum() if not f_de.empty else pd.DataFrame()
+            r2 = f_dt.groupby('Comercial')[['V_Fibra', 'V_Movil']].sum() if not f_dt.empty else pd.DataFrame()
+            r3 = f_da.groupby('Comercial')[['V_Alarma']].sum() if not f_da.empty else pd.DataFrame()
             rank = pd.concat([r1, r2, r3], axis=1).fillna(0).astype(int)
             rank['TOTAL'] = rank.sum(axis=1)
-            rank = rank.sort_values('TOTAL', ascending=False)
-            st.table(rank)
-
+            st.table(rank.sort_values('TOTAL', ascending=False))
         with t_ene:
             if not f_de.empty:
-                col_e1, col_e2 = st.columns(2)
-                with col_e1:
-                    fig_e_pie = px.pie(f_de, names='Comercial', values='V_Luz', title="Distribución Luz", hole=0.4, color_discrete_sequence=px.colors.sequential.YlOrBr)
-                    st.plotly_chart(fig_e_pie, use_container_width=True)
-                with col_e2:
-                    fig_e_bar = px.bar(f_de.groupby('Comercial')[['V_Luz', 'V_Gas']].sum().reset_index(), x='Comercial', y=['V_Luz', 'V_Gas'], title="Detalle Energía", barmode='group')
-                    st.plotly_chart(fig_e_bar, use_container_width=True)
-
+                col1, col2 = st.columns(2)
+                with col1:
+                    fig1 = px.pie(f_de, names='Comercial', values='V_Luz', title="Luz por Comercial")
+                    st.plotly_chart(fig1, use_container_width=True)
+                with col2:
+                    fig2 = px.bar(f_de.groupby('Comercial')[['V_Luz', 'V_Gas']].sum().reset_index(), x='Comercial', y=['V_Luz', 'V_Gas'], title="Detalle Energía")
+                    st.plotly_chart(fig2, use_container_width=True)
         with t_tel:
             if not f_dt.empty:
-                col_t1, col_t2 = st.columns(2)
-                with col_t1:
-                    fig_t_pie = px.pie(f_dt, names='Comercial', values='V_Fibra', title="Distribución Fibra")
-                    st.plotly_chart(fig_t_pie, use_container_width=True)
-                with col_t2:
-                    fig_t_bar = px.bar(f_dt.groupby('Comercial')[['V_Fibra', 'V_Movil']].sum().reset_index(), x='Comercial', y=['V_Fibra', 'V_Movil'], title="Detalle Telco")
-                    st.plotly_chart(fig_t_bar, use_container_width=True)
-
+                col1, col2 = st.columns(2)
+                with col1:
+                    fig1 = px.pie(f_dt, names='Comercial', values='V_Fibra', title="Fibra por Comercial")
+                    st.plotly_chart(fig1, use_container_width=True)
+                with col2:
+                    fig2 = px.bar(f_dt.groupby('Comercial')[['V_Fibra', 'V_Movil']].sum().reset_index(), x='Comercial', y=['V_Fibra', 'V_Movil'], title="Detalle Telco")
+                    st.plotly_chart(fig2, use_container_width=True)
         with t_ala:
             if not f_da.empty:
-                col_a1, col_a2 = st.columns(2)
-                with col_a1:
-                    fig_a_pie = px.pie(f_da, names='Comercial', values='V_Alarma', title="Cuota Alarmas")
-                    st.plotly_chart(fig_a_pie, use_container_width=True)
-                with col_a2:
-                    fig_a_bar = px.bar(f_da.groupby('Comercial')['V_Alarma'].sum().reset_index(), x='V_Alarma', y='Comercial', orientation='h', title="Ventas Alarma")
-                    st.plotly_chart(fig_a_bar, use_container_width=True)
-
+                col1, col2 = st.columns(2)
+                with col1:
+                    fig1 = px.pie(f_da, names='Comercial', values='V_Alarma', title="Alarmas por Comercial")
+                    st.plotly_chart(fig1, use_container_width=True)
+                with col2:
+                    fig2 = px.bar(f_da.groupby('Comercial')['V_Alarma'].sum().reset_index(), x='V_Alarma', y='Comercial', orientation='h', title="Ventas Alarmas")
+                    st.plotly_chart(fig2, use_container_width=True)
     except Exception as e:
-        st.error(f"Error cargando el Dashboard: {e}")
+        st.error(f"Error en Dashboard: {e}")
 
-# --- REPOSITORIO (ARREGLADO) ---
+# --- REPOSITORIO (CORREGIDO Y COMPLETO) ---
 elif menu == "📂 REPOSITORIO":
-    st.markdown('<div class="block-header">CENTRO DE DOCUMENTACIÓN Y DESCARGAS</div>', unsafe_allow_html=True)
+    st.markdown('<div class="block-header">REPOSITORIO DE DOCUMENTOS</div>', unsafe_allow_html=True)
     
-    # --- NATURGY ---
-    with st.expander("📂 NATURGY - DOCUMENTACIÓN OFICIAL"):
-        nat_path = "manuales/naturgy"
-        if os.path.exists(nat_path):
-            files = [f for f in os.listdir(nat_path) if f.endswith(".pdf")]
+    # 1. SECCIÓN NATURGY
+    with st.expander("📂 NATURGY"):
+        folder_naturgy = "manuales/naturgy"
+        if os.path.exists(folder_naturgy):
+            files = [f for f in os.listdir(folder_naturgy) if f.lower().endswith(".pdf")]
             if files:
-                for filename in files:
-                    full_path = os.path.join(nat_path, filename)
-                    with open(full_path, "rb") as f:
+                for file in files:
+                    file_path = os.path.join(folder_naturgy, file)
+                    with open(file_path, "rb") as f:
                         st.download_button(
-                            label=f"📄 Descargar: {filename}",
+                            label=f"📄 Descargar: {file}",
                             data=f,
-                            file_name=filename,
-                            key=f"nat_{filename}" # Key única para cada archivo
+                            file_name=file,
+                            key=f"btn_nat_{file}"
                         )
             else:
-                st.info("No se encontraron archivos PDF en la carpeta de Naturgy.")
+                st.warning("No hay archivos PDF en la carpeta Naturgy.")
         else:
-            st.error(f"La carpeta '{nat_path}' no existe.")
+            st.error(f"No se encuentra la carpeta: {folder_naturgy}")
 
-    # --- MANUAL MARCADOR ---
+    # 2. SECCIÓN MANUAL MARCADOR
     with st.expander("📂 MANUAL DEL MARCADOR"):
         manual_path = "manuales/Manual_Premiumnumber_Agente.pdf"
         if os.path.exists(manual_path):
             with open(manual_path, "rb") as f:
                 st.download_button(
-                    label="📖 DESCARGAR MANUAL DEL AGENTE",
+                    label="📖 DESCARGAR MANUAL AGENTE",
                     data=f,
                     file_name="Manual_Marcador.pdf",
-                    key="manual_marcador_btn"
+                    key="btn_manual_marcador"
                 )
         else:
-            st.warning("El archivo del manual no se encuentra en la ruta especificada.")
+            st.error("Archivo 'Manual_Premiumnumber_Agente.pdf' no encontrado.")
 
-    # --- DOCUMENTACIÓN LOWI ---
+    # 3. SECCIÓN LOWI
     with st.expander("📁 DOCUMENTACIÓN LOWI"):
-        lowi_path = "manuales/TARIFAS_LOWI_MARZO2026.pdf"
-        if os.path.exists(lowi_path):
-            with open(lowi_path, "rb") as f:
+        archivo_lowi = "manuales/TARIFAS_LOWI_MARZO2026.pdf"
+        if os.path.exists(archivo_lowi):
+            with open(archivo_lowi, "rb") as f:
                 st.download_button(
                     label="📄 DESCARGAR TARIFAS LOWI",
                     data=f,
                     file_name="Tarifas_Lowi_Marzo2026.pdf",
-                    key="lowi_btn"
+                    key="btn_lowi"
                 )
         else:
-            st.warning("El archivo de Lowi no se encuentra en la ruta especificada.")
+            st.error("Archivo 'TARIFAS_LOWI_MARZO2026.pdf' no encontrado.")
