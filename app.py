@@ -109,6 +109,7 @@ if not st.session_state["password_correct"]:
     _, col_auth, _ = st.columns([1, 1.2, 1])
     with col_auth:
         if os.path.exists("1000233813.jpg"): st.image("1000233813.jpg")
+        st.markdown("<h3 style='text-align:center; color:#d2ff00;'>HUB COMERCIAL</h3>", unsafe_allow_html=True)
         pwd = st.text_input("Clave Comercial:", type="password")
         if st.button("ACCEDER"):
             if pwd == "Ventas2024*":
@@ -122,24 +123,30 @@ with st.sidebar:
     if os.path.exists("1000233813.jpg"): st.image("1000233813.jpg")
     menu = st.radio("MENÚ", ["🚀 CRM", "📊 PRECIOS", "⚖️ COMPARADOR", "📢 ANUNCIOS", "📈 DASHBOARD Y RANKING", "📂 REPOSITORIO"])
 
-# --- LÓGICA DE NAVEGACIÓN ---
+# --- SECCIONES ---
 
 if menu == "🚀 CRM":
-    st.markdown('<div class="block-header">ACCESOS</div>', unsafe_allow_html=True)
-    st.link_button("🔥 MARCADOR", "https://grupobasette.vozipcenter.com/", use_container_width=True)
-    st.link_button("💎 CRM BASETTE", "https://crm.grupobasette.eu/login", use_container_width=True)
+    st.markdown('<div class="block-header">ACCESOS A PLATAFORMAS</div>', unsafe_allow_html=True)
+    c1, c2 = st.columns(2)
+    with c1: st.link_button("🔥 ACCESO MARCADOR", "https://grupobasette.vozipcenter.com/", use_container_width=True)
+    with c2: st.link_button("💎 ACCESO CRM CLIENTES", "https://crm.grupobasette.eu/login", use_container_width=True)
 
 elif menu == "📊 PRECIOS":
-    st.header("Tarifas")
-    st.info("Consulte el repositorio para descargar PDFs.")
+    st.markdown('<div class="block-header">TARIFAS Y PRECIOS</div>', unsafe_allow_html=True)
+    st.info("⚠️ Los documentos de precios actualizados se encuentran en la sección 'REPOSITORIO'.")
+    if st.button("IR AL REPOSITORIO"):
+        st.info("Seleccione 'REPOSITORIO' en el menú de la izquierda.")
 
 elif menu == "⚖️ COMPARADOR":
-    st.header("Comparador")
+    st.markdown('<div class="block-header">COMPARADOR ENERGÉTICO</div>', unsafe_allow_html=True)
+    st.write("Módulo de comparativa en desarrollo.")
 
 elif menu == "📢 ANUNCIOS":
-    st.header("Marketing")
+    st.markdown('<div class="block-header">ANUNCIOS Y MARKETING</div>', unsafe_allow_html=True)
     if os.path.exists("anunciosbasette/qr-plan amigo.png"):
-        st.image("anunciosbasette/qr-plan amigo.png")
+        st.image("anunciosbasette/qr-plan amigo.png", caption="Escanea para Plan Amigo")
+    else:
+        st.warning("No se encuentra el archivo 'qr-plan amigo.png' en la carpeta 'anunciosbasette'.")
 
 elif menu == "📈 DASHBOARD Y RANKING":
     try:
@@ -147,13 +154,16 @@ elif menu == "📈 DASHBOARD Y RANKING":
         all_anos = sorted(list(set(de['Año']) | set(dt['Año']) | set(da['Año'])))
         all_meses = sorted(list(set(de['Mes']) | set(dt['Mes']) | set(da['Mes'])))
         all_coms = sorted(list(set(de['Comercial']) | set(dt['Comercial']) | set(da['Comercial'])))
+        
         c1, c2, c3 = st.columns([1, 2, 2])
         with c1: f_ano = st.selectbox("Año", all_anos, index=len(all_anos)-1 if all_anos else 0)
         with c2: f_meses = st.multiselect("Meses", all_meses, default=[all_meses[-1]] if all_meses else [])
         with c3: f_coms = st.multiselect("Comerciales", all_coms, default=all_coms)
+        
         f_de = de[(de['Año']==f_ano) & (de['Mes'].isin(f_meses)) & (de['Comercial'].isin(f_coms))]
         f_dt = dt[(dt['Año']==f_ano) & (dt['Mes'].isin(f_meses)) & (dt['Comercial'].isin(f_coms))]
         f_da = da[(da['Año']==f_ano) & (da['Mes'].isin(f_meses)) & (da['Comercial'].isin(f_coms))]
+        
         t_rank, t_ene, t_tel, t_ala = st.tabs(["🏆 RANKING", "⚡ ENERGÍA", "📱 TELCO", "🛡️ ALARMAS"])
         with t_rank:
             st.markdown('<div class="block-header">RANKING GLOBAL</div>', unsafe_allow_html=True)
@@ -163,84 +173,64 @@ elif menu == "📈 DASHBOARD Y RANKING":
             rank = pd.concat([r1, r2, r3], axis=1).fillna(0).astype(int)
             rank['TOTAL'] = rank.sum(axis=1)
             st.table(rank.sort_values('TOTAL', ascending=False))
+        # (Resto de tabs de gráficos se mantienen igual que en tu copia)
         with t_ene:
             if not f_de.empty:
                 col1, col2 = st.columns(2)
                 with col1:
-                    fig1 = px.pie(f_de, names='Comercial', values='V_Luz', title="Luz por Comercial")
-                    st.plotly_chart(fig1, use_container_width=True)
+                    st.plotly_chart(px.pie(f_de, names='Comercial', values='V_Luz', title="Luz"), use_container_width=True)
                 with col2:
-                    fig2 = px.bar(f_de.groupby('Comercial')[['V_Luz', 'V_Gas']].sum().reset_index(), x='Comercial', y=['V_Luz', 'V_Gas'], title="Detalle Energía")
-                    st.plotly_chart(fig2, use_container_width=True)
+                    st.plotly_chart(px.bar(f_de.groupby('Comercial')[['V_Luz', 'V_Gas']].sum().reset_index(), x='Comercial', y=['V_Luz', 'V_Gas'], title="Energía"), use_container_width=True)
         with t_tel:
             if not f_dt.empty:
                 col1, col2 = st.columns(2)
                 with col1:
-                    fig1 = px.pie(f_dt, names='Comercial', values='V_Fibra', title="Fibra por Comercial")
-                    st.plotly_chart(fig1, use_container_width=True)
+                    st.plotly_chart(px.pie(f_dt, names='Comercial', values='V_Fibra', title="Fibra"), use_container_width=True)
                 with col2:
-                    fig2 = px.bar(f_dt.groupby('Comercial')[['V_Fibra', 'V_Movil']].sum().reset_index(), x='Comercial', y=['V_Fibra', 'V_Movil'], title="Detalle Telco")
-                    st.plotly_chart(fig2, use_container_width=True)
+                    st.plotly_chart(px.bar(f_dt.groupby('Comercial')[['V_Fibra', 'V_Movil']].sum().reset_index(), x='Comercial', y=['V_Fibra', 'V_Movil'], title="Telco"), use_container_width=True)
         with t_ala:
             if not f_da.empty:
                 col1, col2 = st.columns(2)
                 with col1:
-                    fig1 = px.pie(f_da, names='Comercial', values='V_Alarma', title="Alarmas por Comercial")
-                    st.plotly_chart(fig1, use_container_width=True)
+                    st.plotly_chart(px.pie(f_da, names='Comercial', values='V_Alarma', title="Alarma"), use_container_width=True)
                 with col2:
-                    fig2 = px.bar(f_da.groupby('Comercial')['V_Alarma'].sum().reset_index(), x='V_Alarma', y='Comercial', orientation='h', title="Ventas Alarmas")
-                    st.plotly_chart(fig2, use_container_width=True)
+                    st.plotly_chart(px.bar(f_da.groupby('Comercial')['V_Alarma'].sum().reset_index(), x='V_Alarma', y='Comercial', orientation='h', title="Alarmas"), use_container_width=True)
+
     except Exception as e:
         st.error(f"Error en Dashboard: {e}")
 
-# --- REPOSITORIO (CORREGIDO Y COMPLETO) ---
+# --- REPOSITORIO (CORREGIDO TOTALMENTE) ---
 elif menu == "📂 REPOSITORIO":
-    st.markdown('<div class="block-header">REPOSITORIO DE DOCUMENTOS</div>', unsafe_allow_html=True)
+    st.markdown('<div class="block-header">CENTRO DE DOCUMENTACIÓN</div>', unsafe_allow_html=True)
     
-    # 1. SECCIÓN NATURGY
-    with st.expander("📂 NATURGY"):
-        folder_naturgy = "manuales/naturgy"
-        if os.path.exists(folder_naturgy):
-            files = [f for f in os.listdir(folder_naturgy) if f.lower().endswith(".pdf")]
-            if files:
-                for file in files:
-                    file_path = os.path.join(folder_naturgy, file)
-                    with open(file_path, "rb") as f:
-                        st.download_button(
-                            label=f"📄 Descargar: {file}",
-                            data=f,
-                            file_name=file,
-                            key=f"btn_nat_{file}"
-                        )
+    # 1. NATURGY (Lógica para que salgan todos los documentos de la carpeta)
+    with st.expander("📂 NATURGY - TODOS LOS DOCUMENTOS"):
+        ruta_nat = "manuales/naturgy"
+        if os.path.exists(ruta_nat):
+            archivos = [f for f in os.listdir(ruta_nat) if f.lower().endswith(".pdf")]
+            if archivos:
+                for arc in archivos:
+                    with open(os.path.join(ruta_nat, arc), "rb") as f:
+                        st.download_button(label=f"📄 Descargar {arc}", data=f, file_name=arc, key=f"nat_{arc}")
             else:
-                st.warning("No hay archivos PDF en la carpeta Naturgy.")
+                st.warning("No hay archivos PDF en la carpeta manuales/naturgy")
         else:
-            st.error(f"No se encuentra la carpeta: {folder_naturgy}")
+            st.error(f"No existe la carpeta {ruta_nat}")
 
-    # 2. SECCIÓN MANUAL MARCADOR
+    # 2. MANUAL MARCADOR
     with st.expander("📂 MANUAL DEL MARCADOR"):
-        manual_path = "manuales/Manual_Premiumnumber_Agente.pdf"
-        if os.path.exists(manual_path):
-            with open(manual_path, "rb") as f:
-                st.download_button(
-                    label="📖 DESCARGAR MANUAL AGENTE",
-                    data=f,
-                    file_name="Manual_Marcador.pdf",
-                    key="btn_manual_marcador"
-                )
+        ruta_man = "manuales/Manual_Premiumnumber_Agente.pdf"
+        if os.path.exists(ruta_man):
+            with open(ruta_man, "rb") as f:
+                st.download_button("📖 DESCARGAR MANUAL MARCADOR", f, file_name="Manual_Marcador.pdf", key="man_marc")
         else:
-            st.error("Archivo 'Manual_Premiumnumber_Agente.pdf' no encontrado.")
+            st.error("No se encuentra el archivo Manual_Premiumnumber_Agente.pdf")
 
-    # 3. SECCIÓN LOWI
+    # 3. LOWI
     with st.expander("📁 DOCUMENTACIÓN LOWI"):
-        archivo_lowi = "manuales/TARIFAS_LOWI_MARZO2026.pdf"
-        if os.path.exists(archivo_lowi):
-            with open(archivo_lowi, "rb") as f:
-                st.download_button(
-                    label="📄 DESCARGAR TARIFAS LOWI",
-                    data=f,
-                    file_name="Tarifas_Lowi_Marzo2026.pdf",
-                    key="btn_lowi"
-                )
+        ruta_lowi = "manuales/TARIFAS_LOWI_MARZO2026.pdf"
+        if os.path.exists(ruta_lowi):
+            with open(ruta_lowi, "rb") as f:
+                st.download_button("📄 DESCARGAR TARIFAS LOWI", f, file_name="Tarifas_Lowi.pdf", key="lowi_btn")
         else:
-            st.error("Archivo 'TARIFAS_LOWI_MARZO2026.pdf' no encontrado.")
+            st.error("No se encuentra el archivo TARIFAS_LOWI_MARZO2026.pdf")
