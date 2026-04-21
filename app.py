@@ -8,7 +8,7 @@ from datetime import datetime, time, date
 import calendar
 import unicodedata
 from fpdf import FPDF
-from PIL import Image  # IMPORTANTE: Para que no de error el logo
+from PIL import Image
 
 # 1. CONFIGURACIÓN
 st.set_page_config(
@@ -17,7 +17,7 @@ st.set_page_config(
     initial_sidebar_state="expanded" 
 )
 
-# --- FUNCIONES DE APOYO ---
+# --- FUNCIONES DE APOYO DEL CRM ORIGINAL ---
 def get_base64_of_bin_file(bin_file):
     if os.path.exists(bin_file):
         with open(bin_file, 'rb') as f:
@@ -63,7 +63,7 @@ def load_data_laboral():
 # Preparamos la imagen de Rosco
 img_base64 = get_base64_of_bin_file("rosco.jpg")
 
-# 2. CSS DE ALTA VISIBILIDAD (TU DISEÑO ORIGINAL)
+# 2. CSS DE ALTA VISIBILIDAD (MANTENIDO DEL ORIGINAL)
 st.markdown("""
     <style>
     .stApp { background-color: #0d1117; color: #ffffff; }
@@ -131,7 +131,7 @@ if menu == "📊 DASHBOARD VENTAS":
     except Exception as e:
         st.error(f"Error cargando el Dashboard: {e}")
 
-# --- PESTAÑA 2: CONTROL LABORAL ---
+# --- PESTAÑA 2: CONTROL LABORAL (NUEVA PESTAÑA) ---
 elif menu == "🕒 CONTROL LABORAL":
     df_raw_lab = load_data_laboral()
     
@@ -139,7 +139,7 @@ elif menu == "🕒 CONTROL LABORAL":
     st.sidebar.subheader("Filtros Laboral")
     comercial_lab = st.sidebar.selectbox("Seleccionar Comercial", sorted(list(fechas_empresa.keys())))
     meses_lab = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
-    mes_lab = st.sidebar.selectbox("Seleccionar Mes", meses_lab, index=3) # Por defecto Abril (index 3)
+    mes_lab = st.sidebar.selectbox("Seleccionar Mes", meses_lab, index=datetime.now().month - 1)
     m_num = meses_lab.index(mes_lab) + 1
 
     dias_mes = [date(2026, m_num, d) for d in range(1, calendar.monthrange(2026, m_num)[1] + 1) 
@@ -185,7 +185,6 @@ elif menu == "🕒 CONTROL LABORAL":
     with col_l2:
         st.markdown(f"<h1 style='text-align: center; color: #d2ff00;'>{comercial_lab}</h1>", unsafe_allow_html=True)
     with col_l3:
-        # MARCO ROJO LLAMATIVO
         st.markdown(f"""<div style="border: 4px solid #FF0000; border-radius: 10px; padding: 15px; background-color: #FFF5F5; text-align: center;">
             <p style="margin: 0; color: #FF0000; font-size: 1.1em; font-weight: bold;">⚠️ HORAS A RECUPERAR</p>
             <p style="margin: 5px 0 0 0; color: #000000; font-size: 2.2em; font-weight: 900;">{total_p} h</p>
