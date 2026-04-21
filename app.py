@@ -8,9 +8,9 @@ from datetime import datetime, time, date
 import calendar
 import unicodedata
 from fpdf import FPDF
-from PIL import Image  # Esto es lo que faltaba para el logo de laboral
+from PIL import Image  # Necesaria para el logo de laboral
 
-# 1. CONFIGURACIÓN (Solo una vez en todo el archivo)
+# 1. CONFIGURACIÓN ÚNICA DEL CRM (ORIGINAL)
 st.set_page_config(
     page_title="Basette Group | Hub", 
     layout="wide", 
@@ -30,7 +30,7 @@ def normalizar(texto):
     texto = unicodedata.normalize('NFD', texto)
     return "".join([c for c in texto if unicodedata.category(c) != 'Mn']).strip().upper()
 
-# --- DATOS CONTROL LABORAL (SIN CONFIGURACIÓN DE PÁGINA) ---
+# --- DATOS CONTROL LABORAL (INTEGRADOS AQUÍ) ---
 festivos_2026 = ["2026-01-01", "2026-01-06", "2026-02-28", "2026-04-02", "2026-04-03", "2026-04-22", "2026-05-01", "2026-06-04", "2026-08-15", "2026-10-12", "2026-11-02", "2026-12-07", "2026-12-08", "2026-12-25"]
 fechas_empresa = {
     'LUIS RODRÍGUEZ': {'alta': date(2026, 4, 8), 'baja': None},
@@ -57,10 +57,10 @@ def load_data_laboral():
         return df.dropna(subset=['Marca temporal'])
     except: return pd.DataFrame()
 
-# Preparamos la imagen de Rosco
+# Preparamos la imagen de Rosco (Original CRM)
 img_base64 = get_base64_of_bin_file("rosco.jpg")
 
-# 2. CSS DE TU CRM (MANTENIDO)
+# 2. CSS ORIGINAL CRM
 st.markdown("""
     <style>
     .stApp { background-color: #0d1117; color: #ffffff; }
@@ -73,7 +73,7 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# 3. MENU LATERAL
+# 3. MENU LATERAL CON PESTAÑA AÑADIDA
 with st.sidebar:
     if os.path.exists("rosco.jpg"):
         st.image("rosco.jpg")
@@ -86,7 +86,7 @@ with st.sidebar:
         index=0
     )
 
-# --- PESTAÑA 1: DASHBOARD VENTAS (TU CRM ORIGINAL) ---
+# --- PESTAÑA 1: CRM ORIGINAL ---
 if menu == "📊 DASHBOARD VENTAS":
     st.title("🚀 Panel de Control de Ventas")
     try:
@@ -114,7 +114,7 @@ if menu == "📊 DASHBOARD VENTAS":
     except Exception as e:
         st.error(f"Error: {e}")
 
-# --- PESTAÑA 2: CONTROL LABORAL (INSERTADO SIN LA CONFIGURACIÓN DE PÁGINA) ---
+# --- PESTAÑA 2: CONTROL LABORAL (SOLO LÓGICA DE VISUALIZACIÓN) ---
 elif menu == "🕒 CONTROL LABORAL":
     df_raw_lab = load_data_laboral()
     st.sidebar.markdown("---")
@@ -134,10 +134,12 @@ elif menu == "🕒 CONTROL LABORAL":
         dia_data = df_raw_lab[(df_raw_lab['Nombre_Norm'] == normalizar(comercial_lab)) & (df_raw_lab['Fecha'] == f)] if not df_raw_lab.empty else pd.DataFrame()
         fuera = f < info['alta'] or (info['baja'] and f >= info['baja'])
         v_h = 4.5 if (date(2026, 4, 20) <= f <= date(2026, 4, 26)) else (8.0 if comercial_lab == 'RAQUEL GUADALUPE' else 5.0)
+        
         e, s = "-", "-"
         for _, r in dia_data.iterrows():
             if "ENTRADA" in r['Accion_Norm']: e = r['Hora_f']
             if "SALIDA" in r['Accion_Norm']: s = r['Hora_f']
+
         estado = excep[f] if f in excep else ("BAJA/NO ALTA" if fuera else ("SI pendiente recuperar" if e == "-" and f <= date.today() else "-"))
         ret = 0
         if estado == "-" and isinstance(e, time):
@@ -158,10 +160,11 @@ elif menu == "🕒 CONTROL LABORAL":
         st.markdown(f"<h1 style='text-align: center; color: #d2ff00;'>{comercial_lab}</h1>", unsafe_allow_html=True)
     with col_l3:
         st.markdown(f'<div style="border: 4px solid #FF0000; border-radius: 10px; padding: 15px; background-color: #FFF5F5; text-align: center;"><p style="margin: 0; color: #FF0000; font-weight: bold;">⚠️ HORAS A RECUPERAR</p><p style="margin: 5px 0 0 0; color: #000000; font-size: 2.2em; font-weight: 900;">{total_p} h</p></div>', unsafe_allow_html=True)
+    
     st.divider()
     st.dataframe(df_lab_f[['Fecha', 'ENTRADA', 'SALIDA', 'AUSENCIA', 'MIN_RETRASO', 'Jornada_h']], use_container_width=True)
 
-# --- PESTAÑA 3: REPOSITORIO (ORIGINAL) ---
+# --- PESTAÑA 3: REPOSITORIO ---
 elif menu == "📂 REPOSITORIO":
     st.header("Documentación")
     with st.expander("📂 MANUAL DEL MARCADOR"):
