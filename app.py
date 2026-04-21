@@ -17,11 +17,7 @@ st.set_page_config(
     initial_sidebar_state="expanded" 
 )
 
-# Rutas de imágenes solicitadas
-RUTA_LOGO_BASSETTE = r"C:\Users\Propietario\Desktop\MI_INTRANET\LOGO BASETTE GRUO EUROPA SL.jpg"
-RUTA_LOGO_TECOMPAROTODO = r"C:\Users\Propietario\Desktop\MI_INTRANET\tecomparotodo_logo.jpg"
-
-# Función para convertir imagen a base64 (Mantenida de tu original)
+# Función para convertir imagen a base64 y que se vea en el HTML
 def get_base64_of_bin_file(bin_file):
     if os.path.exists(bin_file):
         with open(bin_file, 'rb') as f:
@@ -29,12 +25,10 @@ def get_base64_of_bin_file(bin_file):
         return base64.b64encode(data).decode()
     return ""
 
-def normalizar(texto):
-    if not isinstance(texto, str): return ""
-    texto = unicodedata.normalize('NFD', texto)
-    return "".join([c for c in texto if unicodedata.category(c) != 'Mn']).strip().upper()
+# Preparamos la imagen de Rosco
+img_base64 = get_base64_of_bin_file("rosco.jpg")
 
-# --- DATOS CONTROL LABORAL (AÑADIDO) ---
+# --- DATOS CONTROL LABORAL (INSERTADO) ---
 festivos_2026 = ["2026-01-01", "2026-01-06", "2026-02-28", "2026-04-02", "2026-04-03", "2026-04-22", "2026-05-01", "2026-06-04", "2026-08-15", "2026-10-12", "2026-11-02", "2026-12-07", "2026-12-08", "2026-12-25"]
 fechas_empresa = {
     'LUIS RODRÍGUEZ': {'alta': date(2026, 4, 8), 'baja': None},
@@ -44,6 +38,11 @@ fechas_empresa = {
     'BELÉN TRONCOSO': {'alta': date(2026, 3, 18), 'baja': None},
     'MACARENA BACA': {'alta': date(2026, 3, 18), 'baja': date(2026, 3, 20)}
 }
+
+def normalizar(texto):
+    if not isinstance(texto, str): return ""
+    texto = unicodedata.normalize('NFD', texto)
+    return "".join([c for c in texto if unicodedata.category(c) != 'Mn']).strip().upper()
 
 @st.cache_data(ttl=5)
 def load_data_laboral():
@@ -59,7 +58,7 @@ def load_data_laboral():
         return df.dropna(subset=['Marca temporal'])
     except: return pd.DataFrame()
 
-# 2. CSS DE ALTA VISIBILIDAD (TU ORIGINAL)
+# 2. CSS DE ALTA VISIBILIDAD (GENERAL)
 st.markdown("""
     <style>
     .stApp { background-color: #0d1117; color: #ffffff; }
@@ -69,114 +68,147 @@ st.markdown("""
         font-weight: 900 !important;
         font-size: 1.25rem !important;
     }
+    button p, .stDownloadButton button p, .stButton button p { 
+        color: #000000 !important; 
+        font-weight: 900 !important; 
+    }
+    button, .stDownloadButton button, .stButton button { 
+        background-color: #ffffff !important; 
+        border: 2px solid #d2ff00 !important; 
+    }
+    .stTable { background-color: white !important; border-radius: 10px; }
+    .stTable td, .stTable th { color: #000000 !important; text-align: center !important; }
+    
+    .block-header {
+        background-color: #d2ff00; color: black; padding: 8px 20px; border-radius: 5px;
+        font-weight: bold; margin-bottom: 20px; margin-top: 25px; display: inline-block; font-size: 1.1rem;
+    }
+    
+    .winner-card { 
+        background: linear-gradient(90deg, #1e3a8a, #3b82f6); 
+        padding: 25px; 
+        border-radius: 15px; 
+        color: white !important; 
+        text-align: center; 
+        font-weight: bold; 
+        font-size: 28px; 
+        margin-bottom: 25px;
+        box-shadow: 0px 4px 15px rgba(0,0,0,0.5);
+    }
+
+    .social-container {
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+        gap: 20px;
+        padding: 10px;
+    }
+    .social-icon {
+        transition: transform 0.3s;
+    }
+    .social-icon:hover {
+        transform: scale(1.1);
+    }
+
+    .price-card {
+        background-color: #161b22;
+        border: 2px solid #30363d;
+        border-radius: 15px;
+        padding: 20px;
+        text-align: center;
+        margin-bottom: 15px;
+        transition: transform 0.3s;
+        height: 100%;
+    }
+    .price-card:hover {
+        border-color: #d2ff00;
+        transform: translateY(-5px);
+    }
+    .price-title { color: #d2ff00; font-size: 1.2rem; font-weight: bold; margin-bottom: 10px; }
+    .price-val { color: white; font-size: 2rem; font-weight: 900; }
+    .price-sub { color: #8b949e; font-size: 0.85rem; margin-bottom: 5px; }
+
+    span[data-baseweb="tag"] {
+        background-color: #d2ff00 !important;
+        border-radius: 5px !important;
+    }
+    span[data-baseweb="tag"] span {
+        color: black !important;
+        font-weight: bold !important;
+    }
+
+    .stSelectbox div[data-baseweb="select"], .stMultiSelect div[data-baseweb="select"] {
+        background-color: #161b22 !important;
+        color: white !important;
+    }
     </style>
     """, unsafe_allow_html=True)
 
-# 3. SISTEMA DE ACCESO (LOGOTIPO BASSETTE Y CLAVE Ventas2024*)
-if 'auth' not in st.session_state:
-    st.session_state.auth = False
+# --- FUNCIONES DE DATOS DASHBOARD ---
+def get_csv_url(url):
+    return url.replace('/edit?usp=sharing', '/export?format=csv').split('&ouid=')[0].split('?')[0] + '/export?format=csv'
 
-if not st.session_state.auth:
-    col1, col2, col3 = st.columns([1,2,1])
-    with col2:
-        st.markdown("<br><br>", unsafe_allow_html=True)
-        if os.path.exists(RUTA_LOGO_BASSETTE):
-            st.image(Image.open(RUTA_LOGO_BASSETTE), use_container_width=True)
-        st.title("🔒 Acceso Basette Hub")
-        pwd = st.text_input("Introduce la contraseña", type="password")
-        if st.button("ENTRAR"):
-            if pwd == "Ventas2024*":
-                st.session_state.auth = True
-                st.rerun()
-            else:
-                st.error("Contraseña incorrecta")
-    st.stop()
+URL_ENE = get_csv_url("https://docs.google.com/spreadsheets/d/1W-Eq63SnBBlOykJlP9XgASXDPpWQhQnVW-oFHUlSMcQ/edit?usp=sharing")
+URL_TEL = get_csv_url("https://docs.google.com/spreadsheets/d/1HkI37_hUTZbsm_DwLjbi2kMTKcC23QsV/edit?usp=sharing")
+URL_ALA = get_csv_url("https://docs.google.com/spreadsheets/d/17o4HSJ4DZBwMgp9AAiGhkd8NQCZEaaQ_/edit?usp=sharing")
 
-# --- SIDEBAR (TU MENÚ ORIGINAL + CONTROL LABORAL) ---
-with st.sidebar:
-    if os.path.exists(RUTA_LOGO_BASSETTE):
-        st.image(Image.open(RUTA_LOGO_BASSETTE))
-    st.markdown("---")
-    menu = st.radio(
-        "NAVEGACIÓN",
-        ["📊 DASHBOARD VENTAS", "📢 ANUNCIOS", "🔗 CRM", "💰 PRECIOS", "⚖️ COMPARADOR", "📂 REPOSITORIO", "🕒 CONTROL LABORAL"],
-        index=0
-    )
-    if st.button("Cerrar Sesión"):
-        st.session_state.auth = False
-        st.rerun()
-
-# --- LÓGICA DE LAS PESTAÑAS (TODO TU CÓDIGO ORIGINAL) ---
-
-if menu == "📊 DASHBOARD VENTAS":
-    st.title("🚀 Panel de Control de Ventas")
-    try:
-        sheet_id = "1nC_rA571-R5_x6S7Ube33W89pE3N3q9L2p5N7H-Yc8Q"
-        url_v = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv"
-        dv = pd.read_csv(url_v)
-        
-        c1, c2, c3, c4 = st.columns(4)
-        c1.metric("TOTAL VENTAS", len(dv))
-        c2.metric("FIBRA/MOVIL", len(dv[dv['Producto'].isin(['FIBRA', 'MOVIL', 'CONVERGENTE'])]))
-        if 'V_Alarma' in dv.columns:
-            c3.metric("ALARMAS", int(dv['V_Alarma'].sum()))
-        c4.metric("ENERGÍA", len(dv[dv['Producto'] == 'LUZ/GAS']))
-
-        t1, t2 = st.tabs(["Análisis por Comercial", "Ventas Alarmas"])
-        with t1:
-            col_v1, col_v2 = st.columns(2)
-            with col_v1:
-                st.plotly_chart(px.pie(dv, names='Comercial', title="Reparto de Ventas", hole=0.4), use_container_width=True)
-            with col_v2:
-                st.plotly_chart(px.bar(dv, x='Producto', color='Comercial', title="Productos", barmode='group'), use_container_width=True)
-        with t2:
-            if 'V_Alarma' in dv.columns:
-                da = dv[dv['V_Alarma'] > 0]
-                st.plotly_chart(px.pie(da, names='Comercial', values='V_Alarma', title="% Alarmas", hole=0.4), use_container_width=True)
-
-    except Exception as e:
-        st.error(f"Error: {e}")
-
-elif menu == "📢 ANUNCIOS":
-    st.title("📢 Tablón de Anuncios")
-    st.info("No hay anuncios nuevos hoy.")
-
-elif menu == "🔗 CRM":
-    st.title("🔗 Acceso Directo a CRM")
-    col_c1, col_c2 = st.columns(2)
-    with col_c1:
-        st.markdown("[![CRM 1](https://img.shields.io/badge/ACCESO-CRM_PRO-blue?style=for-the-badge)](https://www.google.com)") # Cambia por tus links
-    with col_c2:
-        st.markdown("[![CRM 2](https://img.shields.io/badge/ACCESO-CRM_VENTAS-green?style=for-the-badge)](https://www.google.com)")
-
-elif menu == "💰 PRECIOS":
-    st.title("💰 Consulta de Precios")
-    st.info("Sección de tarifas originales.")
-
-elif menu == "⚖️ COMPARADOR":
-    st.title("⚖️ Comparador de Servicios")
-    st.info("Sección de comparativa original.")
-
-elif menu == "📂 REPOSITORIO":
-    st.header("Documentación")
-    with st.expander("📂 MANUALES"):
-        st.write("Contenido del repositorio original.")
-
-# --- NUEVA PESTAÑA: CONTROL LABORAL ---
-elif menu == "🕒 CONTROL LABORAL":
-    df_lab = load_data_laboral()
-    comercial_sel = st.sidebar.selectbox("Seleccionar Comercial", sorted(list(fechas_empresa.keys())))
+@st.cache_data(ttl=60)
+def load_and_clean_ranking():
+    # ENERGÍA
+    df_e = pd.read_csv(URL_ENE)
+    df_e.columns = df_e.columns.str.strip()
+    df_e['Fecha Creación'] = pd.to_datetime(df_e['Fecha Creación'], dayfirst=True, errors='coerce')
+    df_e = df_e.dropna(subset=['Comercial', 'Fecha Creación'])
+    df_e['Año'] = df_e['Fecha Creación'].dt.year.astype(str)
+    df_e['Mes'] = df_e['Fecha Creación'].dt.strftime('%m - %B')
+    df_e['V_Luz'] = df_e['CUPS Luz'].apply(lambda x: 1 if pd.notnull(x) and str(x).strip() != "" else 0)
+    df_e['V_Gas'] = df_e['CUPS Gas'].apply(lambda x: 1 if pd.notnull(x) and str(x).strip() != "" else 0)
+    df_e['Total_Ene'] = df_e['V_Luz'] + df_e['V_Gas']
+    df_e['REF_Ene'] = df_e['Canal'].apply(lambda x: 1 if pd.notnull(x) and "REF" in str(x).upper() else 0) if 'Canal' in df_e.columns else 0
     
-    col_l1, col_l2 = st.columns([1, 3])
-    with col_l1:
-        if os.path.exists(RUTA_LOGO_TECOMPAROTODO):
-            st.image(Image.open(RUTA_LOGO_TECOMPAROTODO), width=220)
-    with col_l2:
-        st.markdown(f"<h1 style='color: #d2ff00;'>{comercial_sel}</h1>", unsafe_allow_html=True)
+    # TELCO
+    df_t = pd.read_csv(URL_TEL)
+    df_t.columns = df_t.columns.str.strip()
+    df_t['Fecha Creación'] = pd.to_datetime(df_t['Fecha Creación'], dayfirst=True, errors='coerce')
+    df_t = df_t.dropna(subset=['Comercial', 'Fecha Creación'])
+    df_t['Año'] = df_t['Fecha Creación'].dt.year.astype(str)
+    df_t['Mes'] = df_t['Fecha Creación'].dt.strftime('%m - %B')
+    df_t['REF_Tel'] = df_t['Canal'].apply(lambda x: 1 if pd.notnull(x) and "REF" in str(x).upper() else 0) if 'Canal' in df_t.columns else 0
     
-    st.divider()
-    if not df_lab.empty:
-        df_indiv = df_lab[df_lab['Nombre_Norm'] == normalizar(comercial_sel)]
-        st.dataframe(df_indiv, use_container_width=True)
-    else:
-        st.warning("No hay datos en el Google Sheet de laboral.")
+    def get_telco_metrics(row):
+        f, m = 0, 0
+        t = str(row.get('Tipo Tarifa', '')).lower()
+        if 'fibramovil' in t or ('fibra' in t and 'movil' in t): f, m = 1, 1
+        elif 'fibra' in t: f = 1
+        elif 'movil' in t: m = 1
+        for col in ['Línea 2', 'Línea 3', 'Línea 4', 'Línea 5']:
+            if col in row and pd.notnull(row[col]) and str(row[col]).strip() != "": m += 1
+        return f, m, (f + m)
+
+    res = df_t.apply(get_telco_metrics, axis=1)
+    df_t['V_Fibra'] = res.apply(lambda x: x[0])
+    df_t['V_Móvil'] = res.apply(lambda x: x[1])
+    df_t['Total_Tel'] = res.apply(lambda x: x[2])
+
+    # ALARMAS
+    df_a = pd.read_csv(URL_ALA)
+    df_a.columns = df_a.columns.str.strip()
+    df_a['Fecha Creación'] = pd.to_datetime(df_a['Fecha Creación'], dayfirst=True, errors='coerce')
+    df_a = df_a.dropna(subset=['Comercial', 'Fecha Creación'])
+    df_a['Año'] = df_a['Fecha Creación'].dt.year.astype(str)
+    df_a['Mes'] = df_a['Fecha Creación'].dt.strftime('%m - %B')
+    df_a['V_Alarma'] = 1 
+    df_a['REF_Ala'] = df_a['Canal'].apply(lambda x: 1 if pd.notnull(x) and "REF" in str(x).upper() else 0) if 'Canal' in df_a.columns else 0
+    
+    return df_e, df_t, df_a
+
+# 3. BASE DE DATOS LUZ - PRECIOS ACTUALIZADOS GANA ENERGÍA
+tarifas_luz = [
+    {"PRIORIDAD": 1, "COMPAÑÍA": "GANA ENERGÍA", "TARIFA": "24H", "P1": 0.089, "P2": 0.089, "ENERGIA": 0.119, "EXCEDENTE": 0.05, "DTO": "0%", "BATERIA": "SI_GRATIS", "logo": "manuales/logo_gana.png"},
+    {"PRIORIDAD": 1, "COMPAÑÍA": "GANA ENERGÍA", "TARIFA": "3T", "P1": 0.089, "P2": 0.089, "ENERGIA": "0,171/0,104/0,08", "EXCEDENTE": 0.05, "DTO": "0%", "BATERIA": "SI_GRATIS", "logo": "manuales/logo_gana.png"},
+    {"PRIORIDAD": 2, "COMPAÑÍA": "NATURGY", "TARIFA": "24H (POR USO)", "P1": 0.123, "P2": 0.037, "ENERGIA": 0.109, "EXCEDENTE": 0.06, "DTO": "0%", "BATERIA": "SI_GRATIS", "logo": "manuales/logo_naturgy.png"},
+    {"PRIORIDAD": 2, "COMPAÑÍA": "NATURGY", "TARIFA": "3T (TARIF NOCHE)", "P1": 0.123, "P2": 0.037, "ENERGIA": "0,180/0,107/0,718", "EXCEDENTE": 0.06, "DTO": "0%", "BATERIA": "SI_GRATIS", "logo": "manuales/logo_naturgy.png"},
+    {"PRIORIDAD": 3, "COMPAÑÍA": "TOTAL LUZ", "TARIFA": "24H (A TU AIRE)", "P1": 0.081, "P2": 0.081, "ENERGIA": 0.114, "EXCEDENTE": 0.07, "DTO": "0%", "BATERIA": "NO", "logo": "manuales/logo_total.png"},
+    {"PRIORIDAD": 4, "COMPAÑÍA": "ENDESA", "TARIFA": "SOLAR", "P1": 0.093, "P2": 0.093, "ENERGIA": 0.138, "EXCEDENTE": 0.06, "DTO": "-7%", "BATERIA": "SI_2€", "logo": "manuales/logo_endesa.png"},
+    {"PRIORIDAD": 4, "COMPAÑÍA": "ENDESA", "TARIFA": "24H", "P1": 0.093, "P2": 0.093, "ENERGIA": 0.119, "EXCEDENTE": "NO TIENE", "DTO": "0%", "BATERIA": "NO", "logo": "manuales/logo_endesa.png"},
+    {"PRIORIDAD": 4, "COMPAÑÍA
