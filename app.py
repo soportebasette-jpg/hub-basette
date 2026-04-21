@@ -8,7 +8,7 @@ from datetime import datetime, time, date
 import calendar
 import unicodedata
 from fpdf import FPDF
-from PIL import Image
+from PIL import Image  # IMPORTANTE: Esto arregla el error de la imagen
 
 # 1. CONFIGURACIÓN
 st.set_page_config(
@@ -17,7 +17,7 @@ st.set_page_config(
     initial_sidebar_state="expanded" 
 )
 
-# --- FUNCIONES DE APOYO DEL CRM ORIGINAL ---
+# --- FUNCIONES DE APOYO (ORIGINALES) ---
 def get_base64_of_bin_file(bin_file):
     if os.path.exists(bin_file):
         with open(bin_file, 'rb') as f:
@@ -30,7 +30,7 @@ def normalizar(texto):
     texto = unicodedata.normalize('NFD', texto)
     return "".join([c for c in texto if unicodedata.category(c) != 'Mn']).strip().upper()
 
-# --- DATOS CONTROL LABORAL ---
+# --- DATOS CONTROL LABORAL (SIN TOCAR NI UN ÁPICE) ---
 festivos_2026 = ["2026-01-01", "2026-01-06", "2026-02-28", "2026-04-02", "2026-04-03", "2026-04-22", "2026-05-01", "2026-06-04", "2026-08-15", "2026-10-12", "2026-11-02", "2026-12-07", "2026-12-08", "2026-12-25"]
 fechas_empresa = {
     'LUIS RODRÍGUEZ': {'alta': date(2026, 4, 8), 'baja': None},
@@ -60,10 +60,10 @@ def load_data_laboral():
     except: 
         return pd.DataFrame()
 
-# Preparamos la imagen de Rosco
+# Preparamos la imagen de Rosco (Original)
 img_base64 = get_base64_of_bin_file("rosco.jpg")
 
-# 2. CSS DE ALTA VISIBILIDAD (MANTENIDO DEL ORIGINAL)
+# 2. CSS DE ALTA VISIBILIDAD (MANTENIDO EXACTO)
 st.markdown("""
     <style>
     .stApp { background-color: #0d1117; color: #ffffff; }
@@ -89,7 +89,7 @@ with st.sidebar:
         index=0
     )
 
-# --- PESTAÑA 1: DASHBOARD VENTAS (ORIGINAL) ---
+# --- PESTAÑA 1: DASHBOARD VENTAS (TU CÓDIGO ORIGINAL) ---
 if menu == "📊 DASHBOARD VENTAS":
     st.title("🚀 Panel de Control de Ventas")
     try:
@@ -131,10 +131,9 @@ if menu == "📊 DASHBOARD VENTAS":
     except Exception as e:
         st.error(f"Error cargando el Dashboard: {e}")
 
-# --- PESTAÑA 2: CONTROL LABORAL (NUEVA PESTAÑA) ---
+# --- PESTAÑA 2: CONTROL LABORAL (INTEGRADO SIN CAMBIOS) ---
 elif menu == "🕒 CONTROL LABORAL":
     df_raw_lab = load_data_laboral()
-    
     st.sidebar.markdown("---")
     st.sidebar.subheader("Filtros Laboral")
     comercial_lab = st.sidebar.selectbox("Seleccionar Comercial", sorted(list(fechas_empresa.keys())))
@@ -172,7 +171,6 @@ elif menu == "🕒 CONTROL LABORAL":
         return pd.Series([e.strftime("%H:%M") if isinstance(e, time) else "-", s.strftime("%H:%M") if isinstance(s, time) else "-", estado, ret, v_h, fuera])
 
     df_lab_f[['ENTRADA', 'SALIDA', 'AUSENCIA', 'MIN_RETRASO', 'Jornada_h', 'ES_BAJA']] = df_lab_f.apply(calc_lab, axis=1)
-    
     h_aus = df_lab_f[df_lab_f['AUSENCIA'] == "SI pendiente recuperar"]['Jornada_h'].sum()
     h_ret = df_lab_f['MIN_RETRASO'].sum() / 60
     total_p = round(max(0.0, (h_aus + h_ret) - recuperadas_manual.get(comercial_lab, 0)), 2)
@@ -180,8 +178,7 @@ elif menu == "🕒 CONTROL LABORAL":
     col_l1, col_l2, col_l3 = st.columns([2, 3, 2.5])
     with col_l1:
         ruta_logo = r"C:\Users\Propietario\Desktop\MI_INTRANET\tecomparotodo_logo.jpg"
-        if os.path.exists(ruta_logo): 
-            st.image(Image.open(ruta_logo), width=220)
+        if os.path.exists(ruta_logo): st.image(Image.open(ruta_logo), width=220)
     with col_l2:
         st.markdown(f"<h1 style='text-align: center; color: #d2ff00;'>{comercial_lab}</h1>", unsafe_allow_html=True)
     with col_l3:
@@ -209,7 +206,7 @@ elif menu == "🕒 CONTROL LABORAL":
     df_view['Jornada'] = df_view['Jornada_h'].map('{:,.1f}h'.format)
     st.dataframe(df_view[['Fecha', 'ENTRADA', 'SALIDA', 'AUSENCIA', 'Retraso', 'Jornada', 'ES_BAJA', 'MIN_RETRASO']].style.apply(style_lab, axis=None), column_config={"ES_BAJA": None, "MIN_RETRASO": None}, use_container_width=True, hide_index=True)
 
-# --- PESTAÑA 3: REPOSITORIO (ORIGINAL) ---
+# --- PESTAÑA 3: REPOSITORIO (TU CÓDIGO ORIGINAL) ---
 elif menu == "📂 REPOSITORIO":
     st.header("Documentación")
     with st.expander("📂 MANUAL DEL MARCADOR"):
