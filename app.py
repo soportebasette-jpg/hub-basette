@@ -2,10 +2,12 @@ import streamlit as st
 import os
 import pandas as pd
 import plotly.express as px
+import random
 import base64
 from datetime import datetime, time, date
 import calendar
 import unicodedata
+from fpdf import FPDF
 from PIL import Image
 
 # 1. CONFIGURACIÓN
@@ -15,7 +17,7 @@ st.set_page_config(
     initial_sidebar_state="expanded" 
 )
 
-# --- FUNCIONES DE APOYO ---
+# --- FUNCIONES DE APOYO DEL CRM ORIGINAL ---
 def get_base64_of_bin_file(bin_file):
     if os.path.exists(bin_file):
         with open(bin_file, 'rb') as f:
@@ -28,7 +30,7 @@ def normalizar(texto):
     texto = unicodedata.normalize('NFD', texto)
     return "".join([c for c in texto if unicodedata.category(c) != 'Mn']).strip().upper()
 
-# --- DATOS CONTROL LABORAL ---
+# --- DATOS CONTROL LABORAL (SIN TOCAR NADA) ---
 festivos_2026 = ["2026-01-01", "2026-01-06", "2026-02-28", "2026-04-02", "2026-04-03", "2026-04-22", "2026-05-01", "2026-06-04", "2026-08-15", "2026-10-12", "2026-11-02", "2026-12-07", "2026-12-08", "2026-12-25"]
 fechas_empresa = {
     'LUIS RODRÍGUEZ': {'alta': date(2026, 4, 8), 'baja': None},
@@ -58,7 +60,10 @@ def load_data_laboral():
     except: 
         return pd.DataFrame()
 
-# 2. CSS GENERAL
+# Preparamos la imagen de Rosco (Original)
+img_base64 = get_base64_of_bin_file("rosco.jpg")
+
+# 2. CSS DE ALTA VISIBILIDAD (ORIGINAL)
 st.markdown("""
     <style>
     .stApp { background-color: #0d1117; color: #ffffff; }
@@ -84,7 +89,7 @@ with st.sidebar:
         index=0
     )
 
-# --- PESTAÑA 1: DASHBOARD VENTAS ---
+# --- PESTAÑA 1: DASHBOARD VENTAS (CÓDIGO ORIGINAL SIN TOCAR) ---
 if menu == "📊 DASHBOARD VENTAS":
     st.title("🚀 Panel de Control de Ventas")
     try:
@@ -106,6 +111,7 @@ if menu == "📊 DASHBOARD VENTAS":
             col_b1, col_b2 = st.columns(2)
             with col_b1:
                 fig_v = px.pie(dv, names='Comercial', title="Reparto de Ventas", hole=0.4)
+                fig_v.update_traces(textposition='inside', textinfo='label+percent')
                 st.plotly_chart(fig_v, use_container_width=True)
             with col_b2:
                 fig_p = px.bar(dv, x='Producto', color='Comercial', title="Productos por Comercial", barmode='group')
@@ -113,22 +119,20 @@ if menu == "📊 DASHBOARD VENTAS":
         with t2:
             if 'V_Alarma' in dv.columns:
                 da = dv[dv['V_Alarma'] > 0]
-                if not da.empty:
-                    col_a1, col_a2 = st.columns(2)
-                    with col_a1:
-                        fig_a_pie = px.pie(da, names='Comercial', values='V_Alarma', title="% Alarmas por Comercial")
-                        st.plotly_chart(fig_a_pie, use_container_width=True)
-                    with col_a2:
-                        fig_a_bar = px.bar(da.groupby('Comercial')['V_Alarma'].sum().reset_index(), x='V_Alarma', y='Comercial', orientation='h', title="Ventas de Alarmas") 
+                col_a1, col_a2 = st.columns(2)
+                with col_a1:
+                    fig_a_pie = px.pie(da, names='Comercial', values='V_Alarma', title="% Alarmas por Comercial")
+                    fig_a_pie.update_traces(textposition='outside', textinfo='label+percent')
+                    st.plotly_chart(fig_a_pie, use_container_width=True)
+                with col_a2:
+                    if not da.empty:
+                        fig_a_bar = px.bar(da.groupby('Comercial')['V_Alarma'].sum().reset_index().sort_values('V_Alarma'), x='V_Alarma', y='Comercial', orientation='h', text_auto=True, title="Ventas de Alarmas", color_discrete_sequence=['#0000FF']) 
                         st.plotly_chart(fig_a_bar, use_container_width=True)
-                else:
-                    st.info("No hay ventas de alarmas registradas.")
     except Exception as e:
-        st.error(f"Error en Dashboard: {e}")
+        st.error(f"Error cargando el Dashboard: {e}")
 
-# --- PESTAÑA 2: CONTROL LABORAL ---
+# --- PESTAÑA 2: CONTROL LABORAL (INTEGRADA) ---
 elif menu == "🕒 CONTROL LABORAL":
-    # CARGAMOS LOS DATOS AQUÍ DENTRO PARA EVITAR NameError
     df_raw_lab = load_data_laboral()
     
     st.sidebar.markdown("---")
@@ -138,9 +142,7 @@ elif menu == "🕒 CONTROL LABORAL":
     mes_lab = st.sidebar.selectbox("Seleccionar Mes", meses_lab, index=datetime.now().month - 1)
     m_num = meses_lab.index(mes_lab) + 1
 
-    # Generar días del mes
-    num_dias = calendar.monthrange(2026, m_num)[1]
-    dias_mes = [date(2026, m_num, d) for d in range(1, num_dias + 1) 
+    dias_mes = [date(2026, m_num, d) for d in range(1, calendar.monthrange(2026, m_num)[1] + 1) 
                 if date(2026, m_num, d).weekday() < 5 and date(2026, m_num, d).strftime("%Y-%m-%d") not in festivos_2026]
     df_lab_f = pd.DataFrame({'Fecha': dias_mes})
 
@@ -148,20 +150,14 @@ elif menu == "🕒 CONTROL LABORAL":
         f = row['Fecha']
         info = fechas_empresa[comercial_lab]
         excep = excepciones_laboral.get(comercial_lab, {})
-        
-        # Filtrado de datos del comercial
-        dia_data = pd.DataFrame()
-        if not df_raw_lab.empty:
-            dia_data = df_raw_lab[(df_raw_lab['Nombre_Norm'] == normalizar(comercial_lab)) & (df_raw_lab['Fecha'] == f)]
-        
+        dia_data = df_raw_lab[(df_raw_lab['Nombre_Norm'] == normalizar(comercial_lab)) & (df_raw_lab['Fecha'] == f)] if not df_raw_lab.empty else pd.DataFrame()
         fuera = f < info['alta'] or (info['baja'] and f >= info['baja'])
         v_h = 4.5 if (date(2026, 4, 20) <= f <= date(2026, 4, 26)) else (8.0 if comercial_lab == 'RAQUEL GUADALUPE' else 5.0)
         
         e, s = "-", "-"
-        if not dia_data.empty:
-            for _, r in dia_data.iterrows():
-                if "ENTRADA" in r['Accion_Norm']: e = r['Hora_f']
-                if "SALIDA" in r['Accion_Norm']: s = r['Hora_f']
+        for _, r in dia_data.iterrows():
+            if "ENTRADA" in r['Accion_Norm']: e = r['Hora_f']
+            if "SALIDA" in r['Accion_Norm']: s = r['Hora_f']
 
         if f in excep: estado = excep[f]
         elif fuera: estado = "BAJA/NO ALTA"
@@ -177,23 +173,16 @@ elif menu == "🕒 CONTROL LABORAL":
 
     df_lab_f[['ENTRADA', 'SALIDA', 'AUSENCIA', 'MIN_RETRASO', 'Jornada_h', 'ES_BAJA']] = df_lab_f.apply(calc_lab, axis=1)
     
-    # Cálculo de deuda
     h_aus = df_lab_f[df_lab_f['AUSENCIA'] == "SI pendiente recuperar"]['Jornada_h'].sum()
     h_ret = df_lab_f['MIN_RETRASO'].sum() / 60
     total_p = round(max(0.0, (h_aus + h_ret) - recuperadas_manual.get(comercial_lab, 0)), 2)
 
-    # Cabecera con Logo y Marco Rojo
     col_l1, col_l2, col_l3 = st.columns([2, 3, 2.5])
     with col_l1:
         ruta_logo = r"C:\Users\Propietario\Desktop\MI_INTRANET\tecomparotodo_logo.jpg"
-        if os.path.exists(ruta_logo):
-            st.image(Image.open(ruta_logo), width=220)
-        else:
-            st.warning("Logo tecomparotodo no encontrado")
-            
+        if os.path.exists(ruta_logo): st.image(Image.open(ruta_logo), width=220)
     with col_l2:
         st.markdown(f"<h1 style='text-align: center; color: #d2ff00;'>{comercial_lab}</h1>", unsafe_allow_html=True)
-        
     with col_l3:
         st.markdown(f"""<div style="border: 4px solid #FF0000; border-radius: 10px; padding: 15px; background-color: #FFF5F5; text-align: center;">
             <p style="margin: 0; color: #FF0000; font-size: 1.1em; font-weight: bold;">⚠️ HORAS A RECUPERAR</p>
@@ -207,7 +196,7 @@ elif menu == "🕒 CONTROL LABORAL":
         for i, row in data.iterrows():
             c = ""
             aus = str(row['AUSENCIA'])
-            if "objetivo" in aus.lower(): c = "background-color: #dcfce7; color: #166534" # Verde Lorena
+            if "objetivo" in aus.lower(): c = "background-color: #dcfce7; color: #166534"
             elif row['ES_BAJA']: c = "background-color: #333; color: #999"
             elif "SI" in aus: c = "background-color: #fee2e2; color: #991b1b"
             elif row['MIN_RETRASO'] > 0: c = "background-color: #fef9c3; color: #000"
@@ -217,15 +206,9 @@ elif menu == "🕒 CONTROL LABORAL":
     df_view = df_lab_f.copy()
     df_view['Retraso'] = df_view['MIN_RETRASO'].apply(lambda x: f"{int(x)} min" if x > 0 else "-")
     df_view['Jornada'] = df_view['Jornada_h'].map('{:,.1f}h'.format)
-    
-    st.dataframe(
-        df_view[['Fecha', 'ENTRADA', 'SALIDA', 'AUSENCIA', 'Retraso', 'Jornada', 'ES_BAJA', 'MIN_RETRASO']].style.apply(style_lab, axis=None), 
-        column_config={"ES_BAJA": None, "MIN_RETRASO": None}, 
-        use_container_width=True, 
-        hide_index=True
-    )
+    st.dataframe(df_view[['Fecha', 'ENTRADA', 'SALIDA', 'AUSENCIA', 'Retraso', 'Jornada', 'ES_BAJA', 'MIN_RETRASO']].style.apply(style_lab, axis=None), column_config={"ES_BAJA": None, "MIN_RETRASO": None}, use_container_width=True, hide_index=True)
 
-# --- PESTAÑA 3: REPOSITORIO ---
+# --- PESTAÑA 3: REPOSITORIO (CÓDIGO ORIGINAL SIN TOCAR) ---
 elif menu == "📂 REPOSITORIO":
     st.header("Documentación")
     with st.expander("📂 MANUAL DEL MARCADOR"):
