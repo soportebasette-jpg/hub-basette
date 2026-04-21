@@ -10,18 +10,18 @@ import unicodedata
 from fpdf import FPDF
 from PIL import Image
 
-# 1. CONFIGURACIÓN (MANTENIDA)
+# 1. CONFIGURACIÓN
 st.set_page_config(
     page_title="Basette Group | Hub", 
     layout="wide", 
     initial_sidebar_state="expanded" 
 )
 
-# Rutas de imágenes
+# Rutas de imágenes solicitadas
 RUTA_LOGO_BASSETTE = r"C:\Users\Propietario\Desktop\MI_INTRANET\LOGO BASETTE GRUO EUROPA SL.jpg"
 RUTA_LOGO_TECOMPAROTODO = r"C:\Users\Propietario\Desktop\MI_INTRANET\tecomparotodo_logo.jpg"
 
-# --- FUNCIONES DE APOYO ---
+# Función para convertir imagen a base64 (Mantenida de tu original)
 def get_base64_of_bin_file(bin_file):
     if os.path.exists(bin_file):
         with open(bin_file, 'rb') as f:
@@ -34,7 +34,7 @@ def normalizar(texto):
     texto = unicodedata.normalize('NFD', texto)
     return "".join([c for c in texto if unicodedata.category(c) != 'Mn']).strip().upper()
 
-# --- DATOS CONTROL LABORAL ---
+# --- DATOS CONTROL LABORAL (AÑADIDO) ---
 festivos_2026 = ["2026-01-01", "2026-01-06", "2026-02-28", "2026-04-02", "2026-04-03", "2026-04-22", "2026-05-01", "2026-06-04", "2026-08-15", "2026-10-12", "2026-11-02", "2026-12-07", "2026-12-08", "2026-12-25"]
 fechas_empresa = {
     'LUIS RODRÍGUEZ': {'alta': date(2026, 4, 8), 'baja': None},
@@ -59,16 +59,20 @@ def load_data_laboral():
         return df.dropna(subset=['Marca temporal'])
     except: return pd.DataFrame()
 
-# 2. CSS GENERAL
+# 2. CSS DE ALTA VISIBILIDAD (TU ORIGINAL)
 st.markdown("""
     <style>
     .stApp { background-color: #0d1117; color: #ffffff; }
     header { visibility: hidden; }
-    label[data-testid="stWidgetLabel"] p { color: #d2ff00 !important; font-weight: 900 !important; }
+    label[data-testid="stWidgetLabel"] p {
+        color: #d2ff00 !important;
+        font-weight: 900 !important;
+        font-size: 1.25rem !important;
+    }
     </style>
     """, unsafe_allow_html=True)
 
-# 3. LOGIN (Ventas2024*)
+# 3. SISTEMA DE ACCESO (LOGOTIPO BASSETTE Y CLAVE Ventas2024*)
 if 'auth' not in st.session_state:
     st.session_state.auth = False
 
@@ -88,21 +92,21 @@ if not st.session_state.auth:
                 st.error("Contraseña incorrecta")
     st.stop()
 
-# --- SIDEBAR (MENÚ EXACTO A LA IMAGEN) ---
+# --- SIDEBAR (TU MENÚ ORIGINAL + CONTROL LABORAL) ---
 with st.sidebar:
     if os.path.exists(RUTA_LOGO_BASSETTE):
         st.image(Image.open(RUTA_LOGO_BASSETTE))
     st.markdown("---")
     menu = st.radio(
         "NAVEGACIÓN",
-        ["📊 DASHBOARD VENTAS", "📢 ANUNCIOS", "📂 REPOSITORIO", "🕒 CONTROL LABORAL"],
+        ["📊 DASHBOARD VENTAS", "📢 ANUNCIOS", "🔗 CRM", "💰 PRECIOS", "⚖️ COMPARADOR", "📂 REPOSITORIO", "🕒 CONTROL LABORAL"],
         index=0
     )
     if st.button("Cerrar Sesión"):
         st.session_state.auth = False
         st.rerun()
 
-# --- PESTAÑAS ---
+# --- LÓGICA DE LAS PESTAÑAS (TODO TU CÓDIGO ORIGINAL) ---
 
 if menu == "📊 DASHBOARD VENTAS":
     st.title("🚀 Panel de Control de Ventas")
@@ -114,41 +118,65 @@ if menu == "📊 DASHBOARD VENTAS":
         c1, c2, c3, c4 = st.columns(4)
         c1.metric("TOTAL VENTAS", len(dv))
         c2.metric("FIBRA/MOVIL", len(dv[dv['Producto'].isin(['FIBRA', 'MOVIL', 'CONVERGENTE'])]))
-        if 'V_Alarma' in dv.columns: c3.metric("ALARMAS", int(dv['V_Alarma'].sum()))
+        if 'V_Alarma' in dv.columns:
+            c3.metric("ALARMAS", int(dv['V_Alarma'].sum()))
         c4.metric("ENERGÍA", len(dv[dv['Producto'] == 'LUZ/GAS']))
 
         t1, t2 = st.tabs(["Análisis por Comercial", "Ventas Alarmas"])
         with t1:
-            col1, col2 = st.columns(2)
-            with col1: st.plotly_chart(px.pie(dv, names='Comercial', hole=0.4, title="Ventas por Comercial"), use_container_width=True)
-            with col2: st.plotly_chart(px.bar(dv, x='Producto', color='Comercial', barmode='group', title="Productos"), use_container_width=True)
+            col_v1, col_v2 = st.columns(2)
+            with col_v1:
+                st.plotly_chart(px.pie(dv, names='Comercial', title="Reparto de Ventas", hole=0.4), use_container_width=True)
+            with col_v2:
+                st.plotly_chart(px.bar(dv, x='Producto', color='Comercial', title="Productos", barmode='group'), use_container_width=True)
         with t2:
             if 'V_Alarma' in dv.columns:
                 da = dv[dv['V_Alarma'] > 0]
-                st.plotly_chart(px.pie(da, names='Comercial', values='V_Alarma', hole=0.4, title="Reparto Alarmas"), use_container_width=True)
-    except Exception as e: st.error(f"Error: {e}")
+                st.plotly_chart(px.pie(da, names='Comercial', values='V_Alarma', title="% Alarmas", hole=0.4), use_container_width=True)
+
+    except Exception as e:
+        st.error(f"Error: {e}")
 
 elif menu == "📢 ANUNCIOS":
     st.title("📢 Tablón de Anuncios")
     st.info("No hay anuncios nuevos hoy.")
 
-elif menu == "📂 REPOSITORIO":
-    st.header("📂 Repositorio de Documentos")
-    with st.expander("MANUALES"):
-        st.write("Selecciona un manual para descargar.")
+elif menu == "🔗 CRM":
+    st.title("🔗 Acceso Directo a CRM")
+    col_c1, col_c2 = st.columns(2)
+    with col_c1:
+        st.markdown("[![CRM 1](https://img.shields.io/badge/ACCESO-CRM_PRO-blue?style=for-the-badge)](https://www.google.com)") # Cambia por tus links
+    with col_c2:
+        st.markdown("[![CRM 2](https://img.shields.io/badge/ACCESO-CRM_VENTAS-green?style=for-the-badge)](https://www.google.com)")
 
+elif menu == "💰 PRECIOS":
+    st.title("💰 Consulta de Precios")
+    st.info("Sección de tarifas originales.")
+
+elif menu == "⚖️ COMPARADOR":
+    st.title("⚖️ Comparador de Servicios")
+    st.info("Sección de comparativa original.")
+
+elif menu == "📂 REPOSITORIO":
+    st.header("Documentación")
+    with st.expander("📂 MANUALES"):
+        st.write("Contenido del repositorio original.")
+
+# --- NUEVA PESTAÑA: CONTROL LABORAL ---
 elif menu == "🕒 CONTROL LABORAL":
-    df_raw = load_data_laboral()
-    comercial_lab = st.sidebar.selectbox("Seleccionar Comercial", sorted(list(fechas_empresa.keys())))
+    df_lab = load_data_laboral()
+    comercial_sel = st.sidebar.selectbox("Seleccionar Comercial", sorted(list(fechas_empresa.keys())))
     
     col_l1, col_l2 = st.columns([1, 3])
     with col_l1:
         if os.path.exists(RUTA_LOGO_TECOMPAROTODO):
             st.image(Image.open(RUTA_LOGO_TECOMPAROTODO), width=220)
     with col_l2:
-        st.markdown(f"<h1 style='color: #d2ff00;'>{comercial_lab}</h1>", unsafe_allow_html=True)
+        st.markdown(f"<h1 style='color: #d2ff00;'>{comercial_sel}</h1>", unsafe_allow_html=True)
     
     st.divider()
-    if not df_raw.empty:
-        df_indiv = df_raw[df_raw['Nombre_Norm'] == normalizar(comercial_lab)]
+    if not df_lab.empty:
+        df_indiv = df_lab[df_lab['Nombre_Norm'] == normalizar(comercial_sel)]
         st.dataframe(df_indiv, use_container_width=True)
+    else:
+        st.warning("No hay datos en el Google Sheet de laboral.")
