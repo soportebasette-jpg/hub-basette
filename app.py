@@ -8,7 +8,7 @@ from datetime import datetime, time, date
 import calendar
 import unicodedata
 from fpdf import FPDF
-from PIL import Image  # <--- Esta es la línea que faltaba y causaba el error
+from PIL import Image  # IMPORTANTE: Para que no de error el logo
 
 # 1. CONFIGURACIÓN
 st.set_page_config(
@@ -17,7 +17,7 @@ st.set_page_config(
     initial_sidebar_state="expanded" 
 )
 
-# --- FUNCIONES DE APOYO CRM ORIGINAL ---
+# --- FUNCIONES DE APOYO ---
 def get_base64_of_bin_file(bin_file):
     if os.path.exists(bin_file):
         with open(bin_file, 'rb') as f:
@@ -30,7 +30,7 @@ def normalizar(texto):
     texto = unicodedata.normalize('NFD', texto)
     return "".join([c for c in texto if unicodedata.category(c) != 'Mn']).strip().upper()
 
-# --- DATOS CONTROL LABORAL (VALORES EXACTOS) ---
+# --- DATOS CONTROL LABORAL ---
 festivos_2026 = ["2026-01-01", "2026-01-06", "2026-02-28", "2026-04-02", "2026-04-03", "2026-04-22", "2026-05-01", "2026-06-04", "2026-08-15", "2026-10-12", "2026-11-02", "2026-12-07", "2026-12-08", "2026-12-25"]
 fechas_empresa = {
     'LUIS RODRÍGUEZ': {'alta': date(2026, 4, 8), 'baja': None},
@@ -60,10 +60,10 @@ def load_data_laboral():
     except: 
         return pd.DataFrame()
 
-# Preparamos la imagen de Rosco original
+# Preparamos la imagen de Rosco
 img_base64 = get_base64_of_bin_file("rosco.jpg")
 
-# 2. CSS DE ALTA VISIBILIDAD (CRM ORIGINAL)
+# 2. CSS DE ALTA VISIBILIDAD (TU DISEÑO ORIGINAL)
 st.markdown("""
     <style>
     .stApp { background-color: #0d1117; color: #ffffff; }
@@ -131,7 +131,7 @@ if menu == "📊 DASHBOARD VENTAS":
     except Exception as e:
         st.error(f"Error cargando el Dashboard: {e}")
 
-# --- PESTAÑA 2: CONTROL LABORAL (NUEVA) ---
+# --- PESTAÑA 2: CONTROL LABORAL ---
 elif menu == "🕒 CONTROL LABORAL":
     df_raw_lab = load_data_laboral()
     
@@ -139,7 +139,7 @@ elif menu == "🕒 CONTROL LABORAL":
     st.sidebar.subheader("Filtros Laboral")
     comercial_lab = st.sidebar.selectbox("Seleccionar Comercial", sorted(list(fechas_empresa.keys())))
     meses_lab = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
-    mes_lab = st.sidebar.selectbox("Seleccionar Mes", meses_lab, index=datetime.now().month - 1)
+    mes_lab = st.sidebar.selectbox("Seleccionar Mes", meses_lab, index=3) # Por defecto Abril (index 3)
     m_num = meses_lab.index(mes_lab) + 1
 
     dias_mes = [date(2026, m_num, d) for d in range(1, calendar.monthrange(2026, m_num)[1] + 1) 
@@ -182,11 +182,10 @@ elif menu == "🕒 CONTROL LABORAL":
         ruta_logo = r"C:\Users\Propietario\Desktop\MI_INTRANET\tecomparotodo_logo.jpg"
         if os.path.exists(ruta_logo): 
             st.image(Image.open(ruta_logo), width=220)
-        else:
-            st.warning("Logo no encontrado")
     with col_l2:
         st.markdown(f"<h1 style='text-align: center; color: #d2ff00;'>{comercial_lab}</h1>", unsafe_allow_html=True)
     with col_l3:
+        # MARCO ROJO LLAMATIVO
         st.markdown(f"""<div style="border: 4px solid #FF0000; border-radius: 10px; padding: 15px; background-color: #FFF5F5; text-align: center;">
             <p style="margin: 0; color: #FF0000; font-size: 1.1em; font-weight: bold;">⚠️ HORAS A RECUPERAR</p>
             <p style="margin: 5px 0 0 0; color: #000000; font-size: 2.2em; font-weight: 900;">{total_p} h</p>
