@@ -8,7 +8,7 @@ from datetime import datetime, time, date
 import calendar
 import unicodedata
 from fpdf import FPDF
-from PIL import Image  # IMPORTANTE: Esto arregla el error de la imagen
+from PIL import Image  # <--- ESTA LÍNEA ES LA QUE FALTA Y CAUSA EL ERROR
 
 # 1. CONFIGURACIÓN
 st.set_page_config(
@@ -30,7 +30,7 @@ def normalizar(texto):
     texto = unicodedata.normalize('NFD', texto)
     return "".join([c for c in texto if unicodedata.category(c) != 'Mn']).strip().upper()
 
-# --- DATOS CONTROL LABORAL (SIN TOCAR NI UN ÁPICE) ---
+# --- DATOS CONTROL LABORAL (INTEGRADOS) ---
 festivos_2026 = ["2026-01-01", "2026-01-06", "2026-02-28", "2026-04-02", "2026-04-03", "2026-04-22", "2026-05-01", "2026-06-04", "2026-08-15", "2026-10-12", "2026-11-02", "2026-12-07", "2026-12-08", "2026-12-25"]
 fechas_empresa = {
     'LUIS RODRÍGUEZ': {'alta': date(2026, 4, 8), 'baja': None},
@@ -63,7 +63,7 @@ def load_data_laboral():
 # Preparamos la imagen de Rosco (Original)
 img_base64 = get_base64_of_bin_file("rosco.jpg")
 
-# 2. CSS DE ALTA VISIBILIDAD (MANTENIDO EXACTO)
+# 2. CSS DE ALTA VISIBILIDAD (TU DISEÑO ORIGINAL)
 st.markdown("""
     <style>
     .stApp { background-color: #0d1117; color: #ffffff; }
@@ -89,7 +89,7 @@ with st.sidebar:
         index=0
     )
 
-# --- PESTAÑA 1: DASHBOARD VENTAS (TU CÓDIGO ORIGINAL) ---
+# --- PESTAÑA 1: DASHBOARD VENTAS (ORIGINAL) ---
 if menu == "📊 DASHBOARD VENTAS":
     st.title("🚀 Panel de Control de Ventas")
     try:
@@ -131,7 +131,7 @@ if menu == "📊 DASHBOARD VENTAS":
     except Exception as e:
         st.error(f"Error cargando el Dashboard: {e}")
 
-# --- PESTAÑA 2: CONTROL LABORAL (INTEGRADO SIN CAMBIOS) ---
+# --- PESTAÑA 2: CONTROL LABORAL (INTEGRADA) ---
 elif menu == "🕒 CONTROL LABORAL":
     df_raw_lab = load_data_laboral()
     st.sidebar.markdown("---")
@@ -206,7 +206,7 @@ elif menu == "🕒 CONTROL LABORAL":
     df_view['Jornada'] = df_view['Jornada_h'].map('{:,.1f}h'.format)
     st.dataframe(df_view[['Fecha', 'ENTRADA', 'SALIDA', 'AUSENCIA', 'Retraso', 'Jornada', 'ES_BAJA', 'MIN_RETRASO']].style.apply(style_lab, axis=None), column_config={"ES_BAJA": None, "MIN_RETRASO": None}, use_container_width=True, hide_index=True)
 
-# --- PESTAÑA 3: REPOSITORIO (TU CÓDIGO ORIGINAL) ---
+# --- PESTAÑA 3: REPOSITORIO (ORIGINAL) ---
 elif menu == "📂 REPOSITORIO":
     st.header("Documentación")
     with st.expander("📂 MANUAL DEL MARCADOR"):
