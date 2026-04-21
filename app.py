@@ -4,7 +4,7 @@ import pandas as pd
 import plotly.express as px
 import random
 import base64
-from datetime import datetime, time, date
+from datetime import datetime, time, date  # <--- IMPORTACIÓN CORREGIDA
 import calendar
 import unicodedata
 from fpdf import FPDF
@@ -17,7 +17,7 @@ st.set_page_config(
     initial_sidebar_state="expanded" 
 )
 
-# --- FUNCIONES DE APOYO DEL CRM ORIGINAL ---
+# --- FUNCIONES DE APOYO CRM ORIGINAL ---
 def get_base64_of_bin_file(bin_file):
     if os.path.exists(bin_file):
         with open(bin_file, 'rb') as f:
@@ -30,7 +30,7 @@ def normalizar(texto):
     texto = unicodedata.normalize('NFD', texto)
     return "".join([c for c in texto if unicodedata.category(c) != 'Mn']).strip().upper()
 
-# --- DATOS CONTROL LABORAL (SIN TOCAR NADA) ---
+# --- DATOS CONTROL LABORAL ---
 festivos_2026 = ["2026-01-01", "2026-01-06", "2026-02-28", "2026-04-02", "2026-04-03", "2026-04-22", "2026-05-01", "2026-06-04", "2026-08-15", "2026-10-12", "2026-11-02", "2026-12-07", "2026-12-08", "2026-12-25"]
 fechas_empresa = {
     'LUIS RODRÍGUEZ': {'alta': date(2026, 4, 8), 'baja': None},
@@ -60,10 +60,10 @@ def load_data_laboral():
     except: 
         return pd.DataFrame()
 
-# Preparamos la imagen de Rosco (Original)
+# Preparamos la imagen de Rosco
 img_base64 = get_base64_of_bin_file("rosco.jpg")
 
-# 2. CSS DE ALTA VISIBILIDAD (ORIGINAL)
+# 2. CSS DE ALTA VISIBILIDAD (CRM ORIGINAL)
 st.markdown("""
     <style>
     .stApp { background-color: #0d1117; color: #ffffff; }
@@ -89,7 +89,7 @@ with st.sidebar:
         index=0
     )
 
-# --- PESTAÑA 1: DASHBOARD VENTAS (CÓDIGO ORIGINAL SIN TOCAR) ---
+# --- PESTAÑA 1: DASHBOARD VENTAS (ORIGINAL) ---
 if menu == "📊 DASHBOARD VENTAS":
     st.title("🚀 Panel de Control de Ventas")
     try:
@@ -208,7 +208,7 @@ elif menu == "🕒 CONTROL LABORAL":
     df_view['Jornada'] = df_view['Jornada_h'].map('{:,.1f}h'.format)
     st.dataframe(df_view[['Fecha', 'ENTRADA', 'SALIDA', 'AUSENCIA', 'Retraso', 'Jornada', 'ES_BAJA', 'MIN_RETRASO']].style.apply(style_lab, axis=None), column_config={"ES_BAJA": None, "MIN_RETRASO": None}, use_container_width=True, hide_index=True)
 
-# --- PESTAÑA 3: REPOSITORIO (CÓDIGO ORIGINAL SIN TOCAR) ---
+# --- PESTAÑA 3: REPOSITORIO (ORIGINAL) ---
 elif menu == "📂 REPOSITORIO":
     st.header("Documentación")
     with st.expander("📂 MANUAL DEL MARCADOR"):
