@@ -4,11 +4,11 @@ import pandas as pd
 import plotly.express as px
 import random
 import base64
-from datetime import datetime, time, date  # <--- IMPORTACIÓN CORREGIDA
+from datetime import datetime, time, date
 import calendar
 import unicodedata
 from fpdf import FPDF
-from PIL import Image
+from PIL import Image  # <--- Esta es la línea que faltaba y causaba el error
 
 # 1. CONFIGURACIÓN
 st.set_page_config(
@@ -30,7 +30,7 @@ def normalizar(texto):
     texto = unicodedata.normalize('NFD', texto)
     return "".join([c for c in texto if unicodedata.category(c) != 'Mn']).strip().upper()
 
-# --- DATOS CONTROL LABORAL ---
+# --- DATOS CONTROL LABORAL (VALORES EXACTOS) ---
 festivos_2026 = ["2026-01-01", "2026-01-06", "2026-02-28", "2026-04-02", "2026-04-03", "2026-04-22", "2026-05-01", "2026-06-04", "2026-08-15", "2026-10-12", "2026-11-02", "2026-12-07", "2026-12-08", "2026-12-25"]
 fechas_empresa = {
     'LUIS RODRÍGUEZ': {'alta': date(2026, 4, 8), 'baja': None},
@@ -60,7 +60,7 @@ def load_data_laboral():
     except: 
         return pd.DataFrame()
 
-# Preparamos la imagen de Rosco
+# Preparamos la imagen de Rosco original
 img_base64 = get_base64_of_bin_file("rosco.jpg")
 
 # 2. CSS DE ALTA VISIBILIDAD (CRM ORIGINAL)
@@ -131,7 +131,7 @@ if menu == "📊 DASHBOARD VENTAS":
     except Exception as e:
         st.error(f"Error cargando el Dashboard: {e}")
 
-# --- PESTAÑA 2: CONTROL LABORAL (INTEGRADA) ---
+# --- PESTAÑA 2: CONTROL LABORAL (NUEVA) ---
 elif menu == "🕒 CONTROL LABORAL":
     df_raw_lab = load_data_laboral()
     
@@ -180,7 +180,10 @@ elif menu == "🕒 CONTROL LABORAL":
     col_l1, col_l2, col_l3 = st.columns([2, 3, 2.5])
     with col_l1:
         ruta_logo = r"C:\Users\Propietario\Desktop\MI_INTRANET\tecomparotodo_logo.jpg"
-        if os.path.exists(ruta_logo): st.image(Image.open(ruta_logo), width=220)
+        if os.path.exists(ruta_logo): 
+            st.image(Image.open(ruta_logo), width=220)
+        else:
+            st.warning("Logo no encontrado")
     with col_l2:
         st.markdown(f"<h1 style='text-align: center; color: #d2ff00;'>{comercial_lab}</h1>", unsafe_allow_html=True)
     with col_l3:
