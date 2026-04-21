@@ -8,16 +8,16 @@ from datetime import datetime, time, date
 import calendar
 import unicodedata
 from fpdf import FPDF
-from PIL import Image  # Librería para que funcione el logo de laboral
+from PIL import Image  # Esto es lo que faltaba para el logo de laboral
 
-# 1. CONFIGURACIÓN ÚNICA (Solo puede haber una en todo el archivo)
+# 1. CONFIGURACIÓN (Solo una vez en todo el archivo)
 st.set_page_config(
     page_title="Basette Group | Hub", 
     layout="wide", 
     initial_sidebar_state="expanded" 
 )
 
-# --- FUNCIONES DE APOYO ORIGINALES ---
+# --- FUNCIONES DE APOYO (ORIGINALES CRM) ---
 def get_base64_of_bin_file(bin_file):
     if os.path.exists(bin_file):
         with open(bin_file, 'rb') as f:
@@ -30,7 +30,7 @@ def normalizar(texto):
     texto = unicodedata.normalize('NFD', texto)
     return "".join([c for c in texto if unicodedata.category(c) != 'Mn']).strip().upper()
 
-# --- DATOS CONTROL LABORAL (TU CÓDIGO DE LABORAL) ---
+# --- DATOS CONTROL LABORAL (SIN CONFIGURACIÓN DE PÁGINA) ---
 festivos_2026 = ["2026-01-01", "2026-01-06", "2026-02-28", "2026-04-02", "2026-04-03", "2026-04-22", "2026-05-01", "2026-06-04", "2026-08-15", "2026-10-12", "2026-11-02", "2026-12-07", "2026-12-08", "2026-12-25"]
 fechas_empresa = {
     'LUIS RODRÍGUEZ': {'alta': date(2026, 4, 8), 'baja': None},
@@ -57,26 +57,36 @@ def load_data_laboral():
         return df.dropna(subset=['Marca temporal'])
     except: return pd.DataFrame()
 
-# Preparamos la imagen de Rosco (ORIGINAL)
+# Preparamos la imagen de Rosco
 img_base64 = get_base64_of_bin_file("rosco.jpg")
 
-# 2. CSS DE ALTA VISIBILIDAD (ORIGINAL)
+# 2. CSS DE TU CRM (MANTENIDO)
 st.markdown("""
     <style>
     .stApp { background-color: #0d1117; color: #ffffff; }
     header { visibility: hidden; }
-    label[data-testid="stWidgetLabel"] p { color: #d2ff00 !important; font-weight: 900 !important; font-size: 1.25rem !important; }
+    label[data-testid="stWidgetLabel"] p {
+        color: #d2ff00 !important;
+        font-weight: 900 !important;
+        font-size: 1.25rem !important;
+    }
     </style>
     """, unsafe_allow_html=True)
 
 # 3. MENU LATERAL
 with st.sidebar:
-    if os.path.exists("rosco.jpg"): st.image("rosco.jpg")
-    else: st.title("BASETTE HUB")
+    if os.path.exists("rosco.jpg"):
+        st.image("rosco.jpg")
+    else:
+        st.title("BASETTE HUB")
     st.markdown("---")
-    menu = st.radio("NAVEGACIÓN", ["📊 DASHBOARD VENTAS", "🕒 CONTROL LABORAL", "📂 REPOSITORIO"], index=0)
+    menu = st.radio(
+        "NAVEGACIÓN",
+        ["📊 DASHBOARD VENTAS", "🕒 CONTROL LABORAL", "📂 REPOSITORIO"],
+        index=0
+    )
 
-# --- PESTAÑA 1: DASHBOARD VENTAS (ORIGINAL) ---
+# --- PESTAÑA 1: DASHBOARD VENTAS (TU CRM ORIGINAL) ---
 if menu == "📊 DASHBOARD VENTAS":
     st.title("🚀 Panel de Control de Ventas")
     try:
@@ -86,9 +96,12 @@ if menu == "📊 DASHBOARD VENTAS":
         c1, c2, c3, c4 = st.columns(4)
         c1.metric("TOTAL VENTAS", len(dv))
         c2.metric("FIBRA/MOVIL", len(dv[dv['Producto'].isin(['FIBRA', 'MOVIL', 'CONVERGENTE'])]))
-        if 'V_Alarma' in dv.columns: c3.metric("ALARMAS", int(dv['V_Alarma'].sum()))
-        else: c3.metric("ALARMAS", 0)
+        if 'V_Alarma' in dv.columns:
+            c3.metric("ALARMAS", int(dv['V_Alarma'].sum()))
+        else:
+            c3.metric("ALARMAS", 0)
         c4.metric("ENERGÍA", len(dv[dv['Producto'] == 'LUZ/GAS']))
+
         t1, t2 = st.tabs(["Análisis por Comercial", "Ventas Alarmas"])
         with t1:
             col_b1, col_b2 = st.columns(2)
@@ -98,9 +111,10 @@ if menu == "📊 DASHBOARD VENTAS":
             with col_b2:
                 fig_p = px.bar(dv, x='Producto', color='Comercial', title="Productos por Comercial", barmode='group')
                 st.plotly_chart(fig_p, use_container_width=True)
-    except Exception as e: st.error(f"Error: {e}")
+    except Exception as e:
+        st.error(f"Error: {e}")
 
-# --- PESTAÑA 2: CONTROL LABORAL (TU CÓDIGO INSERTADO) ---
+# --- PESTAÑA 2: CONTROL LABORAL (INSERTADO SIN LA CONFIGURACIÓN DE PÁGINA) ---
 elif menu == "🕒 CONTROL LABORAL":
     df_raw_lab = load_data_laboral()
     st.sidebar.markdown("---")
@@ -114,7 +128,9 @@ elif menu == "🕒 CONTROL LABORAL":
     df_lab_f = pd.DataFrame({'Fecha': dias_mes})
 
     def calc_lab(row):
-        f = row['Fecha']; info = fechas_empresa[comercial_lab]; excep = excepciones_laboral.get(comercial_lab, {})
+        f = row['Fecha']
+        info = fechas_empresa[comercial_lab]
+        excep = excepciones_laboral.get(comercial_lab, {})
         dia_data = df_raw_lab[(df_raw_lab['Nombre_Norm'] == normalizar(comercial_lab)) & (df_raw_lab['Fecha'] == f)] if not df_raw_lab.empty else pd.DataFrame()
         fuera = f < info['alta'] or (info['baja'] and f >= info['baja'])
         v_h = 4.5 if (date(2026, 4, 20) <= f <= date(2026, 4, 26)) else (8.0 if comercial_lab == 'RAQUEL GUADALUPE' else 5.0)
@@ -136,17 +152,20 @@ elif menu == "🕒 CONTROL LABORAL":
     col_l1, col_l2, col_l3 = st.columns([2, 3, 2.5])
     with col_l1:
         ruta_logo = r"C:\Users\Propietario\Desktop\MI_INTRANET\tecomparotodo_logo.jpg"
-        if os.path.exists(ruta_logo): st.image(Image.open(ruta_logo), width=220)
-    with col_l2: st.markdown(f"<h1 style='text-align: center; color: #d2ff00;'>{comercial_lab}</h1>", unsafe_allow_html=True)
-    with col_l3: st.markdown(f'<div style="border: 4px solid #FF0000; border-radius: 10px; padding: 15px; background-color: #FFF5F5; text-align: center;"><p style="margin: 0; color: #FF0000; font-weight: bold;">⚠️ HORAS A RECUPERAR</p><p style="margin: 5px 0 0 0; color: #000000; font-size: 2.2em; font-weight: 900;">{total_p} h</p></div>', unsafe_allow_html=True)
+        if os.path.exists(ruta_logo): 
+            st.image(Image.open(ruta_logo), width=220)
+    with col_l2:
+        st.markdown(f"<h1 style='text-align: center; color: #d2ff00;'>{comercial_lab}</h1>", unsafe_allow_html=True)
+    with col_l3:
+        st.markdown(f'<div style="border: 4px solid #FF0000; border-radius: 10px; padding: 15px; background-color: #FFF5F5; text-align: center;"><p style="margin: 0; color: #FF0000; font-weight: bold;">⚠️ HORAS A RECUPERAR</p><p style="margin: 5px 0 0 0; color: #000000; font-size: 2.2em; font-weight: 900;">{total_p} h</p></div>', unsafe_allow_html=True)
     st.divider()
-    df_view = df_lab_f.copy()
-    st.dataframe(df_view[['Fecha', 'ENTRADA', 'SALIDA', 'AUSENCIA', 'MIN_RETRASO', 'Jornada_h']].hide_index(), use_container_width=True)
+    st.dataframe(df_lab_f[['Fecha', 'ENTRADA', 'SALIDA', 'AUSENCIA', 'MIN_RETRASO', 'Jornada_h']], use_container_width=True)
 
 # --- PESTAÑA 3: REPOSITORIO (ORIGINAL) ---
 elif menu == "📂 REPOSITORIO":
     st.header("Documentación")
     with st.expander("📂 MANUAL DEL MARCADOR"):
-        if os.path.exists("manuales/Manual_Premiumnumber_Agente.pdf"):
-            with open("manuales/Manual_Premiumnumber_Agente.pdf", "rb") as f:
+        manual_path = "manuales/Manual_Premiumnumber_Agente.pdf"
+        if os.path.exists(manual_path):
+            with open(manual_path, "rb") as f:
                 st.download_button("📖 DESCARGAR MANUAL", f, file_name="Manual_Marcador.pdf")
