@@ -6,12 +6,16 @@ import base64
 from datetime import datetime, time, date
 import calendar
 import unicodedata
-from PIL import Image # IMPORTANTE: Solo una vez aquí arriba
+from PIL import Image
 
-# 1. CONFIGURACIÓN ÚNICA
-st.set_page_config(page_title="Basette Group | Hub", layout="wide")
+# 1. CONFIGURACIÓN ÚNICA (Solo una vez al principio)
+st.set_page_config(
+    page_title="Basette Group | Hub", 
+    layout="wide", 
+    initial_sidebar_state="expanded" 
+)
 
-# --- FUNCIONES GLOBALES ---
+# --- FUNCIONES DE APOYO ---
 def get_base64_of_bin_file(bin_file):
     if os.path.exists(bin_file):
         with open(bin_file, 'rb') as f:
@@ -24,7 +28,7 @@ def normalizar(texto):
     texto = unicodedata.normalize('NFD', texto)
     return "".join([c for c in texto if unicodedata.category(c) != 'Mn']).strip().upper()
 
-# --- DATOS LABORAL ---
+# --- DATOS CONTROL LABORAL ---
 festivos_2026 = ["2026-01-01", "2026-01-06", "2026-02-28", "2026-04-02", "2026-04-03", "2026-04-22", "2026-05-01", "2026-06-04", "2026-08-15", "2026-10-12", "2026-11-02", "2026-12-07", "2026-12-08", "2026-12-25"]
 fechas_empresa = {
     'LUIS RODRÍGUEZ': {'alta': date(2026, 4, 8), 'baja': None},
@@ -34,6 +38,8 @@ fechas_empresa = {
     'BELÉN TRONCOSO': {'alta': date(2026, 3, 18), 'baja': None},
     'MACARENA BACA': {'alta': date(2026, 3, 18), 'baja': date(2026, 3, 20)}
 }
+excepciones_laboral = {'LORENA POZO': {date(2026, 4, 17): "Día libre por objetivo conseguido"}}
+recuperadas_manual = {'LORENA POZO': 2.0, 'BELÉN TRONCOSO': 3.33, 'DEBORAH RODRIGUEZ': 0.5}
 
 @st.cache_data(ttl=5)
 def load_data_laboral():
@@ -49,42 +55,99 @@ def load_data_laboral():
         return df.dropna(subset=['Marca temporal'])
     except: return pd.DataFrame()
 
-# --- DISEÑO ---
+# 2. ESTILOS CSS
 st.markdown("""
     <style>
-    .stApp { background-color: #0d1117; color: white; }
-    label p { color: #d2ff00 !important; font-weight: 900; }
+    .stApp { background-color: #0d1117; color: #ffffff; }
+    header { visibility: hidden; }
+    label[data-testid="stWidgetLabel"] p { color: #d2ff00 !important; font-weight: 900 !important; }
     </style>
     """, unsafe_allow_html=True)
 
-# --- MENÚ ---
+# 3. BARRA LATERAL (MENU)
 with st.sidebar:
-    if os.path.exists("rosco.jpg"): st.image("rosco.jpg")
-    menu = st.radio("NAVEGACIÓN", ["📊 DASHBOARD VENTAS", "🕒 CONTROL LABORAL", "📂 REPOSITORIO"])
+    if os.path.exists("rosco.jpg"):
+        st.image("rosco.jpg")
+    else:
+        st.title("BASETTE HUB")
+    st.markdown("---")
+    menu = st.radio("NAVEGACIÓN", ["📊 DASHBOARD VENTAS", "🕒 CONTROL LABORAL", "📂 REPOSITORIO"], index=0)
 
-# --- PESTAÑA 1: CRM ---
+# --- PESTAÑA 1: DASHBOARD VENTAS (RECUPERADO) ---
 if menu == "📊 DASHBOARD VENTAS":
     st.title("🚀 Panel de Control de Ventas")
-    # ... (Tu código de ventas original aquí)
+    try:
+        sheet_id = "1nC_rA571-R5_x6S7Ube33W89pE3N3q9L2p5N7H-Yc8Q"
+        url_v = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv"
+        dv = pd.read_csv(url_v)
+        
+        c1, c2, c3, c4 = st.columns(4)
+        c1.metric("TOTAL VENTAS", len(dv))
+        c2.metric("FIBRA/MOVIL", len(dv[dv['Producto'].isin(['FIBRA', 'MOVIL', 'CONVERGENTE'])]))
+        if 'V_Alarma' in dv.columns: c3.metric("ALARMAS", int(dv['V_Alarma'].sum()))
+        c4.metric("ENERGÍA", len(dv[dv['Producto'] == 'LUZ/GAS']))
 
-# --- PESTAÑA 2: CONTROL LABORAL ---
+        t1, t2 = st.tabs(["Análisis por Comercial", "Ventas Alarmas"])
+        with t1:
+            col_b1, col_b2 = st.columns(2)
+            with col_b1:
+                fig_v = px.pie(dv, names='Comercial', title="Reparto de Ventas", hole=0.4)
+                st.plotly_chart(fig_v, use_container_width=True)
+            with col_b2:
+                fig_p = px.bar(dv, x='Producto', color='Comercial', title="Productos por Comercial", barmode='group')
+                st.plotly_chart(fig_p, use_container_width=True)
+    except Exception as e:
+        st.error(f"Error en ventas: {e}")
+
+# --- PESTAÑA 2: CONTROL LABORAL (INTEGRADO CORRECTAMENTE) ---
 elif menu == "🕒 CONTROL LABORAL":
-    df_raw = load_data_laboral()
-    col1, col2 = st.columns([1, 2])
-    with col1:
+    df_raw_lab = load_data_laboral()
+    st.sidebar.markdown("---")
+    comercial_lab = st.sidebar.selectbox("Seleccionar Comercial", sorted(list(fechas_empresa.keys())))
+    
+    # Lógica de cálculo (Tu código original de laboral)
+    meses_lab = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
+    mes_lab = st.sidebar.selectbox("Seleccionar Mes", meses_lab, index=datetime.now().month - 1)
+    m_num = meses_lab.index(mes_lab) + 1
+
+    dias_mes = [date(2026, m_num, d) for d in range(1, calendar.monthrange(2026, m_num)[1] + 1) 
+                if date(2026, m_num, d).weekday() < 5 and date(2026, m_num, d).strftime("%Y-%m-%d") not in festivos_2026]
+    df_lab_f = pd.DataFrame({'Fecha': dias_mes})
+
+    def calc_lab(row):
+        f = row['Fecha']; info = fechas_empresa[comercial_lab]; excep = excepciones_laboral.get(comercial_lab, {})
+        dia_data = df_raw_lab[(df_raw_lab['Nombre_Norm'] == normalizar(comercial_lab)) & (df_raw_lab['Fecha'] == f)] if not df_raw_lab.empty else pd.DataFrame()
+        fuera = f < info['alta'] or (info['baja'] and f >= info['baja'])
+        v_h = 4.5 if (date(2026, 4, 20) <= f <= date(2026, 4, 26)) else (8.0 if comercial_lab == 'RAQUEL GUADALUPE' else 5.0)
+        e, s = "-", "-"
+        for _, r in dia_data.iterrows():
+            if "ENTRADA" in r['Accion_Norm']: e = r['Hora_f']
+            if "SALIDA" in r['Accion_Norm']: s = r['Hora_f']
+        estado = excep[f] if f in excep else ("BAJA/NO ALTA" if fuera else ("SI pendiente recuperar" if e == "-" and f <= date.today() else "-"))
+        ret = 0
+        if estado == "-" and isinstance(e, time):
+            h_ref = time(9,0) if v_h == 4.5 or comercial_lab == 'RAQUEL GUADALUPE' else time(9,30)
+            diff = (e.hour*60 + e.minute) - (h_ref.hour*60 + h_ref.minute)
+            if diff > 0: ret = diff
+        return pd.Series([e.strftime("%H:%M") if isinstance(e, time) else "-", s.strftime("%H:%M") if isinstance(s, time) else "-", estado, ret, v_h, fuera])
+
+    df_lab_f[['ENTRADA', 'SALIDA', 'AUSENCIA', 'MIN_RETRASO', 'Jornada_h', 'ES_BAJA']] = df_lab_f.apply(calc_lab, axis=1)
+    total_p = round(max(0.0, (df_lab_f[df_lab_f['AUSENCIA'] == "SI pendiente recuperar"]['Jornada_h'].sum() + df_lab_f['MIN_RETRASO'].sum()/60) - recuperadas_manual.get(comercial_lab, 0)), 2)
+
+    # Cabecera con Logo de Laboral
+    col_l1, col_l2, col_l3 = st.columns([2, 3, 2.5])
+    with col_l1:
         ruta_logo = r"C:\Users\Propietario\Desktop\MI_INTRANET\tecomparotodo_logo.jpg"
-        if os.path.exists(ruta_logo):
-            st.image(Image.open(ruta_logo), width=200) # AQUÍ ES DONDE DABA EL ERROR
+        if os.path.exists(ruta_logo): st.image(Image.open(ruta_logo), width=220)
+    with col_l2: st.markdown(f"<h1 style='text-align: center; color: #d2ff00;'>{comercial_lab}</h1>", unsafe_allow_html=True)
+    with col_l3:
+        st.markdown(f'<div style="border: 4px solid #FF0000; border-radius: 10px; padding: 15px; background-color: #FFF5F5; text-align: center;"><p style="margin: 0; color: #FF0000; font-weight: bold;">⚠️ HORAS A RECUPERAR</p><p style="margin: 5px 0 0 0; color: #000000; font-size: 2.2em; font-weight: 900;">{total_p} h</p></div>', unsafe_allow_html=True)
     
-    comercial = st.selectbox("Seleccionar Comercial", list(fechas_empresa.keys()))
-    st.header(f"Control de {comercial}")
-    
-    # Lógica simplificada para mostrar la tabla sin errores
-    if not df_raw.empty:
-        st.dataframe(df_raw[df_raw['Nombre_Norm'] == normalizar(comercial)], use_container_width=True)
-    else:
-        st.warning("No hay datos en el Excel de laboral.")
+    st.divider()
+    st.dataframe(df_lab_f[['Fecha', 'ENTRADA', 'SALIDA', 'AUSENCIA', 'MIN_RETRASO', 'Jornada_h']], use_container_width=True)
 
 # --- PESTAÑA 3: REPOSITORIO ---
 elif menu == "📂 REPOSITORIO":
-    st.write("Sección de archivos")
+    st.header("Documentación")
+    with st.expander("📂 MANUALES"):
+        st.write("Lista de archivos disponibles...")
