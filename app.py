@@ -434,61 +434,67 @@ elif menu == "📈 DASHBOARD Y RANKING":
 
         t_rank, t_ene, t_tel, t_ala = st.tabs(["🏆 RANKING", "⚡ ENERGÍA", "📱 TELCO", "🛡️ ALARMAS"])
 
-        with t_rank:
+       with t_rank:
             st.balloons()
             st.markdown('<div class="block-header">RANKING DE PRODUCTIVIDAD</div>', unsafe_allow_html=True)
             
-            # Lógica de detección de Estados para el Ranking
+            # --- CORRECCIÓN DE ERROR: Verificación de columnas ---
             for df_temp in [f_de, f_dt, f_da]:
-                if not df_temp.empty and 'Estado' in df_temp.columns:
-                    df_temp['V_Baja'] = df_temp['Estado'].apply(lambda x: 1 if str(x).strip().upper() == "BAJA" else 0)
-                    df_temp['V_Cancelado'] = df_temp['Estado'].apply(lambda x: 1 if str(x).strip().upper() == "CANCELADO" else 0)
-                    df_temp['V_Activo'] = df_temp['Estado'].apply(lambda x: 1 if str(x).strip().upper() == "ACTIVO" else 0)
-                else:
-                    df_temp['V_Baja'] = 0
-                    df_temp['V_Cancelado'] = 0
-                    df_temp['V_Activo'] = 0
+                if not df_temp.empty:
+                    # Si no existe la columna Estado, creamos las métricas a 0 para que no de error
+                    if 'Estado' in df_temp.columns:
+                        df_temp['V_Baja'] = df_temp['Estado'].apply(lambda x: 1 if str(x).strip().upper() == "BAJA" else 0)
+                        df_temp['V_Cancelado'] = df_temp['Estado'].apply(lambda x: 1 if str(x).strip().upper() == "CANCELADO" else 0)
+                        df_temp['V_Activo'] = df_temp['Estado'].apply(lambda x: 1 if str(x).strip().upper() == "ACTIVO" else 0)
+                    else:
+                        df_temp['V_Baja'] = 0
+                        df_temp['V_Cancelado'] = 0
+                        df_temp['V_Activo'] = 0
 
+            # Agrupamos asegurando que las columnas existen
             r1 = f_de.groupby('Comercial')[['V_Luz', 'V_Gas', 'V_Baja', 'V_Cancelado', 'V_Activo']].sum() if not f_de.empty else pd.DataFrame()
             r2 = f_dt.groupby('Comercial')[['V_Fibra', 'V_Movil', 'V_Baja', 'V_Cancelado', 'V_Activo']].sum() if not f_dt.empty else pd.DataFrame()
             r3 = f_da.groupby('Comercial')[['V_Alarma', 'V_Baja', 'V_Cancelado', 'V_Activo']].sum() if not f_da.empty else pd.DataFrame()
             
             rank = pd.concat([r1, r2, r3], axis=1).fillna(0).astype(int)
             
-            # Consolidar columnas de estado que vienen de los 3 dataframes
-            for col_name in ['V_Baja', 'V_Cancelado', 'V_Activo']:
-                if col_name in rank.columns:
-                    rank[col_name.replace('V_', '')] = rank[col_name].sum(axis=1) if isinstance(rank[col_name], pd.DataFrame) else rank[col_name]
+            # Consolidamos las columnas de estado sumando todas las fuentes
+            for col_tag in ['Baja', 'Cancelado', 'Activos']:
+                v_col = 'V_' + col_tag.replace('Activos', 'Activo')
+                if v_col in rank.columns:
+                    rank[col_tag] = rank[v_col].sum(axis=1) if isinstance(rank[v_col], pd.DataFrame) else rank[v_col]
+                else:
+                    rank[col_tag] = 0
 
-            rank = rank.rename(columns={'V_Luz': 'Luz', 'V_Gas': 'Gas', 'V_Fibra': 'Fibra', 'V_Movil': 'Móvil', 'V_Alarma': 'Alarma', 'V_Activo': 'Activos'})
+            # Renombrar productos
+            rank = rank.rename(columns={'V_Luz': 'Luz', 'V_Gas': 'Gas', 'V_Fibra': 'Fibra', 'V_Movil': 'Móvil', 'V_Alarma': 'Alarma'})
             
             # TOTAL: (Luz + Gas + Fibra + Alarma) - Baja - Cancelado. (Móvil no suma)
             rank['TOTAL'] = (rank.get('Luz',0) + rank.get('Gas',0) + rank.get('Fibra',0) + rank.get('Alarma',0)) - rank.get('Baja',0) - rank.get('Cancelado',0)
             
-            columnas_mostrar = ['Luz', 'Gas', 'Fibra', 'Móvil', 'Alarma', 'Baja', 'Cancelado', 'Activos', 'TOTAL']
-            st.table(rank[[c for c in columnas_mostrar if c in rank.columns]].sort_values('TOTAL', ascending=False))
+            # Mostrar tabla limpia
+            cols_ranking = ['Luz', 'Gas', 'Fibra', 'Móvil', 'Alarma', 'Baja', 'Cancelado', 'Activos', 'TOTAL']
+            st.table(rank[[c for c in cols_ranking if c in rank.columns]].sort_values('TOTAL', ascending=False))
 
-            # Frases motivadoras
-            frases = [
-                "¡El éxito es la suma de pequeños esfuerzos repetidos día tras día!",
-                "¡A por todas, equipo! Cada venta cuenta.",
-                "¡La constancia es la clave del éxito!",
-                "¡No cuentes los días, haz que los días cuenten!"
-            ]
+            # Frase motivadora
+            frases = ["¡El éxito es la suma de pequeños esfuerzos!", "¡A por todas, equipo!", "¡La constancia es la clave!", "¡Haz que cada día cuente!"]
             st.info(random.choice(frases))
 
-            # --- TOTALES ENMARCADOS ABAJO (Métricas Generales) ---
+            # --- TOTALES ENMARCADOS (SIN TOCAR) ---
             st.markdown("---")
             m1, m2, m3, m4 = st.columns(4)
             with m1:
-                st.markdown(f'<div class="status-box"><div class="status-label">Total Energía</div><div class="status-value">{rank["Luz"].sum() + rank["Gas"].sum() if "Luz" in rank else 0}</div></div>', unsafe_allow_html=True)
+                val_ene = rank['Luz'].sum() + rank['Gas'].sum() if 'Luz' in rank else 0
+                st.markdown(f'<div class="status-box"><div class="status-label">Total Energía</div><div class="status-value">{val_ene}</div></div>', unsafe_allow_html=True)
             with m2:
-                st.markdown(f'<div class="status-box"><div class="status-label">Total Fibra</div><div class="status-value">{rank["Fibra"].sum() if "Fibra" in rank else 0}</div></div>', unsafe_allow_html=True)
+                val_fib = rank['Fibra'].sum() if 'Fibra' in rank else 0
+                st.markdown(f'<div class="status-box"><div class="status-label">Total Fibra</div><div class="status-value">{val_fib}</div></div>', unsafe_allow_html=True)
             with m3:
-                st.markdown(f'<div class="status-box"><div class="status-label">Total Móvil</div><div class="status-value">{rank["Móvil"].sum() if "Móvil" in rank else 0}</div></div>', unsafe_allow_html=True)
+                val_mov = rank['Móvil'].sum() if 'Móvil' in rank else 0
+                st.markdown(f'<div class="status-box"><div class="status-label">Total Móvil</div><div class="status-value">{val_mov}</div></div>', unsafe_allow_html=True)
             with m4:
-                st.markdown(f'<div class="status-box"><div class="status-label">Total Alarmas</div><div class="status-value">{rank["Alarma"].sum() if "Alarma" in rank else 0}</div></div>', unsafe_allow_html=True)
-
+                val_ala = rank['Alarma'].sum() if 'Alarma' in rank else 0
+                st.markdown(f'<div class="status-box"><div class="status-label">Total Alarmas</div><div class="status-value">{val_ala}</div></div>', unsafe_allow_html=True)
         with t_ene:
             if not f_de.empty:
                 col1, col2 = st.columns(2)
