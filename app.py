@@ -90,12 +90,10 @@ def load_and_clean_ranking():
             df['Año'] = df['Fecha Creación'].dt.year.astype(str)
             df['Mes'] = df['Fecha Creación'].dt.strftime('%m - %B')
             
-            # Inicializar columnas de estado
+            # Lógica para detectar Bajas
             df['V_Baja'] = 0
-            df['V_Cancelado'] = 0
             if 'Estado' in df.columns:
                 df['V_Baja'] = df['Estado'].apply(lambda x: 1 if str(x).strip().upper() == "BAJA" else 0)
-                df['V_Cancelado'] = df['Estado'].apply(lambda x: 1 if str(x).strip().upper() == "CANCELADO" else 0)
 
             if type_label == 'ENE':
                 df['V_Luz'] = df['CUPS Luz'].apply(lambda x: 1 if pd.notnull(x) and str(x).strip() != "" else 0)
@@ -131,7 +129,7 @@ with st.sidebar:
     if os.path.exists("1000233813.jpg"): st.image("1000233813.jpg")
     menu = st.radio("MENÚ", ["🚀 CRM", "📊 PRECIOS", "⚖️ COMPARADOR", "📢 ANUNCIOS", "📈 DASHBOARD Y RANKING", "📂 REPOSITORIO"])
 
-# --- LÓGICA DE NAVEGACIÓN ---
+# --- SECCIONES ---
 
 if menu == "🚀 CRM":
     st.markdown('<div class="block-header">ACCESOS A PLATAFORMAS</div>', unsafe_allow_html=True)
@@ -141,7 +139,7 @@ if menu == "🚀 CRM":
 
 elif menu == "📊 PRECIOS":
     st.markdown('<div class="block-header">TARIFAS Y PRECIOS</div>', unsafe_allow_html=True)
-    st.info("⚠️ Los documentos de precios actualizados se encuentran en la sección 'REPOSITORIO'.")
+    st.write("Sección de tarifas en desarrollo.")
 
 elif menu == "⚖️ COMPARADOR":
     st.markdown('<div class="block-header">COMPARADOR ENERGÉTICO</div>', unsafe_allow_html=True)
@@ -172,27 +170,24 @@ elif menu == "📈 DASHBOARD Y RANKING":
         
         with t_rank:
             st.markdown('<div class="block-header">RANKING GLOBAL</div>', unsafe_allow_html=True)
-            r1 = f_de.groupby('Comercial')[['V_Luz', 'V_Gas', 'V_Baja', 'V_Cancelado']].sum() if not f_de.empty else pd.DataFrame()
-            r2 = f_dt.groupby('Comercial')[['V_Fibra', 'V_Movil', 'V_Baja', 'V_Cancelado']].sum() if not f_dt.empty else pd.DataFrame()
-            r3 = f_da.groupby('Comercial')[['V_Alarma', 'V_Baja', 'V_Cancelado']].sum() if not f_da.empty else pd.DataFrame()
+            r1 = f_de.groupby('Comercial')[['V_Luz', 'V_Gas', 'V_Baja']].sum() if not f_de.empty else pd.DataFrame()
+            r2 = f_dt.groupby('Comercial')[['V_Fibra', 'V_Movil', 'V_Baja']].sum() if not f_dt.empty else pd.DataFrame()
+            r3 = f_da.groupby('Comercial')[['V_Alarma', 'V_Baja']].sum() if not f_da.empty else pd.DataFrame()
             
             rank = pd.concat([r1, r2, r3], axis=1).fillna(0).astype(int)
             
-            # Consolidar columnas de Bajas y Cancelados (vienen de 3 DFs)
+            # Unificar columna Baja
             if 'V_Baja' in rank.columns:
                 rank['Baja'] = rank['V_Baja'].sum(axis=1) if isinstance(rank['V_Baja'], pd.DataFrame) else rank['V_Baja']
-            if 'V_Cancelado' in rank.columns:
-                rank['Cancelado'] = rank['V_Cancelado'].sum(axis=1) if isinstance(rank['V_Cancelado'], pd.DataFrame) else rank['V_Cancelado']
             
-            # Renombrar para visualización
             rank = rank.rename(columns={'V_Luz': 'Luz', 'V_Gas': 'Gas', 'V_Fibra': 'Fibra', 'V_Movil': 'Móvil', 'V_Alarma': 'Alarma'})
             
-            # Columnas finales a mostrar
-            cols_finales = ['Luz', 'Gas', 'Fibra', 'Móvil', 'Alarma', 'Baja', 'Cancelado']
-            rank = rank[[c for c in cols_finales if c in rank.columns]]
+            # Columnas a mostrar
+            cols = ['Luz', 'Gas', 'Fibra', 'Móvil', 'Alarma', 'Baja']
+            rank = rank[[c for c in cols if c in rank.columns]]
             
-            # TOTAL: (Luz + Gas + Fibra + Alarma) - Baja - Cancelado. MÓVIL NO SUMA.
-            rank['TOTAL'] = (rank['Luz'] + rank['Gas'] + rank['Fibra'] + rank['Alarma']) - rank['Baja'] - rank['Cancelado']
+            # Cálculo del Total (Restando Baja)
+            rank['TOTAL'] = (rank['Luz'] + rank['Gas'] + rank['Fibra'] + rank['Móvil'] + rank['Alarma']) - rank['Baja']
             
             st.table(rank.sort_values('TOTAL', ascending=False))
 
@@ -203,7 +198,6 @@ elif menu == "📈 DASHBOARD Y RANKING":
                     st.plotly_chart(px.pie(f_de, names='Comercial', values='V_Luz', title="Luz"), use_container_width=True)
                 with col2:
                     st.plotly_chart(px.bar(f_de.groupby('Comercial')[['V_Luz', 'V_Gas']].sum().reset_index(), x='Comercial', y=['V_Luz', 'V_Gas'], title="Energía"), use_container_width=True)
-        
         with t_tel:
             if not f_dt.empty:
                 col1, col2 = st.columns(2)
@@ -211,7 +205,6 @@ elif menu == "📈 DASHBOARD Y RANKING":
                     st.plotly_chart(px.pie(f_dt, names='Comercial', values='V_Fibra', title="Fibra"), use_container_width=True)
                 with col2:
                     st.plotly_chart(px.bar(f_dt.groupby('Comercial')[['V_Fibra', 'V_Movil']].sum().reset_index(), x='Comercial', y=['V_Fibra', 'V_Movil'], title="Telco"), use_container_width=True)
-        
         with t_ala:
             if not f_da.empty:
                 col1, col2 = st.columns(2)
@@ -226,20 +219,11 @@ elif menu == "📈 DASHBOARD Y RANKING":
 # --- REPOSITORIO ---
 elif menu == "📂 REPOSITORIO":
     st.markdown('<div class="block-header">CENTRO DE DOCUMENTACIÓN</div>', unsafe_allow_html=True)
-    with st.expander("📂 NATURGY"):
-        ruta_nat = "manuales/naturgy"
-        if os.path.exists(ruta_nat):
-            archivos = [f for f in os.listdir(ruta_nat) if f.lower().endswith(".pdf")]
-            for arc in archivos:
-                with open(os.path.join(ruta_nat, arc), "rb") as f:
-                    st.download_button(label=f"📄 Descargar {arc}", data=f, file_name=arc, key=f"nat_{arc}")
     with st.expander("📂 MANUAL DEL MARCADOR"):
-        ruta_man = "manuales/Manual_Premiumnumber_Agente.pdf"
-        if os.path.exists(ruta_man):
-            with open(ruta_man, "rb") as f:
-                st.download_button("📖 DESCARGAR MANUAL", f, file_name="Manual_Marcador.pdf", key="man_marc")
+        if os.path.exists("manuales/Manual_Premiumnumber_Agente.pdf"):
+            with open("manuales/Manual_Premiumnumber_Agente.pdf", "rb") as f:
+                st.download_button("📖 DESCARGAR MANUAL", f, file_name="Manual_Marcador.pdf")
     with st.expander("📁 DOCUMENTACIÓN LOWI"):
-        ruta_lowi = "manuales/TARIFAS_LOWI_MARZO2026.pdf"
-        if os.path.exists(ruta_lowi):
-            with open(ruta_lowi, "rb") as f:
-                st.download_button("📄 DESCARGAR TARIFAS LOWI", f, file_name="Tarifas_Lowi.pdf", key="lowi_btn")
+        if os.path.exists("manuales/TARIFAS_LOWI_MARZO2026.pdf"):
+            with open("manuales/TARIFAS_LOWI_MARZO2026.pdf", "rb") as f:
+                st.download_button
