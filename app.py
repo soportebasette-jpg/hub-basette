@@ -90,7 +90,7 @@ def load_and_clean_ranking():
             df['Año'] = df['Fecha Creación'].dt.year.astype(str)
             df['Mes'] = df['Fecha Creación'].dt.strftime('%m - %B')
             
-            # Lógica de conteo de Bajas
+            # Solo añadir lógica de detección de BAJA
             df['V_Baja'] = 0
             if 'Estado' in df.columns:
                 df['V_Baja'] = df['Estado'].apply(lambda x: 1 if str(x).strip().upper() == "BAJA" else 0)
@@ -156,7 +156,6 @@ elif menu == "📢 ANUNCIOS":
 elif menu == "📈 DASHBOARD Y RANKING":
     try:
         de, dt, da = load_and_clean_ranking()
-        
         all_anos = sorted(list(set(de['Año']) | set(dt['Año']) | set(da['Año'])))
         all_meses = sorted(list(set(de['Mes']) | set(dt['Mes']) | set(da['Mes'])))
         all_coms = sorted(list(set(de['Comercial']) | set(dt['Comercial']) | set(da['Comercial'])))
@@ -166,9 +165,9 @@ elif menu == "📈 DASHBOARD Y RANKING":
         with c2: f_meses = st.multiselect("📆 Meses", all_meses, default=[all_meses[-1]] if all_meses else [])
         with c3: f_coms = st.multiselect("👤 Filtrar Comerciales", all_coms, default=all_coms)
 
-        f_de = de[(de['Año']==f_ano) & (de['Mes'].isin(f_meses)) & (de['Comercial'].isin(f_coms))] if not de.empty else de
-        f_dt = dt[(dt['Año']==f_ano) & (dt['Mes'].isin(f_meses)) & (dt['Comercial'].isin(f_coms))] if not dt.empty else dt
-        f_da = da[(da['Año']==f_ano) & (da['Mes'].isin(f_meses)) & (da['Comercial'].isin(f_coms))] if not da.empty else da
+        f_de = de[(de['Año']==f_ano) & (de['Mes'].isin(f_meses)) & (de['Comercial'].isin(f_coms))]
+        f_dt = dt[(dt['Año']==f_ano) & (dt['Mes'].isin(f_meses)) & (dt['Comercial'].isin(f_coms))]
+        f_da = da[(da['Año']==f_ano) & (da['Mes'].isin(f_meses)) & (da['Comercial'].isin(f_coms))]
 
         t_rank, t_ene, t_tel, t_ala = st.tabs(["🏆 RANKING", "⚡ ENERGÍA", "📱 TELCO", "🛡️ ALARMAS"])
 
@@ -180,54 +179,50 @@ elif menu == "📈 DASHBOARD Y RANKING":
             
             rank = pd.concat([r1, r2, r3], axis=1).fillna(0).astype(int)
             
-            # Consolidar Bajas (sumar de las 3 fuentes)
+            # Consolidar Bajas
             if 'V_Baja' in rank.columns:
                 rank['Baja'] = rank['V_Baja'].sum(axis=1) if isinstance(rank['V_Baja'], pd.DataFrame) else rank['V_Baja']
             
-            # Renombrar columnas para la tabla
             rank = rank.rename(columns={'V_Luz': 'Luz', 'V_Gas': 'Gas', 'V_Fibra': 'Fibra', 'V_Movil': 'Móvil', 'V_Alarma': 'Alarma'})
             
-            # Seleccionar columnas finales (evitar duplicados de V_Baja)
-            cols_to_show = ['Luz', 'Gas', 'Fibra', 'Móvil', 'Alarma', 'Baja']
-            rank_final = rank[[c for c in cols_to_show if c in rank.columns]]
+            cols_finales = ['Luz', 'Gas', 'Fibra', 'Móvil', 'Alarma', 'Baja']
+            rank_display = rank[[c for c in cols_finales if c in rank.columns]]
+            rank_display['TOTAL'] = rank_display.sum(axis=1) - rank_display.get('Baja', 0)
             
-            # TOTAL (Suma de todo menos Baja)
-            rank_final['TOTAL'] = rank_final.sum(axis=1) - rank_final.get('Baja', 0)
-            
-            st.table(rank_final.sort_values('TOTAL', ascending=False))
+            st.table(rank_display.sort_values('TOTAL', ascending=False))
 
         with t_ene:
             if not f_de.empty:
-                col_e1, col_e2 = st.columns(2)
-                with col_e1:
-                    fig_e_pie = px.pie(f_de, names='Comercial', values='V_Luz', title="Distribución Luz", hole=0.4, color_discrete_sequence=px.colors.sequential.YlOrBr)
-                    st.plotly_chart(fig_e_pie, use_container_width=True)
-                with col_e2:
-                    fig_e_bar = px.bar(f_de.groupby('Comercial')[['V_Luz', 'V_Gas']].sum().reset_index(), x='Comercial', y=['V_Luz', 'V_Gas'], title="Detalle Energía", barmode='group')
-                    st.plotly_chart(fig_e_bar, use_container_width=True)
+                col1, col2 = st.columns(2)
+                with col1:
+                    fig1 = px.pie(f_de, names='Comercial', values='V_Luz', title="Luz")
+                    st.plotly_chart(fig1, use_container_width=True)
+                with col2:
+                    fig2 = px.bar(f_de.groupby('Comercial')[['V_Luz', 'V_Gas']].sum().reset_index(), x='Comercial', y=['V_Luz', 'V_Gas'], title="Energía")
+                    st.plotly_chart(fig2, use_container_width=True)
 
         with t_tel:
             if not f_dt.empty:
-                col_t1, col_t2 = st.columns(2)
-                with col_t1:
-                    fig_t_pie = px.pie(f_dt, names='Comercial', values='V_Fibra', title="Distribución Fibra")
-                    st.plotly_chart(fig_t_pie, use_container_width=True)
-                with col_t2:
-                    fig_t_bar = px.bar(f_dt.groupby('Comercial')[['V_Fibra', 'V_Movil']].sum().reset_index(), x='Comercial', y=['V_Fibra', 'V_Movil'], title="Detalle Telco")
-                    st.plotly_chart(fig_t_bar, use_container_width=True)
+                col1, col2 = st.columns(2)
+                with col1:
+                    fig1 = px.pie(f_dt, names='Comercial', values='V_Fibra', title="Fibra")
+                    st.plotly_chart(fig1, use_container_width=True)
+                with col2:
+                    fig2 = px.bar(f_dt.groupby('Comercial')[['V_Fibra', 'V_Movil']].sum().reset_index(), x='Comercial', y=['V_Fibra', 'V_Movil'], title="Telco")
+                    st.plotly_chart(fig2, use_container_width=True)
 
         with t_ala:
             if not f_da.empty:
-                col_a1, col_a2 = st.columns(2)
-                with col_a1:
-                    fig_a_pie = px.pie(f_da, names='Comercial', values='V_Alarma', title="Cuota Alarmas")
-                    st.plotly_chart(fig_a_pie, use_container_width=True)
-                with col_a2:
-                    fig_a_bar = px.bar(f_da.groupby('Comercial')['V_Alarma'].sum().reset_index(), x='V_Alarma', y='Comercial', orientation='h', title="Ventas Alarma")
-                    st.plotly_chart(fig_a_bar, use_container_width=True)
+                col1, col2 = st.columns(2)
+                with col1:
+                    fig1 = px.pie(f_da, names='Comercial', values='V_Alarma', title="Alarmas")
+                    st.plotly_chart(fig1, use_container_width=True)
+                with col2:
+                    fig2 = px.bar(f_da.groupby('Comercial')['V_Alarma'].sum().reset_index(), x='V_Alarma', y='Comercial', orientation='h', title="Alarmas")
+                    st.plotly_chart(fig2, use_container_width=True)
 
     except Exception as e:
-        st.error(f"Error cargando el Dashboard: {e}")
+        st.error(f"Error en Dashboard: {e}")
 
 # --- REPOSITORIO ---
 elif menu == "📂 REPOSITORIO":
