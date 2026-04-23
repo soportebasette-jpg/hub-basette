@@ -518,18 +518,63 @@ elif menu == "📈 DASHBOARD Y RANKING":
         st.error(f"Error cargando el Dashboard: {e}")
 # --- REPOSITORIO ---
 elif menu == "📂 REPOSITORIO":
-    st.header("Documentación")
+    st.markdown('<div class="block-header">📂 REPOSITORIO DE DOCUMENTACIÓN</div>', unsafe_allow_html=True)
+
+    # Función de seguridad para descargas: verifica si el archivo existe y asigna una key única
+    def safe_download(path, label, button_text, unique_key):
+        if os.path.exists(path):
+            with open(path, "rb") as f:
+                st.download_button(
+                    label=button_text,
+                    data=f,
+                    file_name=os.path.basename(path),
+                    mime="application/pdf",
+                    key=unique_key
+                )
+        else:
+            st.warning(f"⚠️ Archivo no encontrado: {label} (Ruta: {path})")
+
+    # 1. HERRAMIENTAS INTERNAS
     with st.expander("📂 MANUAL DEL MARCADOR"):
-        manual_path = "manuales/Manual_Premiumnumber_Agente.pdf"
-        if os.path.exists(manual_path):
-            with open(manual_path, "rb") as f:
-                st.download_button("📖 DESCARGAR MANUAL", f, file_name="Manual_Marcador.pdf")
+        safe_download("manuales/Manual_Premiumnumber_Agente.pdf", "Manual Marcador", "📖 DESCARGAR MANUAL MARCADOR", "btn_marc")
+
     st.markdown("---")
-    with st.expander("📁 DOCUMENTACIÓN LOWI"):
-        archivo_lowi = "manuales/TARIFAS_LOWI_MARZO2026.pdf"
-        if os.path.exists(archivo_lowi):
-            with open(archivo_lowi, "rb") as f:
-                st.download_button("📥 DESCARGAR TARIFAS LOWI MARZO 2026", f, file_name="TARIFAS_LOWI_MARZO2026.pdf")
-    for c in ["GANA ENERGÍA", "NATURGY", "TOTAL", "ENDESA", "O2", "SEGURMA"]:
-        with st.expander(f"📁 DOCUMENTACIÓN {c}"):
-            st.write(f"Ficheros de {c} disponibles para descarga.")
+
+    # 2. SECCIÓN TELCO (Lowi / O2)
+    st.subheader("📱 Telecomunicaciones")
+    col1, col2 = st.columns(2)
+    with col1:
+        with st.expander("📁 DOCUMENTACIÓN LOWI"):
+            safe_download("manuales/TARIFAS_LOWI_MARZO2026.pdf", "Tarifas Lowi", "📥 DESCARGAR TARIFAS LOWI", "btn_lowi")
+    with col2:
+        with st.expander("📁 DOCUMENTACIÓN O2"):
+            safe_download("manuales/TARIFAS_O2.pdf", "Tarifas O2", "📥 DESCARGAR TARIFAS O2", "btn_o2")
+
+    st.markdown("---")
+
+    # 3. SECCIÓN ENERGÍA (Naturgy / Endesa / TotalEnergies / Gana Energía)
+    st.subheader("⚡ Energía")
+    col3, col4 = st.columns(2)
+    col5, col6 = st.columns(2)
+    
+    with col3:
+        with st.expander("📁 DOCUMENTACIÓN NATURGY"):
+            safe_download("manuales/TARIFAS_NATURGY.pdf", "Naturgy", "📥 DESCARGAR NATURGY", "btn_nat")
+    with col4:
+        with st.expander("📁 DOCUMENTACIÓN ENDESA"):
+            safe_download("manuales/TARIFAS_ENDESA.pdf", "Endesa", "📥 DESCARGAR ENDESA", "btn_end")
+    with col5:
+        with st.expander("📁 DOCUMENTACIÓN TOTAL ENERGIES"):
+            safe_download("manuales/TARIFAS_TOTAL.pdf", "Total Energies", "📥 DESCARGAR TOTAL", "btn_tot")
+    with col6:
+        with st.expander("📁 DOCUMENTACIÓN GANA ENERGÍA"):
+            safe_download("manuales/TARIFAS_GANA.pdf", "Gana Energía", "📥 DESCARGAR GANA ENERGÍA", "btn_gana")
+
+    st.markdown("---")
+
+    # 4. SECCIÓN ALARMAS (Segurma)
+    st.subheader("🛡️ Seguridad")
+    with st.expander("🛡️ DOCUMENTACIÓN SEGURMA"):
+        safe_download("manuales/TARIFAS_SEGURMA.pdf", "Segurma", "📥 DESCARGAR PROCESO SEGURMA", "btn_seg")
+
+    st.info("💡 Recordatorio: Los archivos deben estar dentro de la carpeta 'manuales' con el nombre exacto definido en el código.")
