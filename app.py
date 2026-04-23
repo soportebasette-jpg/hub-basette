@@ -414,12 +414,11 @@ elif menu == "📢 ANUNCIOS Y PLAN AMIGO":
                 st.error(f"Falta: {item['file']}")
 
 # --- DASHBOARD Y RANKING ---
-
-           elif menu == "📈 DASHBOARD Y RANKING":
+elif menu == "📈 DASHBOARD Y RANKING":
     try:
         de, dt, da = load_and_clean_ranking()
         
-        # Filtros
+        # --- FILTROS ---
         all_anos = sorted(list(set(de['Año']) | set(dt['Año']) | set(da['Año'])))
         all_meses = sorted(list(set(de['Mes']) | set(dt['Mes']) | set(da['Mes'])))
         all_coms = sorted(list(set(de['Comercial']) | set(dt['Comercial']) | set(da['Comercial'])))
@@ -439,9 +438,12 @@ elif menu == "📢 ANUNCIOS Y PLAN AMIGO":
             st.balloons()
             st.markdown('<div class="block-header">RANKING DE PRODUCTIVIDAD</div>', unsafe_allow_html=True)
             
-            # --- CREACIÓN DE COLUMNAS DE ESTADO PARA EVITAR ERRORES ---
+            # --- NORMALIZACIÓN DE ESTADOS Y MÓVIL (CORRECCIÓN CRÍTICA) ---
             for df_temp in [f_de, f_dt, f_da]:
                 if not df_temp.empty:
+                    # Unificamos Móvil (con/sin tilde) para que no de KeyError
+                    if 'V_Movil' in df_temp.columns: df_temp.rename(columns={'V_Movil': 'V_Móvil'}, inplace=True)
+                    
                     if 'Estado' in df_temp.columns:
                         df_temp['V_Baja'] = df_temp['Estado'].apply(lambda x: 1 if str(x).strip().upper() == "BAJA" else 0)
                         df_temp['V_Cancelado'] = df_temp['Estado'].apply(lambda x: 1 if str(x).strip().upper() == "CANCELADO" else 0)
@@ -449,81 +451,71 @@ elif menu == "📢 ANUNCIOS Y PLAN AMIGO":
                     else:
                         df_temp['V_Baja'], df_temp['V_Cancelado'], df_temp['V_Activo'] = 0, 0, 0
 
-            # Agrupamos datos por comercial
             r1 = f_de.groupby('Comercial')[['V_Luz', 'V_Gas', 'V_Baja', 'V_Cancelado', 'V_Activo']].sum() if not f_de.empty else pd.DataFrame()
             r2 = f_dt.groupby('Comercial')[['V_Fibra', 'V_Móvil', 'V_Baja', 'V_Cancelado', 'V_Activo']].sum() if not f_dt.empty else pd.DataFrame()
             r3 = f_da.groupby('Comercial')[['V_Alarma', 'V_Baja', 'V_Cancelado', 'V_Activo']].sum() if not f_da.empty else pd.DataFrame()
             
-            # Unimos los tres DataFrames (Energía, Telco, Alarmas)
             rank = pd.concat([r1, r2, r3], axis=1).fillna(0).astype(int)
             
-            # Consolidamos las columnas de estado (pueden venir duplicadas de las 3 fuentes)
-            for col_tag in ['Baja', 'Cancelado', 'Activo']:
-                v_col = 'V_' + col_tag
-                if v_col in rank.columns:
-                    # Sumamos si la columna existe (si es un DF sumamos sus columnas, si no, el valor)
-                    rank[col_tag] = rank[v_col].sum(axis=1) if isinstance(rank[v_col], pd.DataFrame) else rank[v_col]
-                else:
-                    rank[col_tag] = 0
+            # Consolidar columnas de estado que vienen de los 3 dfs
+            for st_col in ['Baja', 'Cancelado', 'Activo']:
+                v_tag = f'V_{st_col}'
+                if v_tag in rank.columns:
+                    rank[st_col] = rank[v_tag].sum(axis=1) if isinstance(rank[v_tag], pd.DataFrame) else rank[v_tag]
+                else: rank[st_col] = 0
 
-            # Renombrar columnas para la tabla final
             rank = rank.rename(columns={'V_Luz': 'Luz', 'V_Gas': 'Gas', 'V_Fibra': 'Fibra', 'V_Móvil': 'Móvil', 'V_Alarma': 'Alarma', 'Activo': 'Activos'})
             
-            # CÁLCULO DEL TOTAL: (Luz + Gas + Fibra + Alarma) - Baja - Cancelado. (Móvil no suma)
+            # TOTAL: (Luz + Gas + Fibra + Alarma) - Baja - Cancelado. El Móvil NO suma.
             rank['TOTAL'] = (rank.get('Luz',0) + rank.get('Gas',0) + rank.get('Fibra',0) + rank.get('Alarma',0)) - rank.get('Baja',0) - rank.get('Cancelado',0)
             
-            # Seleccionamos y ordenamos columnas
-            cols_ranking = ['Luz', 'Gas', 'Fibra', 'Móvil', 'Alarma', 'Baja', 'Cancelado', 'Activos', 'TOTAL']
-            st.table(rank[[c for c in cols_ranking if c in rank.columns]].sort_values('TOTAL', ascending=False))
+            # Mostrar Tabla Ranking
+            col_finales = ['Luz', 'Gas', 'Fibra', 'Móvil', 'Alarma', 'Baja', 'Cancelado', 'Activos', 'TOTAL']
+            st.table(rank[[c for c in col_finales if c in rank.columns]].sort_values('TOTAL', ascending=False))
 
-            # Frase motivadora aleatoria
-            frases = ["¡El éxito es la suma de pequeños esfuerzos!", "¡A por todas, equipo!", "¡La constancia es la clave!", "¡Haz que cada día cuente!"]
-            st.info(random.choice(frases))
+            # Frases Motivadoras
+            st.info(random.choice([
+                "¡El éxito es la suma de pequeños esfuerzos repetidos día tras día!",
+                "¡A por todas, equipo! Cada venta cuenta.",
+                "¡La constancia es la clave del éxito!",
+                "¡No cuentes los días, haz que los días cuenten!"
+            ]))
 
-            # --- TOTALES ENMARCADOS ABAJO ---
+            # --- TOTALES ENMARCADOS ABAJO (Métricas Generales) ---
             st.markdown("---")
             m1, m2, m3, m4 = st.columns(4)
             with m1:
-                val_ene = rank['Luz'].sum() + rank['Gas'].sum() if 'Luz' in rank else 0
-                st.markdown(f'<div class="status-box" style="background:#161b22; padding:15px; border-radius:10px; border:1px solid #30363d; text-align:center;"><div style="color:#8b949e; font-size:0.8rem;">Total Energía</div><div style="color:white; font-size:1.8rem; font-weight:900;">{val_ene}</div></div>', unsafe_allow_html=True)
+                v_e = rank['Luz'].sum() + rank['Gas'].sum() if 'Luz' in rank else 0
+                st.markdown(f'<div class="status-box" style="background:#161b22; padding:15px; border-radius:10px; border:1px solid #30363d; text-align:center;"><div style="color:#8b949e; font-size:0.8rem;">Energía</div><div style="color:white; font-size:1.8rem; font-weight:900;">{v_e}</div></div>', unsafe_allow_html=True)
             with m2:
-                val_fib = rank['Fibra'].sum() if 'Fibra' in rank else 0
-                st.markdown(f'<div class="status-box" style="background:#161b22; padding:15px; border-radius:10px; border:1px solid #30363d; text-align:center;"><div style="color:#8b949e; font-size:0.8rem;">Total Fibra</div><div style="color:white; font-size:1.8rem; font-weight:900;">{val_fib}</div></div>', unsafe_allow_html=True)
+                v_f = rank['Fibra'].sum() if 'Fibra' in rank else 0
+                st.markdown(f'<div class="status-box" style="background:#161b22; padding:15px; border-radius:10px; border:1px solid #30363d; text-align:center;"><div style="color:#8b949e; font-size:0.8rem;">Fibra</div><div style="color:white; font-size:1.8rem; font-weight:900;">{v_f}</div></div>', unsafe_allow_html=True)
             with m3:
-                val_mov = rank['Móvil'].sum() if 'Móvil' in rank else 0
-                st.markdown(f'<div class="status-box" style="background:#161b22; padding:15px; border-radius:10px; border:1px solid #30363d; text-align:center;"><div style="color:#8b949e; font-size:0.8rem;">Total Móvil</div><div style="color:white; font-size:1.8rem; font-weight:900;">{val_mov}</div></div>', unsafe_allow_html=True)
+                v_m = rank['Móvil'].sum() if 'Móvil' in rank else 0
+                st.markdown(f'<div class="status-box" style="background:#161b22; padding:15px; border-radius:10px; border:1px solid #30363d; text-align:center;"><div style="color:#8b949e; font-size:0.8rem;">Móvil</div><div style="color:white; font-size:1.8rem; font-weight:900;">{v_m}</div></div>', unsafe_allow_html=True)
             with m4:
-                val_ala = rank['Alarma'].sum() if 'Alarma' in rank else 0
-                st.markdown(f'<div class="status-box" style="background:#161b22; padding:15px; border-radius:10px; border:1px solid #30363d; text-align:center;"><div style="color:#8b949e; font-size:0.8rem;">Total Alarmas</div><div style="color:white; font-size:1.8rem; font-weight:900;">{val_ala}</div></div>', unsafe_allow_html=True)
+                v_a = rank['Alarma'].sum() if 'Alarma' in rank else 0
+                st.markdown(f'<div class="status-box" style="background:#161b22; padding:15px; border-radius:10px; border:1px solid #30363d; text-align:center;"><div style="color:#8b949e; font-size:0.8rem;">Alarmas</div><div style="color:white; font-size:1.8rem; font-weight:900;">{v_a}</div></div>', unsafe_allow_html=True)
 
+        # Gráficas de las pestañas siguientes
         with t_ene:
             if not f_de.empty:
-                col1, col2 = st.columns(2)
-                with col1:
-                    st.plotly_chart(px.pie(f_de, names='Comercial', values='V_Luz', title="Distribución Luz", hole=0.3), use_container_width=True)
-                with col2:
-                    st.plotly_chart(px.bar(f_de.groupby('Comercial')[['V_Luz', 'V_Gas']].sum().reset_index(), x='Comercial', y=['V_Luz', 'V_Gas'], title="Ventas Energía"), use_container_width=True)
-        
+                col_e1, col_e2 = st.columns(2)
+                with col_e1: st.plotly_chart(px.pie(f_de, names='Comercial', values='V_Luz', title="Luz"), use_container_width=True)
+                with col_e2: st.plotly_chart(px.bar(f_de.groupby('Comercial')[['V_Luz', 'V_Gas']].sum().reset_index(), x='Comercial', y=['V_Luz', 'V_Gas'], title="Energía"), use_container_width=True)
         with t_tel:
             if not f_dt.empty:
-                col1, col2 = st.columns(2)
-                with col1:
-                    st.plotly_chart(px.pie(f_dt, names='Comercial', values='V_Fibra', title="Distribución Fibra", hole=0.3), use_container_width=True)
-                with col2:
-                    st.plotly_chart(px.bar(f_dt.groupby('Comercial')[['V_Fibra', 'V_Móvil']].sum().reset_index(), x='Comercial', y=['V_Fibra', 'V_Móvil'], title="Ventas Telco"), use_container_width=True)
-        
+                col_t1, col_t2 = st.columns(2)
+                with col_t1: st.plotly_chart(px.pie(f_dt, names='Comercial', values='V_Fibra', title="Fibra"), use_container_width=True)
+                with col_t2: st.plotly_chart(px.bar(f_dt.groupby('Comercial')[['V_Fibra', 'V_Móvil']].sum().reset_index(), x='Comercial', y=['V_Fibra', 'V_Móvil'], title="Telco"), use_container_width=True)
         with t_ala:
             if not f_da.empty:
-                col1, col2 = st.columns(2)
-                with col1:
-                    st.plotly_chart(px.pie(f_da, names='Comercial', values='V_Alarma', title="Distribución Alarmas", hole=0.3), use_container_width=True)
-                with col2:
-                    st.plotly_chart(px.bar(f_da.groupby('Comercial')['V_Alarma'].sum().reset_index(), x='V_Alarma', y='Comercial', orientation='h', title="Ventas Alarma"), use_container_width=True)
+                col_a1, col_a2 = st.columns(2)
+                with col_a1: st.plotly_chart(px.pie(f_da, names='Comercial', values='V_Alarma', title="Alarmas"), use_container_width=True)
+                with col_a2: st.plotly_chart(px.bar(f_da.groupby('Comercial')['V_Alarma'].sum().reset_index(), x='V_Alarma', y='Comercial', orientation='h', title="Alarmas"), use_container_width=True)
 
     except Exception as e:
-        st.error(f"Error en Dashboard: {e}")
-    
-        
+        st.error(f"Error cargando el Dashboard: {e}")
 # --- REPOSITORIO ---
 elif menu == "📂 REPOSITORIO":
     st.header("Documentación")
