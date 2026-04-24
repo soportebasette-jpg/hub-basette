@@ -520,61 +520,48 @@ elif menu == "📈 DASHBOARD Y RANKING":
 elif menu == "📂 REPOSITORIO":
     st.markdown('<div class="block-header">📂 REPOSITORIO DE DOCUMENTACIÓN</div>', unsafe_allow_html=True)
 
-    # Función de seguridad para descargas: verifica si el archivo existe y asigna una key única
-    def safe_download(path, label, button_text, unique_key):
-        if os.path.exists(path):
-            with open(path, "rb") as f:
-                st.download_button(
-                    label=button_text,
-                    data=f,
-                    file_name=os.path.basename(path),
-                    mime="application/pdf",
-                    key=unique_key
-                )
-        else:
-            st.warning(f"⚠️ Archivo no encontrado: {label} (Ruta: {path})")
+    # Función para listar y permitir descarga de archivos dentro de una carpeta específica
+    def listar_archivos_carpeta(nombre_carpeta, titulo_expander, icono="📁"):
+        ruta_base = os.path.join("manuales", nombre_carpeta)
+        with st.expander(f"{icono} {titulo_expander}"):
+            if os.path.exists(ruta_base):
+                archivos = [f for f in os.listdir(ruta_base) if os.path.isfile(os.path.join(ruta_base, f))]
+                if archivos:
+                    for archivo in archivos:
+                        ruta_archivo = os.path.join(ruta_base, archivo)
+                        with open(ruta_archivo, "rb") as f:
+                            # Determinamos si es PDF o Imagen para el navegador
+                            ext = archivo.split('.')[-1].lower()
+                            mime_type = "application/pdf" if ext == "pdf" else f"image/{ext}"
+                            
+                            st.download_button(
+                                label=f"📥 Ver/Descargar: {archivo}",
+                                data=f,
+                                file_name=archivo,
+                                mime=mime_type,
+                                key=f"btn_{nombre_carpeta}_{archivo}" # Key única para evitar errores
+                            )
+                else:
+                    st.info(f"No hay archivos en la carpeta {nombre_carpeta}")
+            else:
+                st.error(f"No existe la carpeta: manuales/{nombre_carpeta}")
 
-    # 1. HERRAMIENTAS INTERNAS
-    with st.expander("📂 MANUAL DEL MARCADOR"):
-        safe_download("manuales/Manual_Premiumnumber_Agente.pdf", "Manual Marcador", "📖 DESCARGAR MANUAL MARCADOR", "btn_marc")
+    # Organización de las carpetas tal cual las tienes físicamente
+    col_rep1, col_rep2 = st.columns(2)
 
-    st.markdown("---")
+    with col_rep1:
+        listar_archivos_carpeta("MARCADOR", "MANUAL DEL MARCADOR", "📂")
+        listar_archivos_carpeta("ARGUMENTARIOS", "ARGUMENTARIOS DE VENTAS", "📝")
+        listar_archivos_carpeta("O2", "TARIFAS O2", "📱")
+        listar_archivos_carpeta("LOWI", "TARIFAS LOWI", "📱")
+        listar_archivos_carpeta("SEGURMA", "DOCUMENTACIÓN SEGURMA", "🛡️")
 
-    # 2. SECCIÓN TELCO (Lowi / O2)
-    st.subheader("📱 Telecomunicaciones")
-    col1, col2 = st.columns(2)
-    with col1:
-        with st.expander("📁 DOCUMENTACIÓN LOWI"):
-            safe_download("manuales/TARIFAS_LOWI_MARZO2026.pdf", "Tarifas Lowi", "📥 DESCARGAR TARIFAS LOWI", "btn_lowi")
-    with col2:
-        with st.expander("📁 DOCUMENTACIÓN O2"):
-            safe_download("manuales/TARIFAS_O2.pdf", "Tarifas O2", "📥 DESCARGAR TARIFAS O2", "btn_o2")
-
-    st.markdown("---")
-
-    # 3. SECCIÓN ENERGÍA (Naturgy / Endesa / TotalEnergies / Gana Energía)
-    st.subheader("⚡ Energía")
-    col3, col4 = st.columns(2)
-    col5, col6 = st.columns(2)
-    
-    with col3:
-        with st.expander("📁 DOCUMENTACIÓN NATURGY"):
-            safe_download("manuales/TARIFAS_NATURGY.pdf", "Naturgy", "📥 DESCARGAR NATURGY", "btn_nat")
-    with col4:
-        with st.expander("📁 DOCUMENTACIÓN ENDESA"):
-            safe_download("manuales/TARIFAS_ENDESA.pdf", "Endesa", "📥 DESCARGAR ENDESA", "btn_end")
-    with col5:
-        with st.expander("📁 DOCUMENTACIÓN TOTAL ENERGIES"):
-            safe_download("manuales/TARIFAS_TOTAL.pdf", "Total Energies", "📥 DESCARGAR TOTAL", "btn_tot")
-    with col6:
-        with st.expander("📁 DOCUMENTACIÓN GANA ENERGÍA"):
-            safe_download("manuales/TARIFAS_GANA.pdf", "Gana Energía", "📥 DESCARGAR GANA ENERGÍA", "btn_gana")
+    with col_rep2:
+        listar_archivos_carpeta("ENDESA", "TARIFAS ENDESA", "⚡")
+        listar_archivos_carpeta("IBERDROLA", "TARIFAS IBERDROLA", "⚡")
+        listar_archivos_carpeta("NATURGY", "TARIFAS NATURGY", "⚡")
+        listar_archivos_carpeta("TOTAL", "TARIFAS TOTAL ENERGIES", "⚡")
+        listar_archivos_carpeta("GANA", "TARIFAS GANA ENERGÍA", "⚡")
 
     st.markdown("---")
-
-    # 4. SECCIÓN ALARMAS (Segurma)
-    st.subheader("🛡️ Seguridad")
-    with st.expander("🛡️ DOCUMENTACIÓN SEGURMA"):
-        safe_download("manuales/TARIFAS_SEGURMA.pdf", "Segurma", "📥 DESCARGAR PROCESO SEGURMA", "btn_seg")
-
-    st.info("💡 Recordatorio: Los archivos deben estar dentro de la carpeta 'manuales' con el nombre exacto definido en el código.")
+    st.info("💡 Automáticamente aparecerán aquí todos los archivos PDF o JPG que metas en cada carpeta dentro de 'manuales'.")
