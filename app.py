@@ -620,15 +620,15 @@ elif menu == "🕒 CONTROL LABORAL":
                                 elif f_str in libre_lorena_obj: bg, txt_c, etiq = "#00f0ff", "black", "OBJ. LORENA"
                                 
                                 label_h = f'<div style="font-size:0.5rem; font-weight:bold;">{etiq}</div>' if etiq else ""
-                                cols[idx].markdown(f'<div style="background:{bg}; color:{txt_c}; text-align:center; border-radius:5px; padding:2px; min-height:40px; border:1px solid #30363d;"><div style="font-size:0.9rem;">{day}</div>{label_h}</div>', unsafe_allow_html=True)
+                                cols[idx].markdown(f'<div style="background:{bg}; color:{txt_c}; text-align:center; border-radius:5px; padding:2px; min-height:45px; border:1px solid #30363d;"><div style="font-size:0.9rem;">{day}</div>{label_h}</div>', unsafe_allow_html=True)
 
         st.markdown("---")
         com_sel = st.selectbox("👤 Selecciona Comercial", sorted(df_laboral[col_comercial].unique()))
 
         # 3. LÓGICA DE CÁLCULO
-        def calcular_auditoria_v10(df, nombre):
+        def calcular_auditoria_v11(df, nombre):
             datos = df[df[col_comercial] == nombre].copy()
-            min_ret, dias_deuda, dias_rojos, min_medicos, detalle_medico = 0, [], [], 0, ""
+            min_ret, dias_deuda, dias_rojos, min_medicos, lista_justificantes = 0, [], [], 0, []
             hoy = datetime.now().date()
             inicio = datos[col_temporal].min().date()
             
@@ -664,17 +664,16 @@ elif menu == "🕒 CONTROL LABORAL":
 
             # CASO LORENA: Horas Médicas hoy 27/04
             if "LORENA" in nombre.upper() and hoy == pd.Timestamp('2026-04-27').date():
-                min_medicos = 180 # 3 horas
-                detalle_medico = "27/04/2026 (11:30 a 14:30)"
+                min_medicos = 180 
+                lista_justificantes.append({"fecha": "27/04/2026", "motivo": "Cita Médica", "tramo": "11:30 a 14:30", "horas": "3h"})
 
-            return int(min_ret), dias_deuda, dias_rojos, min_medicos, detalle_medico
+            return int(min_ret), dias_deuda, dias_rojos, min_medicos, lista_justificantes
 
-        m_ret, l_deuda, d_rojos, m_med, det_med = calcular_auditoria_v10(df_laboral, com_sel)
+        m_ret, l_deuda, d_rojos, m_med, justificantes = calcular_auditoria_v11(df_laboral, com_sel)
         
-        # 4. TOTALES Y RECUPERACIONES
+        # 4. TOTALES
         bruto = m_ret + (len(l_deuda) * 300)
-        
-        # Belén a 0 (recupera todo su bruto)
+        # Belen recupera todo para estar a 0
         recup = bruto if "BELEN" in com_sel.upper() else (bruto if any(x in com_sel.upper() for x in ["LORENA", "DEBORAH"]) else 0)
         
         pend = max(0, bruto - recup)
@@ -682,7 +681,7 @@ elif menu == "🕒 CONTROL LABORAL":
         h_med, m_med_r = divmod(m_med, 60)
 
         # 5. DASHBOARD
-        st.markdown(f"### 📊 Auditoría: {com_sel}")
+        st.markdown(f"### 📊 Resumen Auditoría: {com_sel}")
         c1, c2, c3, c4, c5 = st.columns(5)
         
         def card_v(l, v, s, c):
@@ -690,21 +689,23 @@ elif menu == "🕒 CONTROL LABORAL":
 
         c1.markdown(card_v("RETRASOS", f"{m_ret} m", f"{len(d_rojos)} registros", "#ffab70"), unsafe_allow_html=True)
         c2.markdown(card_v("DEUDA DÍAS", f"{len(l_deuda)*300} m", f"{len(l_deuda)} días", "#ff7b72"), unsafe_allow_html=True)
-        c3.markdown(card_v("RECUPERADO", f"{recup} m", "Abonado", "#7ee787"), unsafe_allow_html=True)
+        c3.markdown(card_v("RECUPERADO", f"{recup} m", "Total abonado", "#7ee787"), unsafe_allow_html=True)
+        c4.markdown(card_v("HORAS MÉDICAS", f"{int(h_med)}h {int(m_med_r)}m", "Justificadas", "#a371f7"), unsafe_allow_html=True)
         
-        # Cuadro Horas Médicas
-        m_col = "#a371f7" if m_med > 0 else "#8b949e"
-        c4.markdown(card_v("HORAS MÉDICAS", f"{int(h_med)}h {int(m_med_r)}m", det_med if det_med else "Sin registros", m_col), unsafe_allow_html=True)
-        
-        # Cuadro Pendiente
         p_col = "#d2ff00" if pend <= 0 else "#ff4b4b"
         c5.markdown(f'<div style="background:#161b22; padding:15px; border-radius:10px; border:2px solid {p_col}; text-align:center; min-height:110px;"><p style="color:{p_col}; font-weight:bold; margin:0; font-size:0.8rem;">PENDIENTE</p><h2 style="color:{p_col}; margin:5px 0; font-size:1.5rem;">{int(hf)}h {int(mf)}m</h2><p style="color:#8b949e; font-size:0.65rem; margin:0;">{pend} min</p></div>', unsafe_allow_html=True)
+
+        # SECCIÓN DE JUSTIFICANTES MÉDICOS
+        if justificantes:
+            st.markdown("#### 🩺 DETALLE DE HORAS MÉDICAS JUSTIFICADAS")
+            for j in justificantes:
+                st.info(f"**Fecha:** {j['fecha']} | **Tramo:** {j['tramo']} | **Total:** {j['horas']} | **Motivo:** {j['motivo']}")
 
         if l_deuda: st.warning(f"📌 Días con deuda (300m/día): {', '.join(l_deuda)}")
 
         # 6. HISTORIAL
         st.markdown("---")
-        with st.expander("🔍 HISTORIAL (Rojo = Retraso Entrada)"):
+        with st.expander("🔍 VER HISTORIAL DE REGISTROS"):
             h_df = df_laboral[df_laboral[col_comercial] == com_sel][[col_temporal, col_accion]].sort_values(col_temporal, ascending=False)
             st.dataframe(h_df.style.apply(lambda r: ['background-color: #440000; color: white' if r[col_temporal].date() in d_rojos and "ENTRADA" in str(r[col_accion]).upper() else '' for _ in r], axis=1), use_container_width=True)
 
