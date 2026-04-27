@@ -224,6 +224,9 @@ if menu == "🚀 CRM":
                 <a href="https://www.instagram.com/tecomparotodoes?igsh=MXRkcTV2anJ6NmJkcA%3D%3D&utm_source=qr" target="_blank">
                     <img src="https://cdn-icons-png.flaticon.com/512/174/174855.png" width="35" class="social-icon">
                 </a>
+                <a href="https://www.tiktok.com/@tecomparotodo?_r=1&_t=ZN-95nfhnoUU9W" target="_blank">
+                    <img src="https://cdn-icons-png.flaticon.com/512/3046/3046121.png" width="35" class="social-icon">
+                </a>
                 <a href="http://www.tecomparotodo.es" target="_blank">
                     <img src="data:image/jpeg;base64,{img_base64}" width="100" style="border-radius:8px; border: 2px solid #d2ff00;" class="social-icon">
                 </a>
@@ -260,9 +263,7 @@ if menu == "🚀 CRM":
             st.link_button("ENTRAR O2", "https://o2online.es/auth/login/?next=%2Fventas%2F&type=retail", use_container_width=True)
         with c_t2:
             st.markdown('<div style="background:#161b22; padding:15px; border-radius:10px; border:1px solid #30363d; text-align:center; margin-bottom:10px;"><h4 style="color:white; margin:0;">LOWI</h4></div>', unsafe_allow_html=True)
-            st.link_button("ENTRAR LOWI", "https://vodafone.topgestion.es/login", use_container_width=True)
-
-# --- PRECIOS ---
+            st.link_button("ENTRAR LOWI", "https://vodafone.topgestion.es/login", use_container_width=True)# --- PRECIOS ---
 elif menu == "📊 PRECIOS":
     st.header("Tarifario Oficial")
     t1, t2, t3 = st.tabs(["⚡ LUZ", "🔥 GAS", "📶 O2 / FIBRA"])
