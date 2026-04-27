@@ -554,7 +554,18 @@ elif menu == "📈 DASHBOARD Y RANKING":
                 with col_e2: st.plotly_chart(px.bar(f_de.groupby('Comercial')[['V_Luz', 'V_Gas']].sum().reset_index(), x='Comercial', y=['V_Luz', 'V_Gas'], title="Energía"), use_container_width=True)
         with t_tel:
             if not f_dt.empty:
-                col_t1, col_
+                col_t1, col_t2 = st.columns(2)
+                with col_t1: st.plotly_chart(px.pie(f_dt, names='Comercial', values='V_Fibra', title="Fibra"), use_container_width=True)
+                with col_t2: st.plotly_chart(px.bar(f_dt.groupby('Comercial')[['V_Fibra', 'V_Móvil']].sum().reset_index(), x='Comercial', y=['V_Fibra', 'V_Móvil'], title="Telco"), use_container_width=True)
+        with t_ala:
+            if not f_da.empty:
+                col_a1, col_a2 = st.columns(2)
+                with col_a1: st.plotly_chart(px.pie(f_da, names='Comercial', values='V_Alarma', title="Alarmas"), use_container_width=True)
+                with col_a2: st.plotly_chart(px.bar(f_da.groupby('Comercial')['V_Alarma'].sum().reset_index(), x='V_Alarma', y='Comercial', orientation='h', title="Alarmas"), use_container_width=True)
+
+    except Exception as e:
+        st.error(f"Error cargando el Dashboard: {e}")
+
 # --- REPOSITORIO ---
 elif menu == "📂 REPOSITORIO":
     import os  # Crucial para que funcionen las carpetas
