@@ -518,25 +518,27 @@ elif menu == "📈 DASHBOARD Y RANKING":
         st.error(f"Error cargando el Dashboard: {e}")
 # --- REPOSITORIO ---
 elif menu == "📂 REPOSITORIO":
+    import os  # <--- ESTO EVITA EL ERROR DE TU IMAGEN
     st.markdown('<div class="block-header">📂 REPOSITORIO DE DOCUMENTACIÓN</div>', unsafe_allow_html=True)
 
-    # Función Maestra: Lee todo el contenido de una carpeta y crea botones de descarga
+    # Función Maestra: Entra en la carpeta y genera botones para CADA archivo que encuentre
     def mostrar_contenido_carpeta(nombre_carpeta, titulo_visible, icono="📁"):
+        # La ruta se construye buscando dentro de la carpeta 'manuales'
         ruta_especifica = os.path.join("manuales", nombre_carpeta)
         
         if os.path.exists(ruta_especifica):
             with st.expander(f"{icono} {titulo_visible}"):
-                # Listamos todos los archivos dentro de la subcarpeta
-                archivos = [f for f in os.listdir(ruta_especifica) if os.path.isfile(os.path.join(ruta_especifica, f))]
-                
-                if archivos:
-                    for filename in archivos:
-                        ruta_archivo = os.path.join(ruta_especifica, filename)
-                        try:
+                try:
+                    # Listamos todos los archivos reales que hay dentro de esa subcarpeta
+                    archivos = [f for f in os.listdir(ruta_especifica) if os.path.isfile(os.path.join(ruta_especifica, f))]
+                    
+                    if archivos:
+                        for filename in archivos:
+                            ruta_archivo = os.path.join(ruta_especifica, filename)
                             with open(ruta_archivo, "rb") as f:
                                 contenido = f.read()
                                 ext = filename.split('.')[-1].lower()
-                                # Definimos el tipo de archivo para el navegador
+                                # Detectamos si es PDF o imagen para el navegador
                                 m_type = "application/pdf" if ext == "pdf" else f"image/{ext}"
                                 
                                 st.download_button(
@@ -546,15 +548,15 @@ elif menu == "📂 REPOSITORIO":
                                     mime=m_type,
                                     key=f"btn_{nombre_carpeta}_{filename}".replace(" ", "_")
                                 )
-                        except Exception as e:
-                            st.error(f"Error al leer {filename}: {e}")
-                else:
-                    st.write("ℹ️ Esta carpeta está vacía.")
+                    else:
+                        st.write("ℹ️ No hay archivos en esta carpeta todavía.")
+                except Exception as e:
+                    st.error(f"Error al leer la carpeta {nombre_carpeta}: {e}")
         else:
-            # Si ves este mensaje, es que el nombre de la carpeta en el código no coincide con Windows
-            st.caption(f"🚫 No se encuentra la carpeta: manuales/{nombre_carpeta}")
+            # Si ves esto, revisa que la carpeta en 'manuales' se llame exactamente igual (minúsculas/espacios)
+            st.caption(f"🚫 Carpeta no detectada: manuales/{nombre_carpeta}")
 
-    # Diseño en dos columnas para que se vea ordenado
+    # --- LISTADO DE CARPETAS SEGÚN TU ESTRUCTURA ---
     col_a, col_b = st.columns(2)
 
     with col_a:
@@ -572,4 +574,4 @@ elif menu == "📂 REPOSITORIO":
         mostrar_contenido_carpeta("gana energia", "TARIFAS GANA ENERGÍA", "⚡")
 
     st.markdown("---")
-    st.info("💡 **Sistema Automático:** Si metes nuevos archivos en las carpetas de tu ordenador, aparecerán aquí solos al recargar la página.")
+    st.info("💡 **Dinamismo total:** Cualquier archivo que metas en esas carpetas aparecerá aquí automáticamente.")
