@@ -518,18 +518,18 @@ elif menu == "📈 DASHBOARD Y RANKING":
         st.error(f"Error cargando el Dashboard: {e}")
 # --- REPOSITORIO ---
 elif menu == "📂 REPOSITORIO":
-    import os  # <--- ESTO EVITA EL ERROR DE TU IMAGEN
+    import os  # <--- IMPORTACIÓN LOCAL PARA EVITAR EL ERROR DE TU IMAGEN
     st.markdown('<div class="block-header">📂 REPOSITORIO DE DOCUMENTACIÓN</div>', unsafe_allow_html=True)
 
-    # Función Maestra: Entra en la carpeta y genera botones para CADA archivo que encuentre
+    # Función Maestra: Escanea la carpeta y crea botones para CADA archivo
     def mostrar_contenido_carpeta(nombre_carpeta, titulo_visible, icono="📁"):
-        # La ruta se construye buscando dentro de la carpeta 'manuales'
+        # Construimos la ruta buscando en la carpeta 'manuales'
         ruta_especifica = os.path.join("manuales", nombre_carpeta)
         
         if os.path.exists(ruta_especifica):
             with st.expander(f"{icono} {titulo_visible}"):
                 try:
-                    # Listamos todos los archivos reales que hay dentro de esa subcarpeta
+                    # Listamos todos los archivos reales (.pdf, .jpg, .png, etc.)
                     archivos = [f for f in os.listdir(ruta_especifica) if os.path.isfile(os.path.join(ruta_especifica, f))]
                     
                     if archivos:
@@ -538,7 +538,7 @@ elif menu == "📂 REPOSITORIO":
                             with open(ruta_archivo, "rb") as f:
                                 contenido = f.read()
                                 ext = filename.split('.')[-1].lower()
-                                # Detectamos si es PDF o imagen para el navegador
+                                # Definimos el tipo de archivo para que el navegador lo abra bien
                                 m_type = "application/pdf" if ext == "pdf" else f"image/{ext}"
                                 
                                 st.download_button(
@@ -553,10 +553,10 @@ elif menu == "📂 REPOSITORIO":
                 except Exception as e:
                     st.error(f"Error al leer la carpeta {nombre_carpeta}: {e}")
         else:
-            # Si ves esto, revisa que la carpeta en 'manuales' se llame exactamente igual (minúsculas/espacios)
+            # Si aparece este mensaje, el nombre de la carpeta no coincide con tu carpeta real
             st.caption(f"🚫 Carpeta no detectada: manuales/{nombre_carpeta}")
 
-    # --- LISTADO DE CARPETAS SEGÚN TU ESTRUCTURA ---
+    # --- DISTRIBUCIÓN EN 2 COLUMNAS (Exactamente tus carpetas) ---
     col_a, col_b = st.columns(2)
 
     with col_a:
@@ -574,4 +574,3 @@ elif menu == "📂 REPOSITORIO":
         mostrar_contenido_carpeta("gana energia", "TARIFAS GANA ENERGÍA", "⚡")
 
     st.markdown("---")
-    st.info("💡 **Dinamismo total:** Cualquier archivo que metas en esas carpetas aparecerá aquí automáticamente.")
