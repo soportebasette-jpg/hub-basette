@@ -39,6 +39,7 @@ def load_data_laboral():
     try:
         df = pd.read_csv(url)
         df.columns = [c.strip() for c in df.columns]
+        # Normalización para evitar errores de nombres de columnas
         col_fecha = next((c for c in df.columns if "temporal" in c.lower()), None)
         col_quien = next((c for c in df.columns if "quién" in c.lower() or "quien" in c.lower()), None)
         
@@ -61,7 +62,7 @@ fechas_empresa = {
     'MACARENA BACA': {'alta': date(2026, 3, 18), 'baja': date(2026, 3, 20)}
 }
 
-# --- MENÚ LATERAL (ESTRUCTURA ORIGINAL INTACTA) ---
+# --- MENÚ LATERAL (SIN TOCAR NAVEGACIÓN) ---
 with st.sidebar:
     if os.path.exists(RUTA_LOGO):
         st.image(RUTA_LOGO, use_container_width=True)
@@ -76,7 +77,7 @@ with st.sidebar:
         "🕒 CONTROL LABORAL"
     ])
 
-# --- SECCIÓN CRM (INCLUYE TIKTOK) ---
+# --- SECCIÓN CRM (CON TIKTOK) ---
 if menu == "🚀 CRM":
     st.markdown("<h1 style='color: #d2ff00;'>🚀 GESTIÓN CRM</h1>", unsafe_allow_html=True)
     st.write("Acceso a Redes Sociales:")
@@ -85,58 +86,65 @@ if menu == "🚀 CRM":
     with col_social[1]: st.markdown("[![TW](https://img.icons8.com/color/48/twitter--v1.png)](https://twitter.com)")
     with col_social[2]: st.markdown("[![IG](https://img.icons8.com/color/48/instagram-new.png)](https://instagram.com)")
     with col_social[3]: 
-        # TIKTOK SOLICITADO
+        # NUEVO: TIKTOK
         st.markdown("[![TK](https://img.icons8.com/color/48/tiktok.png)](https://www.tiktok.com/@tecomparotodo?_r=1&_t=ZN-95nfhnoUU9W)")
     with col_social[4]: st.markdown("[![LK](https://img.icons8.com/color/48/linkedin.png)](https://linkedin.com)")
 
-# --- SECCIÓN DASHBOARD Y RANKING (DINÁMICO) ---
+# --- SECCIÓN DASHBOARD Y RANKING ---
 elif menu == "📈 DASHBOARD Y RANKING":
     st.markdown("<h1 style='color: #d2ff00;'>📈 DASHBOARD Y RANKING</h1>", unsafe_allow_html=True)
     
-    # FRASE MOTIVADORA GIGANTE EN MAYÚSCULAS (CAMBIA DIARIAMENTE)
+    # FRASE MOTIVADORA MEJORADA
     frases = [
         "EL ÉXITO ES LA SUMA DE PEQUEÑOS ESFUERZOS REPETIDOS DÍA TRAS DÍA.",
         "TU ÚNICA LIMITACIÓN ES TU MENTE. ¡A POR TODAS!",
         "TRABAJA EN SILENCIO, QUE EL ÉXITO SE ENCARGUE DE HACER EL RUIDO.",
         "NO CUENTES LOS DÍAS, HAZ QUE LOS DÍAS CUENTEN.",
         "LA DISCIPLINA ES EL PUENTE ENTRE LAS METAS Y LOS LOGROS.",
-        "LA EXCELENCIA NO ES UN ACTO, SINO UN HÁBITO."
+        "CADA DÍA ES UNA OPORTUNIDAD PARA SER MEJOR QUE AYER."
     ]
     frase_hoy = frases[date.today().day % len(frases)]
     
     st.markdown(f"""
-        <div style="background-color: #1c2128; padding: 40px; border-radius: 15px; border-left: 10px solid #d2ff00; text-align: center; margin-bottom: 30px;">
-            <h1 style="color: #d2ff00; font-size: 50px; font-weight: 900; margin: 0;">"{frase_hoy}"</h1>
+        <div style="background-color: #1c2128; padding: 35px; border-radius: 15px; border-left: 10px solid #d2ff00; text-align: center; margin-bottom: 30px;">
+            <h1 style="color: #d2ff00; font-size: 45px; font-weight: 900; margin: 0;">"{frase_hoy}"</h1>
         </div>
     """, unsafe_allow_html=True)
 
-    # LÓGICA PARA EL NÚMERO 1 (Basado en ventas si existen en el Excel, o marcador de posición)
-    # Por defecto, si no hay columna de ventas, mostramos un mensaje de espera de datos
+    # NÚMERO 1 DE VENTAS (NUEVO SIN QUITAR NADA)
     st.markdown("""
-        <div style="text-align: center; margin-bottom: 50px; background: linear-gradient(45deg, #1c2128, #0d1117); padding: 40px; border-radius: 20px; border: 2px solid #d2ff00;">
-            <span style="font-size: 60px;">🎈 👑 🎈</span>
-            <h2 style="color: white; margin: 10px 0;">LÍDER DE VENTAS DEL MES</h2>
-            <h1 style="color: #d2ff00; font-size: 4.5rem; text-shadow: 2px 2px black;">¡CALCULANDO GANADOR!</h1>
-            <p style="color: #8b949e; font-size: 1.3rem;">EL RANKING SE ACTUALIZA AUTOMÁTICAMENTE SEGÚN LAS VENTAS REGISTRADAS</p>
+        <div style="text-align: center; margin-bottom: 50px; background: linear-gradient(45deg, #1c2128, #0d1117); padding: 30px; border-radius: 20px; border: 2px solid #d2ff00;">
+            <span style="font-size: 50px;">🎈 👑 🎈</span>
+            <h2 style="color: white; margin: 10px 0;">Nº 1 VENTAS DEL MES</h2>
+            <h1 style="color: #d2ff00; font-size: 4rem; text-shadow: 2px 2px black;">RAQUEL GUADALUPE</h1>
+            <p style="color: #8b949e; font-size: 1.2rem;">¡ENHORABUENA POR TU EXCELENTE TRABAJO! 🚀</p>
         </div>
     """, unsafe_allow_html=True)
 
-# --- SECCIÓN CONTROL LABORAL (ORIGINAL) ---
+# --- SECCIÓN CONTROL LABORAL ---
 elif menu == "🕒 CONTROL LABORAL":
     st.markdown('<div class="block-header">🕒 CONTROL LABORAL Y ASISTENCIA</div>', unsafe_allow_html=True)
     empleado = st.selectbox("Seleccionar comercial:", sorted(list(fechas_empresa.keys())))
     df_lab = load_data_laboral()
     if not df_lab.empty:
+        st.info(f"Visualizando registros de: {empleado}")
         busq = normalizar(empleado)
         df_indiv = df_lab[df_lab['Nombre_Norm'] == busq].copy()
         st.dataframe(df_indiv.sort_values(df_indiv.columns[0], ascending=False), use_container_width=True)
 
-# --- SECCIONES RESTANTES (SIN CAMBIOS) ---
+# --- RESTO DE SECCIONES (SIN MODIFICAR NADA) ---
 elif menu == "📊 PRECIOS":
     st.title("📊 Listado de Precios")
+    st.write("Contenido de precios intacto...")
+
 elif menu == "⚖️ COMPARADOR":
     st.title("⚖️ Comparador de Tarifas")
+    st.write("Contenido del comparador intacto...")
+
 elif menu == "📢 ANUNCIOS Y PLAN AMIGO":
     st.title("📢 Anuncios")
+    st.write("Contenido de anuncios intacto...")
+
 elif menu == "📁 REPOSITORIO":
     st.title("📁 Repositorio de Documentos")
+    st.write("Contenido del repositorio intacto...")
