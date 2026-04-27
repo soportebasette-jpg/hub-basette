@@ -598,13 +598,21 @@ elif menu == "🕒 CONTROL LABORAL":
         df_laboral[col_temporal] = pd.to_datetime(df_laboral[col_temporal], dayfirst=True, errors='coerce')
         df_laboral = df_laboral.dropna(subset=[col_temporal])
         
-        # 2. CONFIGURACIÓN DE NO LABORABLES (Actualizado con 01/05)
+        # 2. CONFIGURACIÓN DE DÍAS ESPECIALES
         festivos = ['2026-04-02', '2026-04-03', '2026-04-22', '2026-05-01']
         vacaciones_raquel = [d.strftime('%Y-%m-%d') for d in pd.date_range('2026-06-22', '2026-06-28')]
         libre_lorena = ['2026-04-17']
 
-        # --- CALENDARIO ANUAL ---
-        with st.expander("📅 VER PLANIFICACIÓN ANUAL (VACACIONES Y FESTIVOS)"):
+        # --- CALENDARIO Y LEYENDA ---
+        with st.expander("📅 PLANIFICACIÓN ANUAL Y LEYENDA"):
+            st.markdown("""
+                <div style="display: flex; gap: 20px; margin-bottom: 15px; background: #1c2128; padding: 10px; border-radius: 10px; border: 1px solid #30363d;">
+                    <div style="display: flex; align-items: center; gap: 5px;"><div style="width: 15px; height: 15px; background: #ff4b4b; border-radius: 3px;"></div><span>Festivo</span></div>
+                    <div style="display: flex; align-items: center; gap: 5px;"><div style="width: 15px; height: 15px; background: #d2ff00; border-radius: 3px;"></div><span>Vacaciones (Raquel)</span></div>
+                    <div style="display: flex; align-items: center; gap: 5px;"><div style="width: 15px; height: 15px; background: #00f0ff; border-radius: 3px;"></div><span>Libre Objetivo (Lorena)</span></div>
+                </div>
+            """, unsafe_allow_html=True)
+            
             col_cal1, col_cal2 = st.columns(2)
             for i, m in enumerate([4, 6]):
                 with [col_cal1, col_cal2][i]:
@@ -615,27 +623,24 @@ elif menu == "🕒 CONTROL LABORAL":
                         for idx, day in enumerate(week):
                             if day != 0:
                                 f_str = f"2026-{m:02d}-{day:02d}"
-                                if f_str in vacaciones_raquel: bg, txt = "#d2ff00", "black"
+                                bg, txt = "transparent", "white"
+                                if f_str in festivos: bg, txt = "#ff4b4b", "white"
+                                elif f_str in vacaciones_raquel: bg, txt = "#d2ff00", "black"
                                 elif f_str in libre_lorena: bg, txt = "#00f0ff", "black"
-                                elif f_str in festivos: bg, txt = "#ff4b4b", "white"
-                                else: bg, txt = "transparent", "white"
                                 cols[idx].markdown(f'<div style="background:{bg}; color:{txt}; text-align:center; border-radius:5px;">{day}</div>', unsafe_allow_html=True)
-            st.caption("🟡 Vacaciones | 🔵 Libre Objetivo | 🔴 Festivo")
 
         st.markdown("---")
         com_sel = st.selectbox("👤 Selecciona Comercial", sorted(df_laboral[col_comercial].unique()))
 
-        # 3. LÓGICA DE CÁLCULO
-        def calcular_asistencia_v6(df, nombre):
+        # 3. LÓGICA DE CÁLCULO MEJORADA
+        def calcular_auditoria_completa(df, nombre):
             datos = df[df[col_comercial] == nombre].copy()
             min_ret = 0
             aus = []
-            if datos.empty: return 0, []
+            dias_retraso = [] # Para marcar el historial en rojo
 
             inicio = datos[col_temporal].min().date()
             fin_p = datetime.now().date()
-            if "MACARENA BACA" in nombre.upper(): fin_p = pd.Timestamp('2026-03-19').date()
-            if "LUIS RODRIGUEZ" in nombre.upper(): fin_p = pd.Timestamp('2026-04-24').date()
             
             libres = vacaciones_raquel if "RAQUEL" in nombre.upper() else (libre_lorena if "LORENA" in nombre.upper() else [])
 
@@ -649,66 +654,63 @@ elif menu == "🕒 CONTROL LABORAL":
                 h_lim = time(9, 0) if ("RAQUEL GUADALUPE" in nombre.upper() or es_esp) else time(9, 30)
                 dia_data = datos[datos[col_temporal].dt.date == dia.date()]
                 
+                # Detección de Ausencia (Hoy o días pasados sin fichar correctamente)
                 if dia_data.empty:
                     aus.append(dia.strftime('%d/%m/%Y'))
                 else:
                     entradas = dia_data[dia_data[col_accion].astype(str).str.contains("ENTRADA", case=False, na=False)]
-                    if not entradas.empty:
+                    if entradas.empty:
+                        aus.append(dia.strftime('%d/%m/%Y'))
+                    else:
                         h_real = entradas[col_temporal].min().time()
                         if h_real > h_lim:
                             d1, d2 = datetime.combine(dia, h_real), datetime.combine(dia, h_lim)
                             min_ret += (d1 - d2).total_seconds() / 60
-            return int(min_ret), aus
+                            dias_retraso.append(dia.date())
+            
+            return int(min_ret), aus, dias_retraso
 
-        min_ret, lista_aus = calcular_asistencia_v6(df_laboral, com_sel)
+        min_ret, lista_aus, dias_con_retraso = calcular_auditoria_completa(df_laboral, com_sel)
         
-        # 4. TRATAMIENTO DE TIEMPOS (5h por ausencia)
+        # 4. TRATAMIENTO DE TIEMPOS
         min_ausencias = len(lista_aus) * 300
         bruto_total = min_ret + min_ausencias
 
-        # 5. RECUPERACIONES (Belén actualizada a 5h total)
+        # Recuperaciones
         recuperado = 0
         if "BELEN" in com_sel.upper(): recuperado = 300 
         elif "LORENA" in com_sel.upper() or "DEBORAH" in com_sel.upper(): recuperado = bruto_total
         
         pendiente = max(0, bruto_total - recuperado)
-        horas_p, mins_p = divmod(pendiente, 60)
+        h_p, m_p = divmod(pendiente, 60)
 
-        # 6. DISEÑO VISUAL MEJORADO
-        st.markdown(f"### 📊 Auditoría: {com_sel}")
-        
-        # Estilo de cajas de métricas
-        def metric_box(label, value, sub="", color="#ffffff"):
-            return f'''
-                <div style="background:#1c2128; padding:15px; border-radius:10px; border:1px solid #30363d; text-align:center; min-height:120px;">
-                    <p style="color:#8b949e; margin:0; font-size:0.9rem; font-weight:bold;">{label.upper()}</p>
-                    <h2 style="color:{color}; margin:10px 0; font-size:1.8rem;">{value}</h2>
-                    <p style="color:#58a6ff; margin:0; font-size:0.8rem;">{sub}</p>
-                </div>
-            '''
+        # 5. DASHBOARD VISUAL
+        def metric_card(label, val, sub, col="#ffab70"):
+            return f'<div style="background:#1c2128; padding:15px; border-radius:10px; border:1px solid #30363d; text-align:center; min-height:120px;"><p style="color:#8b949e; margin:0; font-size:0.8rem;">{label}</p><h2 style="color:{col}; margin:10px 0;">{val}</h2><p style="color:#58a6ff; margin:0; font-size:0.7rem;">{sub}</p></div>'
 
-        col1, col2, col3, col4 = st.columns(4)
-        col1.markdown(metric_box("Retrasos Fichaje", f"{min_ret} min", "Minutos acumulados", "#ffab70"), unsafe_allow_html=True)
-        col2.markdown(metric_box("Faltas Totales", f"{min_ausencias} min", f"{len(lista_aus)} días ausente", "#ff7b72"), unsafe_allow_html=True)
-        col3.markdown(metric_box("Ya Recuperado", f"{recuperado} min", "Abonado a la empresa", "#7ee787"), unsafe_allow_html=True)
+        st.markdown(f"### 📊 Resumen Auditoría: {com_sel}")
+        c1, c2, c3, c4 = st.columns(4)
+        c1.markdown(metric_card("MINUTOS RETRASO", f"{min_ret} min", f"{len(dias_con_retraso)} días tarde", "#ffab70"), unsafe_allow_html=True)
+        c2.markdown(metric_card("FALTAS/AUSENCIAS", f"{min_ausencias} min", f"{len(lista_aus)} días", "#ff7b72"), unsafe_allow_html=True)
+        c3.markdown(metric_card("RECUPERADO", f"{recuperado} min", "Abonado", "#7ee787"), unsafe_allow_html=True)
         
-        # Caja de Pendiente destacada
         p_color = "#d2ff00" if pendiente <= 0 else "#ff4b4b"
-        col4.markdown(f'''
-            <div style="background:#161b22; padding:15px; border-radius:10px; border:2px solid {p_color}; text-align:center; min-height:120px;">
-                <p style="color:{p_color}; margin:0; font-size:1rem; font-weight:900;">TIEMPO PENDIENTE</p>
-                <h2 style="color:{p_color}; margin:5px 0; font-size:2rem;">{int(horas_p)}h {int(mins_p)}min</h2>
-                <p style="color:#8b949e; margin:0; font-size:0.8rem;">Total: {pendiente} minutos</p>
-            </div>
-        ''', unsafe_allow_html=True)
+        c4.markdown(f'<div style="background:#161b22; padding:15px; border-radius:10px; border:2px solid {p_color}; text-align:center; min-height:120px;"><p style="color:{p_color}; margin:0; font-weight:bold;">PENDIENTE TOTAL</p><h2 style="color:{p_color}; margin:5px 0; font-size:2rem;">{int(h_p)}h {int(m_p)}min</h2><p style="color:#8b949e; margin:0; font-size:0.8rem;">{pendiente} min</p></div>', unsafe_allow_html=True)
 
         if lista_aus:
-            st.markdown("#### 🚨 Días marcados como ausencia (+5h cada uno)")
-            st.warning(", ".join(lista_aus))
-        
+            st.warning(f"🚨 Ausencias detectadas: {', '.join(lista_aus)}")
+
+        # 6. HISTORIAL CON MARCAJE EN ROJO
         st.markdown("---")
-        with st.expander("🔍 Ver histórico de marcajes"):
-            st.dataframe(df_laboral[df_laboral[col_comercial] == com_sel][[col_temporal, col_accion]].sort_values(col_temporal, ascending=False), use_container_width=True)
+        with st.expander("🔍 VER HISTÓRICO DE MARCAJES (Rojo = Retraso)"):
+            historial = df_laboral[df_laboral[col_comercial] == com_sel][[col_temporal, col_accion]].sort_values(col_temporal, ascending=False)
+            
+            def color_retrasos(row):
+                if row[col_temporal].date() in dias_con_retraso and "ENTRADA" in str(row[col_accion]).upper():
+                    return ['background-color: #440000; color: white'] * len(row)
+                return [''] * len(row)
+
+            st.dataframe(historial.style.apply(color_retrasos, axis=1), use_container_width=True)
 
     except Exception as e:
-        st.error(f"Error: {e}")
+        st.error(f"Error en el sistema: {e}")
