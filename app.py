@@ -202,7 +202,7 @@ if not st.session_state["password_correct"]:
 with st.sidebar:
     if os.path.exists(LOGO_PRINCIPAL): st.image(LOGO_PRINCIPAL)
     st.markdown("---")
-    menu = st.radio("Secciones:", ["🚀 CRM", "📊 PRECIOS", "⚖️ COMPARADOR", "📢 ANUNCIOS Y PLAN AMIGO", "📈 DASHBOARD Y RANKING", "📂 REPOSITORIO"], label_visibility="collapsed","🕒 CONTROL LABORAL")
+    menu = st.radio("Secciones:", ["🚀 CRM", "📊 PRECIOS", "⚖️ COMPARADOR", "📢 ANUNCIOS Y PLAN AMIGO", "📈 DASHBOARD Y RANKING", "📂 REPOSITORIO"],"🕒 CONTROL LABORAL", label_visibility="collapsed")
 
 # --- CRM ---
 if menu == "🚀 CRM":
