@@ -436,6 +436,60 @@ elif menu == "📈 DASHBOARD Y RANKING":
         f_dt = dt[(dt['Año']==f_ano) & (dt['Mes'].isin(f_meses)) & (dt['Comercial'].isin(f_coms))].copy()
         f_da = da[(da['Año']==f_ano) & (da['Mes'].isin(f_meses)) & (da['Comercial'].isin(f_coms))].copy()
 
+        # --- LÓGICA DE CÁLCULO DE RANKING (Necesaria para el Cuadro de Honor) ---
+        for df_temp in [f_de, f_dt, f_da]:
+            if not df_temp.empty:
+                if 'V_Movil' in df_temp.columns: df_temp.rename(columns={'V_Movil': 'V_Móvil'}, inplace=True)
+                if 'Estado' in df_temp.columns:
+                    df_temp['V_Baja'] = df_temp['Estado'].apply(lambda x: 1 if str(x).strip().upper() == "BAJA" else 0)
+                    df_temp['V_Cancelado'] = df_temp['Estado'].apply(lambda x: 1 if str(x).strip().upper() == "CANCELADO" else 0)
+                else:
+                    df_temp['V_Baja'], df_temp['V_Cancelado'] = 0, 0
+
+        r1 = f_de.groupby('Comercial')[['V_Luz', 'V_Gas', 'V_Baja', 'V_Cancelado']].sum() if not f_de.empty else pd.DataFrame()
+        r2 = f_dt.groupby('Comercial')[['V_Fibra', 'V_Móvil', 'V_Baja', 'V_Cancelado']].sum() if not f_dt.empty else pd.DataFrame()
+        r3 = f_da.groupby('Comercial')[['V_Alarma', 'V_Baja', 'V_Cancelado']].sum() if not f_da.empty else pd.DataFrame()
+        
+        rank_calc = pd.concat([r1, r2, r3], axis=1).fillna(0)
+        rank_calc['TOTAL'] = (rank_calc.get('V_Luz',0) + rank_calc.get('V_Gas',0) + rank_calc.get('V_Fibra',0) + rank_calc.get('V_Alarma',0)) - rank_calc.get('V_Baja',0).sum(axis=1 if isinstance(rank_calc.get('V_Baja'), pd.DataFrame) else None) - rank_calc.get('V_Cancelado',0).sum(axis=1 if isinstance(rank_calc.get('V_Cancelado'), pd.DataFrame) else None)
+        
+        # IDENTIFICAR AL GANADOR
+        if not rank_calc.empty and rank_calc['TOTAL'].max() > 0:
+            ganador_nombre = rank_calc['TOTAL'].idxmax()
+            ganador_ventas = int(rank_calc['TOTAL'].max())
+        else:
+            ganador_nombre = "ESPERANDO VENTAS..."
+            ganador_ventas = 0
+
+        # --- DISEÑO ORIGINAL: CUADRO DE HONOR Y FRASE MOTIVADORA GIGANTE ---
+        frases_dia = [
+            "EL ÉXITO ES LA SUMA DE PEQUEÑOS ESFUERZOS REPETIDOS DÍA TRAS DÍA.",
+            "TU ÚNICA LIMITACIÓN ES TU MENTE. ¡A POR TODAS!",
+            "TRABAJA EN SILENCIO, QUE EL ÉXITO SE ENCARGUE DE HACER EL RUIDO.",
+            "NO CUENTES LOS DÍAS, HAZ QUE LOS DÍAS CUENTEN.",
+            "LA DISCIPLINA ES EL PUENTE ENTRE LAS METAS Y LOS LOGROS.",
+            "SI QUIERES LLEGAR DONDE LA MAYORÍA NO LLEGA, HAZ LO QUE LA MAYORÍA NO HACE.",
+            "LA EXCELENCIA NO ES UN ACTO, SINO UN HÁBITO."
+        ]
+        frase_hoy = frases_dia[datetime.now().day % len(frases_dia)]
+
+        st.markdown(f"""
+            <div style="background: linear-gradient(135deg, #1c2128 0%, #0d1117 100%); padding: 30px; border-radius: 20px; border: 2px solid #d2ff00; text-align: center; margin-bottom: 30px; box-shadow: 0 10px 30px rgba(210, 255, 0, 0.2);">
+                <div style="display: flex; justify-content: space-around; align-items: center; flex-wrap: wrap;">
+                    <div style="flex: 1; min-width: 300px;">
+                        <h1 style="color: #d2ff00; font-size: 50px; font-weight: 900; line-height: 1.1; margin-bottom: 20px;">"{frase_hoy}"</h1>
+                    </div>
+                    <div style="background: rgba(210, 255, 0, 0.1); padding: 25px; border-radius: 15px; border: 1px dashed #d2ff00; min-width: 300px;">
+                        <p style="color: #8b949e; letter-spacing: 5px; font-size: 1rem; margin-bottom: 10px;">LÍDER DEL MES 🏆</p>
+                        <h2 style="color: white; font-size: 3rem; margin: 0; text-shadow: 2px 2px #000;">{ganador_nombre}</h2>
+                        <h3 style="color: #d2ff00; font-size: 2.5rem; margin: 0;">{ganador_ventas} VENTAS</h3>
+                        <div style="font-size: 30px; margin-top: 10px;">👑 ⭐ 👑</div>
+                    </div>
+                </div>
+            </div>
+        """, unsafe_allow_html=True)
+
+        # --- CONTINUACIÓN DE TUS TABS ORIGINALES ---
         t_rank, t_ene, t_tel, t_ala = st.tabs(["🏆 RANKING", "⚡ ENERGÍA", "📱 TELCO", "🛡️ ALARMAS"])
 
         with t_rank:
@@ -445,9 +499,7 @@ elif menu == "📈 DASHBOARD Y RANKING":
             # --- NORMALIZACIÓN DE ESTADOS Y MÓVIL (CORRECCIÓN CRÍTICA) ---
             for df_temp in [f_de, f_dt, f_da]:
                 if not df_temp.empty:
-                    # Unificamos Móvil (con/sin tilde) para que no de KeyError
                     if 'V_Movil' in df_temp.columns: df_temp.rename(columns={'V_Movil': 'V_Móvil'}, inplace=True)
-                    
                     if 'Estado' in df_temp.columns:
                         df_temp['V_Baja'] = df_temp['Estado'].apply(lambda x: 1 if str(x).strip().upper() == "BAJA" else 0)
                         df_temp['V_Cancelado'] = df_temp['Estado'].apply(lambda x: 1 if str(x).strip().upper() == "CANCELADO" else 0)
@@ -461,7 +513,6 @@ elif menu == "📈 DASHBOARD Y RANKING":
             
             rank = pd.concat([r1, r2, r3], axis=1).fillna(0).astype(int)
             
-            # Consolidar columnas de estado que vienen de los 3 dfs
             for st_col in ['Baja', 'Cancelado', 'Activo']:
                 v_tag = f'V_{st_col}'
                 if v_tag in rank.columns:
@@ -469,15 +520,11 @@ elif menu == "📈 DASHBOARD Y RANKING":
                 else: rank[st_col] = 0
 
             rank = rank.rename(columns={'V_Luz': 'Luz', 'V_Gas': 'Gas', 'V_Fibra': 'Fibra', 'V_Móvil': 'Móvil', 'V_Alarma': 'Alarma', 'Activo': 'Activos'})
-            
-            # TOTAL: (Luz + Gas + Fibra + Alarma) - Baja - Cancelado. El Móvil NO suma.
             rank['TOTAL'] = (rank.get('Luz',0) + rank.get('Gas',0) + rank.get('Fibra',0) + rank.get('Alarma',0)) - rank.get('Baja',0) - rank.get('Cancelado',0)
             
-            # Mostrar Tabla Ranking
             col_finales = ['Luz', 'Gas', 'Fibra', 'Móvil', 'Alarma', 'Baja', 'Cancelado', 'Activos', 'TOTAL']
             st.table(rank[[c for c in col_finales if c in rank.columns]].sort_values('TOTAL', ascending=False))
 
-            # Frases Motivadoras
             st.info(random.choice([
                 "¡El éxito es la suma de pequeños esfuerzos repetidos día tras día!",
                 "¡A por todas, equipo! Cada venta cuenta.",
@@ -485,7 +532,6 @@ elif menu == "📈 DASHBOARD Y RANKING":
                 "¡No cuentes los días, haz que los días cuenten!"
             ]))
 
-            # --- TOTALES ENMARCADOS ABAJO (Métricas Generales) ---
             st.markdown("---")
             m1, m2, m3, m4 = st.columns(4)
             with m1:
@@ -501,7 +547,6 @@ elif menu == "📈 DASHBOARD Y RANKING":
                 v_a = rank['Alarma'].sum() if 'Alarma' in rank else 0
                 st.markdown(f'<div class="status-box" style="background:#161b22; padding:15px; border-radius:10px; border:1px solid #30363d; text-align:center;"><div style="color:#8b949e; font-size:0.8rem;">Alarmas</div><div style="color:white; font-size:1.8rem; font-weight:900;">{v_a}</div></div>', unsafe_allow_html=True)
 
-        # Gráficas de las pestañas siguientes
         with t_ene:
             if not f_de.empty:
                 col_e1, col_e2 = st.columns(2)
@@ -509,17 +554,7 @@ elif menu == "📈 DASHBOARD Y RANKING":
                 with col_e2: st.plotly_chart(px.bar(f_de.groupby('Comercial')[['V_Luz', 'V_Gas']].sum().reset_index(), x='Comercial', y=['V_Luz', 'V_Gas'], title="Energía"), use_container_width=True)
         with t_tel:
             if not f_dt.empty:
-                col_t1, col_t2 = st.columns(2)
-                with col_t1: st.plotly_chart(px.pie(f_dt, names='Comercial', values='V_Fibra', title="Fibra"), use_container_width=True)
-                with col_t2: st.plotly_chart(px.bar(f_dt.groupby('Comercial')[['V_Fibra', 'V_Móvil']].sum().reset_index(), x='Comercial', y=['V_Fibra', 'V_Móvil'], title="Telco"), use_container_width=True)
-        with t_ala:
-            if not f_da.empty:
-                col_a1, col_a2 = st.columns(2)
-                with col_a1: st.plotly_chart(px.pie(f_da, names='Comercial', values='V_Alarma', title="Alarmas"), use_container_width=True)
-                with col_a2: st.plotly_chart(px.bar(f_da.groupby('Comercial')['V_Alarma'].sum().reset_index(), x='V_Alarma', y='Comercial', orientation='h', title="Alarmas"), use_container_width=True)
-
-    except Exception as e:
-        st.error(f"Error cargando el Dashboard: {e}")
+                col_t1, col_
 # --- REPOSITORIO ---
 elif menu == "📂 REPOSITORIO":
     import os  # Crucial para que funcionen las carpetas
