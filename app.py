@@ -594,7 +594,6 @@ elif menu == "🕒 CONTROL LABORAL":
         col_comercial = "COMERCIAL"
         col_temporal = next((c for c in df_laboral.columns if "TEMPORAL" in c), None)
         col_accion = next((c for c in df_laboral.columns if "HACER" in c), None)
-
         df_laboral[col_temporal] = pd.to_datetime(df_laboral[col_temporal], dayfirst=True, errors='coerce')
         df_laboral = df_laboral.dropna(subset=[col_temporal])
         
@@ -603,16 +602,8 @@ elif menu == "🕒 CONTROL LABORAL":
         vacaciones_raquel = [d.strftime('%Y-%m-%d') for d in pd.date_range('2026-06-22', '2026-06-28')]
         libre_lorena_obj = ['2026-04-17']
 
-        # --- CALENDARIO CON TEXTO DEBAJO ---
-        with st.expander("📅 PLANIFICACIÓN ANUAL DETALLADA"):
-            st.markdown("""
-                <div style="display: flex; gap: 15px; margin-bottom: 10px;">
-                    <span style="color:#ff4b4b;">● Festivo</span> | 
-                    <span style="color:#d2ff00;">● Vacaciones Raquel</span> | 
-                    <span style="color:#00f0ff;">● Libre Lorena (Objetivo)</span>
-                </div>
-            """, unsafe_allow_html=True)
-            
+        # --- CALENDARIO ANUAL ---
+        with st.expander("📅 PLANIFICACIÓN ANUAL"):
             col_cal1, col_cal2 = st.columns(2)
             for i, m in enumerate([4, 6]):
                 with [col_cal1, col_cal2][i]:
@@ -623,46 +614,32 @@ elif menu == "🕒 CONTROL LABORAL":
                         for idx, day in enumerate(week):
                             if day != 0:
                                 f_str = f"2026-{m:02d}-{day:02d}"
-                                bg, txt_color, etiqueta = "transparent", "white", ""
+                                bg, txt_c, etiq = "transparent", "white", ""
+                                if f_str in festivos: bg, etiq = "#ff4b4b", "FESTIVO"
+                                elif f_str in vacaciones_raquel: bg, txt_c, etiq = "#d2ff00", "black", "VACAS RAQUEL"
+                                elif f_str in libre_lorena_obj: bg, txt_c, etiq = "#00f0ff", "black", "OBJ. LORENA"
                                 
-                                if f_str in festivos:
-                                    bg, etiqueta = "#ff4b4b", "FESTIVO"
-                                elif f_str in vacaciones_raquel:
-                                    bg, txt_color, etiqueta = "#d2ff00", "black", "VACAS RAQUEL"
-                                elif f_str in libre_lorena_obj:
-                                    bg, txt_color, etiqueta = "#00f0ff", "black", "OBJ. LORENA"
-                                
-                                label_html = f'<div style="font-size:0.5rem; line-height:1; margin-top:2px; font-weight:bold;">{etiqueta}</div>' if etiqueta else ""
-                                cols[idx].markdown(f'''
-                                    <div style="background:{bg}; color:{txt_color}; text-align:center; border-radius:5px; padding:2px; min-height:40px; border:1px solid #30363d;">
-                                        <div style="font-size:0.9rem;">{day}</div>
-                                        {label_html}
-                                    </div>
-                                ''', unsafe_allow_html=True)
+                                label_h = f'<div style="font-size:0.5rem; font-weight:bold;">{etiq}</div>' if etiq else ""
+                                cols[idx].markdown(f'<div style="background:{bg}; color:{txt_c}; text-align:center; border-radius:5px; padding:2px; min-height:40px; border:1px solid #30363d;"><div style="font-size:0.9rem;">{day}</div>{label_h}</div>', unsafe_allow_html=True)
 
         st.markdown("---")
         com_sel = st.selectbox("👤 Selecciona Comercial", sorted(df_laboral[col_comercial].unique()))
 
-        # 3. LÓGICA DE CÁLCULO UNIFICADA
-        def calcular_auditoria_v9(df, nombre):
+        # 3. LÓGICA DE CÁLCULO
+        def calcular_auditoria_v10(df, nombre):
             datos = df[df[col_comercial] == nombre].copy()
-            min_ret, dias_deuda, dias_rojos, extra_hoy = 0, [], [], 0
-            inicio = datos[col_temporal].min().date()
+            min_ret, dias_deuda, dias_rojos, min_medicos, detalle_medico = 0, [], [], 0, ""
             hoy = datetime.now().date()
+            inicio = datos[col_temporal].min().date()
             
-            # Control de bajas
             fin_p = hoy
             if "MACARENA BACA" in nombre.upper(): fin_p = pd.Timestamp('2026-03-19').date()
             elif "LUIS RODRIGUEZ" in nombre.upper(): fin_p = pd.Timestamp('2026-04-24').date()
-            
+
             for dia in pd.date_range(inicio, fin_p):
                 d_str = dia.strftime('%Y-%m-%d')
                 if dia.weekday() >= 5 or d_str in festivos: continue 
-                
-                # Excluir vacaciones Raquel del cálculo de deuda
                 if "RAQUEL" in nombre.upper() and d_str in vacaciones_raquel: continue
-
-                # Si es día libre de Lorena, suma como deuda (ausencia de 300min)
                 if "LORENA" in nombre.upper() and d_str in libre_lorena_obj:
                     dias_deuda.append(f"{dia.strftime('%d/%m/%Y')} (Libre Obj)")
                     continue
@@ -685,39 +662,49 @@ elif menu == "🕒 CONTROL LABORAL":
                             min_ret += (datetime.combine(dia, h_real) - datetime.combine(dia, h_lim_e)).total_seconds() / 60
                             dias_rojos.append(dia.date())
 
-            # Deuda específica Lorena Hoy 27/04 por salida antes
+            # CASO LORENA: Horas Médicas hoy 27/04
             if "LORENA" in nombre.upper() and hoy == pd.Timestamp('2026-04-27').date():
-                extra_hoy = 120 
+                min_medicos = 180 # 3 horas
+                detalle_medico = "27/04/2026 (11:30 a 14:30)"
 
-            return int(min_ret), dias_deuda, dias_rojos, extra_hoy
+            return int(min_ret), dias_deuda, dias_rojos, min_medicos, detalle_medico
 
-        m_ret, l_deuda, d_rojos, ex_hoy = calcular_auditoria_v9(df_laboral, com_sel)
+        m_ret, l_deuda, d_rojos, m_med, det_med = calcular_auditoria_v10(df_laboral, com_sel)
         
-        # 4. TOTALES
-        bruto = m_ret + (len(l_deuda) * 300) + ex_hoy
-        recup = 300 if "BELEN" in com_sel.upper() else (bruto if any(x in com_sel.upper() for x in ["LORENA", "DEBORAH"]) else 0)
+        # 4. TOTALES Y RECUPERACIONES
+        bruto = m_ret + (len(l_deuda) * 300)
+        
+        # Belén a 0 (recupera todo su bruto)
+        recup = bruto if "BELEN" in com_sel.upper() else (bruto if any(x in com_sel.upper() for x in ["LORENA", "DEBORAH"]) else 0)
+        
         pend = max(0, bruto - recup)
         hf, mf = divmod(pend, 60)
+        h_med, m_med_r = divmod(m_med, 60)
 
         # 5. DASHBOARD
         st.markdown(f"### 📊 Auditoría: {com_sel}")
-        c1, c2, c3, c4 = st.columns(4)
-        def box_m(l, v, s, c):
-            return f'<div style="background:#1c2128; padding:15px; border-radius:10px; border:1px solid #30363d; text-align:center;"><p style="color:#8b949e; font-size:0.8rem; margin:0;">{l}</p><h2 style="color:{c}; margin:10px 0;">{v}</h2><p style="color:#58a6ff; font-size:0.7rem; margin:0;">{s}</p></div>'
-
-        c1.markdown(box_m("RETRASOS", f"{m_ret} m", f"{len(d_rojos)} días tarde", "#ffab70"), unsafe_allow_html=True)
-        c2.markdown(box_m("DEUDA DÍAS", f"{len(l_deuda)*300} m", f"{len(l_deuda)} días totales", "#ff7b72"), unsafe_allow_html=True)
-        c3.markdown(box_m("RECUPERADO", f"{recup} m", "Total compensado", "#7ee787"), unsafe_allow_html=True)
+        c1, c2, c3, c4, c5 = st.columns(5)
         
-        p_col = "#d2ff00" if pend <= 0 else "#ff4b4b"
-        c4.markdown(f'<div style="background:#161b22; padding:15px; border-radius:10px; border:2px solid {p_col}; text-align:center;"><p style="color:{p_col}; font-weight:bold; margin:0;">PENDIENTE</p><h2 style="color:{p_col}; margin:5px 0;">{int(hf)}h {int(mf)}min</h2><p style="color:#8b949e; font-size:0.8rem; margin:0;">{pend} min</p></div>', unsafe_allow_html=True)
+        def card_v(l, v, s, c):
+            return f'<div style="background:#1c2128; padding:15px; border-radius:10px; border:1px solid #30363d; text-align:center; min-height:110px;"><p style="color:#8b949e; font-size:0.75rem; margin:0;">{l}</p><h2 style="color:{c}; margin:10px 0; font-size:1.4rem;">{v}</h2><p style="color:#58a6ff; font-size:0.65rem; margin:0;">{s}</p></div>'
 
-        if ex_hoy > 0: st.error(f"⚠️ Salida anticipada hoy (27/04): +{ex_hoy} min de deuda.")
+        c1.markdown(card_v("RETRASOS", f"{m_ret} m", f"{len(d_rojos)} registros", "#ffab70"), unsafe_allow_html=True)
+        c2.markdown(card_v("DEUDA DÍAS", f"{len(l_deuda)*300} m", f"{len(l_deuda)} días", "#ff7b72"), unsafe_allow_html=True)
+        c3.markdown(card_v("RECUPERADO", f"{recup} m", "Abonado", "#7ee787"), unsafe_allow_html=True)
+        
+        # Cuadro Horas Médicas
+        m_col = "#a371f7" if m_med > 0 else "#8b949e"
+        c4.markdown(card_v("HORAS MÉDICAS", f"{int(h_med)}h {int(m_med_r)}m", det_med if det_med else "Sin registros", m_col), unsafe_allow_html=True)
+        
+        # Cuadro Pendiente
+        p_col = "#d2ff00" if pend <= 0 else "#ff4b4b"
+        c5.markdown(f'<div style="background:#161b22; padding:15px; border-radius:10px; border:2px solid {p_col}; text-align:center; min-height:110px;"><p style="color:{p_col}; font-weight:bold; margin:0; font-size:0.8rem;">PENDIENTE</p><h2 style="color:{p_col}; margin:5px 0; font-size:1.5rem;">{int(hf)}h {int(mf)}m</h2><p style="color:#8b949e; font-size:0.65rem; margin:0;">{pend} min</p></div>', unsafe_allow_html=True)
+
         if l_deuda: st.warning(f"📌 Días con deuda (300m/día): {', '.join(l_deuda)}")
 
         # 6. HISTORIAL
         st.markdown("---")
-        with st.expander("🔍 VER HISTORIAL (Rojo = Retraso Entrada)"):
+        with st.expander("🔍 HISTORIAL (Rojo = Retraso Entrada)"):
             h_df = df_laboral[df_laboral[col_comercial] == com_sel][[col_temporal, col_accion]].sort_values(col_temporal, ascending=False)
             st.dataframe(h_df.style.apply(lambda r: ['background-color: #440000; color: white' if r[col_temporal].date() in d_rojos and "ENTRADA" in str(r[col_accion]).upper() else '' for _ in r], axis=1), use_container_width=True)
 
