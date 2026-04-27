@@ -581,18 +581,20 @@ elif menu == "🕒 CONTROL LABORAL":
     st.markdown('<div class="block-header">🕒 CONTROL LABORAL Y ASISTENCIA</div>', unsafe_allow_html=True)
     
     try:
-        # 1. CONEXIÓN Y PROCESAMIENTO DE GOOGLE FORMS
+        # 1. CONEXIÓN Y LIMPIEZA DE DATOS
         sheet_id = "175LGa4j6dAhsjQ7Wiy-8tZnKWuDC9_C9uy6SYC-i-LY"
         url_csv = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv"
         df_laboral = pd.read_csv(url_csv)
 
-        # Nombres exactos de tus columnas
+        # Nombres de tus columnas (basado en lo que me dijiste)
         col_temporal = "Marca temporal"
         col_comercial = "¿Quién eres?"
         col_accion = "¿Qué vas a hacer?"
 
-        # Convertir Marca temporal a Fecha y Hora reales
-        df_laboral[col_temporal] = pd.to_datetime(df_laboral[col_temporal], dayfirst=True)
+        # Convertir y limpiar fechas
+        df_laboral[col_temporal] = pd.to_datetime(df_laboral[col_temporal], dayfirst=True, errors='coerce')
+        df_laboral = df_laboral.dropna(subset=[col_temporal]) # Eliminar filas con fecha rota
+        
         df_laboral['Fecha_Solo'] = df_laboral[col_temporal].dt.date
         df_laboral['Hora_Solo'] = df_laboral[col_temporal].dt.time
 
@@ -600,54 +602,51 @@ elif menu == "🕒 CONTROL LABORAL":
         lista_comerciales = sorted(df_laboral[col_comercial].unique())
         com_sel = st.selectbox("👤 Selecciona Comercial para Auditoría", lista_comerciales)
 
-        # 3. LÓGICA DE CÁLCULO
-        def calcular_asistencia(df, nombre):
+        # 3. LÓGICA DE CÁLCULO BLINDADA
+        def calcular_asistencia_segura(df, nombre):
             datos = df[df[col_comercial] == nombre].copy()
             retraso_total = 0
             ausencias = []
             
             if datos.empty: return 0, []
 
-            # Rango: Desde el primer registro hasta hoy
             inicio = datos['Fecha_Solo'].min()
             fin = datetime.now().date()
             
             for dia in pd.date_range(inicio, fin):
-                if dia.weekday() >= 5: continue # Lunes a Viernes
+                if dia.weekday() >= 5: continue # Saltar findes
                 
-                # Horarios Especiales Feria y Semana Santa 2026
+                # Horarios Especiales 2026
                 es_especial = (dia >= pd.Timestamp('2026-03-29') and dia <= pd.Timestamp('2026-04-05')) or \
                               (dia >= pd.Timestamp('2026-04-19') and dia <= pd.Timestamp('2026-04-26'))
                 
-                # Definir hora de entrada oficial
+                # Definir hora de entrada
                 if "RAQUEL GUADALUPE" in nombre.upper():
                     h_oficial = time(9, 0)
                 else:
                     h_oficial = time(9, 0) if es_especial else time(9, 30)
 
-                # Buscar registros de este día
                 dia_data = datos[datos['Fecha_Solo'] == dia.date()]
                 
                 if dia_data.empty:
                     ausencias.append(dia.strftime('%d/%m/%Y'))
                 else:
-                    # Buscamos el primer registro de tipo "ENTRADA"
+                    # Buscamos registro que contenga "ENTRADA"
                     entradas = dia_data[dia_data[col_accion].str.contains("ENTRADA", case=False, na=False)]
                     if not entradas.empty:
                         h_real = entradas['Hora_Solo'].min()
-                        if h_real > h_oficial:
-                            d1 = datetime.combine(dia, h_real)
-                            d2 = datetime.combine(dia, h_oficial)
-                            retraso_total += (d1 - d2).total_seconds() / 60
-                    else:
-                        # Si hay marcajes pero ninguno dice ENTRADA, lo contamos como incidencia
-                        pass
+                        # Validación CRUCIAL: verificar que h_real sea tipo time
+                        if isinstance(h_real, time):
+                            if h_real > h_oficial:
+                                d1 = datetime.combine(dia, h_real)
+                                d2 = datetime.combine(dia, h_oficial)
+                                retraso_total += (d1 - d2).total_seconds() / 60
 
             return int(retraso_total), ausencias
 
-        min_ret, lista_aus = calcular_asistencia(df_laboral, com_sel)
+        min_ret, lista_aus = calcular_asistencia_segura(df_laboral, com_sel)
 
-        # 4. DASHBOARD VISUAL
+        # 4. INTERFAZ VISUAL
         c1, c2 = st.columns(2)
         with c1:
             st.markdown(f"""
@@ -660,20 +659,21 @@ elif menu == "🕒 CONTROL LABORAL":
             color_aus = "#ff4b4b" if lista_aus else "#238636"
             st.markdown(f"""
                 <div style="background:#161b22; padding:20px; border-radius:15px; border:1px solid #30363d; text-align:center;">
-                    <h3 style="color:#8b949e; margin:0;">Ausencias Totales</h3>
+                    <h3 style="color:#8b949e; margin:0;">Días de Ausencia</h3>
                     <h1 style="color:{color_aus}; margin:0;">{len(lista_aus)}</h1>
                 </div>
             """, unsafe_allow_html=True)
 
         if lista_aus:
-            st.markdown("### 🚨 DÍAS SIN ACTIVIDAD (ROJO)")
+            st.markdown("### 🚨 AUSENCIAS DETECTADAS (DÍAS SIN REGISTRO)")
             cols = st.columns(5)
-            for i, fecha_aus in enumerate(lista_aus):
-                cols[i % 5].markdown(f'<div style="background:#440000; color:white; padding:10px; border-radius:8px; text-align:center; border:1px solid #ff4b4b; margin-bottom:5px;">{fecha_aus}</div>', unsafe_allow_html=True)
+            for i, f_aus in enumerate(lista_aus):
+                cols[i % 5].markdown(f'<div style="background:#440000; color:white; padding:10px; border-radius:8px; text-align:center; border:1px solid #ff4b4b; margin-bottom:5px;">{f_aus}</div>', unsafe_allow_html=True)
         
         st.markdown("---")
-        with st.expander("🔍 Ver todos los movimientos"):
+        with st.expander("🔍 Historial de Entradas y Salidas"):
+            # Mostramos la tabla limpia
             st.dataframe(df_laboral[df_laboral[col_comercial] == com_sel][[col_temporal, col_accion]].sort_values(col_temporal, ascending=False), use_container_width=True)
 
     except Exception as e:
-        st.error(f"Error cargando datos: {e}")
+        st.error(f"Error en el sistema de Control Laboral: {e}")
