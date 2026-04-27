@@ -518,12 +518,12 @@ elif menu == "📈 DASHBOARD Y RANKING":
         st.error(f"Error cargando el Dashboard: {e}")
 # --- REPOSITORIO ---
 elif menu == "📂 REPOSITORIO":
-    import os  # <--- IMPORTACIÓN LOCAL PARA EVITAR EL ERROR DE TU IMAGEN
+    import os  # Crucial para que funcionen las carpetas
     st.markdown('<div class="block-header">📂 REPOSITORIO DE DOCUMENTACIÓN</div>', unsafe_allow_html=True)
 
-    # Función Maestra: Escanea la carpeta y crea botones para CADA archivo
+    # Función Maestra: Escanea la carpeta y genera botones para CADA archivo
     def mostrar_contenido_carpeta(nombre_carpeta, titulo_visible, icono="📁"):
-        # Construimos la ruta buscando en la carpeta 'manuales'
+        # Construimos la ruta buscando exactamente como se llaman tus carpetas
         ruta_especifica = os.path.join("manuales", nombre_carpeta)
         
         if os.path.exists(ruta_especifica):
@@ -538,7 +538,7 @@ elif menu == "📂 REPOSITORIO":
                             with open(ruta_archivo, "rb") as f:
                                 contenido = f.read()
                                 ext = filename.split('.')[-1].lower()
-                                # Definimos el tipo de archivo para que el navegador lo abra bien
+                                # MIME type para que el navegador sepa qué es
                                 m_type = "application/pdf" if ext == "pdf" else f"image/{ext}"
                                 
                                 st.download_button(
@@ -549,28 +549,28 @@ elif menu == "📂 REPOSITORIO":
                                     key=f"btn_{nombre_carpeta}_{filename}".replace(" ", "_")
                                 )
                     else:
-                        st.write("ℹ️ No hay archivos en esta carpeta todavía.")
+                        st.write("ℹ️ Esta carpeta está vacía.")
                 except Exception as e:
                     st.error(f"Error al leer la carpeta {nombre_carpeta}: {e}")
         else:
-            # Si aparece este mensaje, el nombre de la carpeta no coincide con tu carpeta real
-            st.caption(f"🚫 Carpeta no detectada: manuales/{nombre_carpeta}")
+            # Si sale este mensaje es que el nombre de la carpeta no coincide con el disco duro
+            st.caption(f"🚫 No detectada: manuales/{nombre_carpeta}")
 
-    # --- DISTRIBUCIÓN EN 2 COLUMNAS (Exactamente tus carpetas) ---
+    # --- DISTRIBUCIÓN SEGÚN TUS CARPETAS EN MAYÚSCULAS ---
     col_a, col_b = st.columns(2)
 
     with col_a:
-        mostrar_contenido_carpeta("marcador", "MANUAL DEL MARCADOR", "📂")
-        mostrar_contenido_carpeta("argumentarios", "ARGUMENTARIOS DE VENTAS", "📝")
-        mostrar_contenido_carpeta("o2", "TARIFAS O2", "📱")
-        mostrar_contenido_carpeta("lowi", "TARIFAS LOWI", "📱")
-        mostrar_contenido_carpeta("segurma", "DOCUMENTACIÓN SEGURMA", "🛡️")
+        mostrar_contenido_carpeta("MARCADOR", "MANUAL DEL MARCADOR", "📂")
+        mostrar_contenido_carpeta("ARGUMENTARIO", "ARGUMENTARIOS DE VENTAS", "📝")
+        mostrar_contenido_carpeta("TARIFAS O2", "TARIFAS O2", "📱")
+        mostrar_contenido_carpeta("TARIFAS LOWI", "TARIFAS LOWI", "📱")
+        mostrar_contenido_carpeta("TARIFAS SEGURMA", "DOCUMENTACIÓN SEGURMA", "🛡️")
 
     with col_b:
-        mostrar_contenido_carpeta("endesa", "TARIFAS ENDESA", "⚡")
-        mostrar_contenido_carpeta("iberdrola", "TARIFAS IBERDROLA", "⚡")
-        mostrar_contenido_carpeta("naturgy", "TARIFAS NATURGY", "⚡")
-        mostrar_contenido_carpeta("total energies", "TARIFAS TOTAL ENERGIES", "⚡")
-        mostrar_contenido_carpeta("gana energia", "TARIFAS GANA ENERGÍA", "⚡")
+        mostrar_contenido_carpeta("TARIFAS ENDESA", "TARIFAS ENDESA", "⚡")
+        mostrar_contenido_carpeta("TARIFAS IBERDROLA", "TARIFAS IBERDROLA", "⚡")
+        mostrar_contenido_carpeta("TARIFAS NATURGY", "TARIFAS NATURGY", "⚡")
+        mostrar_contenido_carpeta("TARIFAS TOTAL", "TARIFAS TOTAL ENERGIES", "⚡")
+        mostrar_contenido_carpeta("TARIFAS GANA", "TARIFAS GANA ENERGÍA", "⚡")
 
     st.markdown("---")
