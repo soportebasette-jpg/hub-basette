@@ -580,6 +580,7 @@ elif menu == "📂 REPOSITORIO":
 # --- CONTROL LABORAL ---
 elif menu == "🕒 CONTROL LABORAL":
     import pandas as pd
+    import calendar
     from datetime import datetime, time
     st.markdown('<div class="block-header">🕒 CONTROL LABORAL Y ASISTENCIA</div>', unsafe_allow_html=True)
     
@@ -597,54 +598,58 @@ elif menu == "🕒 CONTROL LABORAL":
         df_laboral[col_temporal] = pd.to_datetime(df_laboral[col_temporal], dayfirst=True, errors='coerce')
         df_laboral = df_laboral.dropna(subset=[col_temporal])
         
-        lista_comerciales = sorted([str(x) for x in df_laboral[col_comercial].unique() if pd.notnull(x)])
-
-        # 2. CONFIGURACIÓN DE NO LABORABLES (VACACIONES, LIBRES, FESTIVOS Y BAJAS)
+        # 2. CONFIGURACIÓN DE NO LABORABLES Y VACACIONES
         festivos = ['2026-04-02', '2026-04-03', '2026-04-22']
-        
-        # Diccionario de días especiales por persona
-        dias_especiales = {
-            "RAQUEL GUADALUPE": [d.strftime('%Y-%m-%d') for d in pd.date_range('2026-06-22', '2026-06-28')],
-            "LORENA": ['2026-04-17']
-        }
+        vacaciones_raquel = [d.strftime('%Y-%m-%d') for d in pd.date_range('2026-06-22', '2026-06-28')]
+        libre_lorena = ['2026-04-17']
 
-        # Sección visual de Vacaciones/Libres para todos
-        st.markdown("### 🏖️ CALENDARIO DE VACACIONES Y LIBRES")
-        cv1, cv2 = st.columns(2)
-        cv1.info("**Raquel Guadalupe:** Vacaciones del 22/06 al 28/06")
-        cv2.success("**Lorena:** Día libre 17/04 (Objetivo Conseguido)")
+        # --- BOTÓN PARA CALENDARIO ANUAL ---
+        with st.expander("📅 VER CALENDARIO ANUAL DE VACACIONES Y LIBRES"):
+            st.markdown("#### Planificación 2026")
+            col_cal1, col_cal2, col_cal3 = st.columns(3)
+            meses = [4, 6] # Meses con eventos
+            for i, m in enumerate(meses):
+                with [col_cal1, col_cal2][i]:
+                    st.write(f"**{calendar.month_name[m]} 2026**")
+                    cal = calendar.monthcalendar(2026, m)
+                    for week in cal:
+                        cols = st.columns(7)
+                        for idx, day in enumerate(week):
+                            if day == 0: cols[idx].write(" ")
+                            else:
+                                fecha_str = f"2026-{m:02d}-{day:02d}"
+                                if fecha_str in vacaciones_raquel:
+                                    cols[idx].markdown(f'<div style="background:#d2ff00; color:black; text-align:center; border-radius:5px; font-weight:bold;">{day}</div>', unsafe_allow_html=True)
+                                elif fecha_str in libre_lorena:
+                                    cols[idx].markdown(f'<div style="background:#00f0ff; color:black; text-align:center; border-radius:5px; font-weight:bold;">{day}</div>', unsafe_allow_html=True)
+                                elif fecha_str in festivos:
+                                    cols[idx].markdown(f'<div style="background:#ff4b4b; color:white; text-align:center; border-radius:5px;">{day}</div>', unsafe_allow_html=True)
+                                else:
+                                    cols[idx].write(day)
+            st.caption("🟡 Raquel (Vacaciones) | 🔵 Lorena (Libre Objetivo) | 🔴 Festivo")
+
         st.markdown("---")
-
-        com_sel = st.selectbox("👤 Selecciona Comercial para Auditoría", lista_comerciales)
-
-        def obtener_fecha_fin(nombre):
-            if "MACARENA BACA" in nombre.upper(): return pd.Timestamp('2026-03-19').date()
-            if "LUIS RODRIGUEZ" in nombre.upper(): return pd.Timestamp('2026-04-24').date()
-            return datetime.now().date()
+        com_sel = st.selectbox("👤 Selecciona Comercial para Auditoría", sorted(df_laboral[col_comercial].unique()))
 
         # 3. LÓGICA DE CÁLCULO
-        def calcular_asistencia_v4(df, nombre):
+        def calcular_asistencia_v5(df, nombre):
             datos = df[df[col_comercial] == nombre].copy()
-            retraso_total = 0
+            minutos_retraso = 0
             ausencias = []
             if datos.empty: return 0, []
 
             inicio = datos[col_temporal].min().date()
-            fin_persona = obtener_fecha_fin(nombre)
+            # Bajas empresa
+            fin_persona = datetime.now().date()
+            if "MACARENA BACA" in nombre.upper(): fin_persona = pd.Timestamp('2026-03-19').date()
+            if "LUIS RODRIGUEZ" in nombre.upper(): fin_persona = pd.Timestamp('2026-04-24').date()
             
-            # Días específicos a saltar para esta persona (Vacaciones/Libres)
-            libres_persona = dias_especiales.get(nombre.upper(), [])
-            if "LORENA" in nombre.upper(): libres_persona = dias_especiales["LORENA"]
-            if "RAQUEL" in nombre.upper(): libres_persona = dias_especiales["RAQUEL GUADALUPE"]
+            libres_p = vacaciones_raquel if "RAQUEL" in nombre.upper() else (libre_lorena if "LORENA" in nombre.upper() else [])
 
             for dia in pd.date_range(inicio, fin_persona):
                 dia_str = dia.strftime('%Y-%m-%d')
+                if dia.weekday() >= 5 or dia_str in festivos or dia_str in libres_p: continue 
                 
-                # REGLAS DE EXCLUSIÓN: Findes, Festivos generales, y Días Libres/Vacaciones propios
-                if dia.weekday() >= 5 or dia_str in festivos or dia_str in libres_persona:
-                    continue 
-                
-                # Horarios Especiales Feria y SS
                 es_especial = (dia >= pd.Timestamp('2026-03-29') and dia <= pd.Timestamp('2026-04-05')) or \
                               (dia >= pd.Timestamp('2026-04-19') and dia <= pd.Timestamp('2026-04-26'))
                 
@@ -660,34 +665,36 @@ elif menu == "🕒 CONTROL LABORAL":
                         if h_real > h_limite:
                             d1 = datetime.combine(dia, h_real)
                             d2 = datetime.combine(dia, h_limite)
-                            retraso_total += (d1 - d2).total_seconds() / 60
+                            minutos_retraso += (d1 - d2).total_seconds() / 60
             
-            return int(retraso_total), ausencias
+            return int(minutos_retraso), ausencias
 
-        min_ret, lista_aus = calcular_asistencia_v4(df_laboral, com_sel)
+        min_ret, lista_aus = calcular_asistencia_v5(df_laboral, com_sel)
 
-        # 4. GESTIÓN DE RECUPERACIONES
+        # 4. CONVERSIÓN DE AUSENCIAS (1 día = 5h = 300 min)
+        minutos_por_ausencia = len(lista_aus) * 300
+        retraso_bruto_total = min_ret + minutos_por_ausencia
+
+        # 5. RECUPERACIONES
         recuperado_min = 0
         if "BELEN" in com_sel.upper(): recuperado_min = 180 
-        elif "LORENA" in com_sel.upper() or "DEBORAH" in com_sel.upper(): recuperado_min = min_ret
+        elif "LORENA" in com_sel.upper() or "DEBORAH" in com_sel.upper(): recuperado_min = retraso_bruto_total
         
-        pendiente_min = max(0, min_ret - recuperado_min)
+        pendiente_min = max(0, retraso_bruto_total - recuperado_min)
 
-        # 5. DASHBOARD
-        c1, c2, c3 = st.columns(3)
-        with c1:
-            st.markdown(f'<div style="background:#161b22; padding:20px; border-radius:15px; border:1px solid #30363d; text-align:center;"><h4 style="color:#8b949e; margin:0;">Retraso Bruto</h4><h1 style="color:#ff4b4b; margin:0;">{min_ret} <small>min</small></h1></div>', unsafe_allow_html=True)
-        with c2:
-            st.markdown(f'<div style="background:#161b22; padding:20px; border-radius:15px; border:1px solid #30363d; text-align:center;"><h4 style="color:#8b949e; margin:0;">Recuperado</h4><h1 style="color:#d2ff00; margin:0;">{recuperado_min} <small>min</small></h1></div>', unsafe_allow_html=True)
-        with c3:
-            color_p = "#238636" if pendiente_min <= 0 else "#ff4b4b"
-            st.markdown(f'<div style="background:#161b22; padding:20px; border-radius:15px; border:1px solid #30363d; text-align:center;"><h4 style="color:#8b949e; margin:0;">PENDIENTE</h4><h1 style="color:{color_p}; margin:0;">{pendiente_min} <small>min</small></h1></div>', unsafe_allow_html=True)
+        # 6. DASHBOARD
+        st.markdown(f"### Resumen de {com_sel}")
+        c1, c2, c3, c4 = st.columns(4)
+        c1.metric("Retraso Fichaje", f"{min_ret} min")
+        c2.metric("Minutos Ausencias", f"{minutos_por_ausencia} min", f"{len(lista_aus)} días")
+        c3.metric("Total Recuperado", f"{recuperado_min} min")
+        c4.markdown(f'<div style="background:#161b22; padding:10px; border-radius:10px; border:2px solid {"#238636" if pendiente_min <=0 else "#ff4b4b"}; text-align:center;"><h4 style="margin:0;">PENDIENTE</h4><h2 style="color:{"#d2ff00" if pendiente_min <=0 else "#ff4b4b"}; margin:0;">{pendiente_min} min</h2></div>', unsafe_allow_html=True)
 
         if lista_aus:
-            st.markdown("### 🚨 AUSENCIAS (Días laborables sin registro)")
+            st.markdown("#### 🚨 Detalle de Ausencias Sumadas")
             cols = st.columns(5)
             for i, f in enumerate(lista_aus):
-                cols[i % 5].markdown(f'<div style="background:#440000; color:white; padding:10px; border-radius:8px; text-align:center; border:1px solid #ff4b4b; margin-bottom:5px; font-weight:bold;">{f}</div>', unsafe_allow_html=True)
+                cols[i % 5].error(f"{f} (+300 min)")
         
         st.markdown("---")
         with st.expander("🔍 Historial de Marcajes"):
