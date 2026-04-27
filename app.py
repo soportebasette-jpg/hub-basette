@@ -579,92 +579,111 @@ elif menu == "📂 REPOSITORIO":
     st.markdown("---")
 # --- CONTROL LABORAL ---
 elif menu == "🕒 CONTROL LABORAL":
-    import pandas as pd  # <--- Esto evita el error de la línea 205
+    import pandas as pd
+    import os
     from datetime import datetime, time
     
     st.markdown('<div class="block-header">🕒 CONTROL LABORAL Y ASISTENCIA</div>', unsafe_allow_html=True)
     
     try:
-        # 1. CARGA DE DATOS DESDE GOOGLE FORMS
+        # 1. CARGA DE DATOS DESDE GOOGLE SHEETS
         sheet_id = "175LGa4j6dAhsjQ7Wiy-8tZnKWuDC9_C9uy6SYC-i-LY"
         url_csv = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv"
         df_laboral = pd.read_csv(url_csv)
 
-        # Nombres exactos de tus columnas
-        col_temporal = "Marca temporal"
-        col_comercial = "¿Quién eres?"
-        col_accion = "¿Qué vas a hacer?"
+        # Limpieza de nombres de columnas: quitamos espacios y pasamos a MAYÚSCULAS
+        df_laboral.columns = [str(c).strip().upper() for c in df_laboral.columns]
+        
+        # Mapeo de columnas con los nuevos nombres
+        col_comercial = "COMERCIAL" # El que acabas de cambiar
+        col_temporal = next((c for c in df_laboral.columns if "TEMPORAL" in c), None)
+        col_accion = next((c for c in df_laboral.columns if "HACER" in c), None)
 
-        # Limpieza y conversión
+        if col_comercial not in df_laboral.columns:
+            st.error(f"No encuentro la columna 'COMERCIAL'. Columnas actuales: {list(df_laboral.columns)}")
+            st.stop()
+
+        # Limpieza de datos y fechas
         df_laboral[col_temporal] = pd.to_datetime(df_laboral[col_temporal], dayfirst=True, errors='coerce')
         df_laboral = df_laboral.dropna(subset=[col_temporal])
         
         # 2. SELECCIÓN DE COMERCIAL
-        lista_comerciales = sorted(df_laboral[col_comercial].unique())
+        lista_comerciales = sorted([str(x) for x in df_laboral[col_comercial].unique() if pd.notnull(x)])
         com_sel = st.selectbox("👤 Selecciona Comercial para Auditoría", lista_comerciales)
 
-        # 3. LÓGICA DE CÁLCULO
-        def procesar_asistencia(df, nombre):
+        # 3. LÓGICA DE CÁLCULO (HORARIOS Y RETRASOS)
+        def calcular_asistencia_final(df, nombre):
             datos = df[df[col_comercial] == nombre].copy()
             retraso_total = 0
             ausencias = []
             
             if datos.empty: return 0, []
 
+            # Calculamos desde el primer registro hasta el día de hoy
             inicio = datos[col_temporal].min().date()
             fin = datetime.now().date()
             
             for dia in pd.date_range(inicio, fin):
-                if dia.weekday() >= 5: continue # Saltar fines de semana
+                if dia.weekday() >= 5: continue # Lunes a Viernes
                 
-                # Horarios Especiales 2026 (Semana Santa y Feria)
+                # Fechas Especiales 2026 (Semana Santa y Feria)
                 es_especial = (dia >= pd.Timestamp('2026-03-29') and dia <= pd.Timestamp('2026-04-05')) or \
                               (dia >= pd.Timestamp('2026-04-19') and dia <= pd.Timestamp('2026-04-26'))
                 
-                # Definir hora límite
+                # Horario según persona
                 if "RAQUEL GUADALUPE" in str(nombre).upper():
                     h_limite = time(9, 0)
                 else:
                     h_limite = time(9, 0) if es_especial else time(9, 30)
 
-                # Filtrar registros del día
+                # Datos del día
                 dia_data = datos[datos[col_temporal].dt.date == dia.date()]
                 
                 if dia_data.empty:
                     ausencias.append(dia.strftime('%d/%m/%Y'))
                 else:
-                    # Solo nos fijamos en la primera ENTRADA
-                    entradas = dia_data[dia_data[col_accion].str.contains("ENTRADA", case=False, na=False)]
+                    # Buscamos registro de ENTRADA
+                    entradas = dia_data[dia_data[col_accion].astype(str).str.contains("ENTRADA", case=False, na=False)]
                     if not entradas.empty:
                         h_real_dt = entradas[col_temporal].min()
                         h_real = h_real_dt.time()
-                        
                         if h_real > h_limite:
-                            dt_real = datetime.combine(dia, h_real)
-                            dt_limite = datetime.combine(dia, h_limite)
-                            retraso_total += (dt_real - dt_limite).total_seconds() / 60
+                            # Sumamos los minutos de diferencia
+                            d1 = datetime.combine(dia, h_real)
+                            d2 = datetime.combine(dia, h_limite)
+                            retraso_total += (d1 - d2).total_seconds() / 60
             
             return int(retraso_total), ausencias
 
-        min_ret, lista_aus = procesar_asistencia(df_laboral, com_sel)
+        min_ret, lista_aus = calcular_asistencia_final(df_laboral, com_sel)
 
-        # 4. DASHBOARD
+        # 4. DASHBOARD VISUAL
         c1, c2 = st.columns(2)
         with c1:
-            st.markdown(f'<div style="background:#161b22; padding:20px; border-radius:15px; border:1px solid #30363d; text-align:center;"><h4 style="color:#8b949e; margin:0;">Retraso Acumulado</h4><h1 style="color:#ff4b4b; margin:0;">{min_ret} <small>min</small></h1></div>', unsafe_allow_html=True)
+            st.markdown(f"""
+                <div style="background:#161b22; padding:20px; border-radius:15px; border:1px solid #30363d; text-align:center;">
+                    <h4 style="color:#8b949e; margin:0;">Retraso Acumulado</h4>
+                    <h1 style="color:#ff4b4b; margin:0;">{min_ret} <small style="font-size:1rem;">min</small></h1>
+                </div>
+            """, unsafe_allow_html=True)
         with c2:
-            color_aus = "#ff4b4b" if lista_aus else "#238636"
-            st.markdown(f'<div style="background:#161b22; padding:20px; border-radius:15px; border:1px solid #30363d; text-align:center;"><h4 style="color:#8b949e; margin:0;">Días de Ausencia</h4><h1 style="color:{color_aus}; margin:0;">{len(lista_aus)}</h1></div>', unsafe_allow_html=True)
+            color_a = "#ff4b4b" if lista_aus else "#238636"
+            st.markdown(f"""
+                <div style="background:#161b22; padding:20px; border-radius:15px; border:1px solid #30363d; text-align:center;">
+                    <h4 style="color:#8b949e; margin:0;">Días de Ausencia</h4>
+                    <h1 style="color:{color_a}; margin:0;">{len(lista_aus)}</h1>
+                </div>
+            """, unsafe_allow_html=True)
 
         if lista_aus:
-            st.markdown("### 🚨 DÍAS SIN REGISTRO")
+            st.markdown("### 🚨 DETALLE DE AUSENCIAS (DÍAS SIN REGISTRO)")
             cols = st.columns(5)
             for i, f in enumerate(lista_aus):
                 cols[i % 5].markdown(f'<div style="background:#440000; color:white; padding:10px; border-radius:8px; text-align:center; border:1px solid #ff4b4b; margin-bottom:5px; font-weight:bold;">{f}</div>', unsafe_allow_html=True)
         
         st.markdown("---")
-        with st.expander("🔍 Historial Detallado"):
+        with st.expander("🔍 Histórico Completo de Marcajes"):
             st.dataframe(df_laboral[df_laboral[col_comercial] == com_sel][[col_temporal, col_accion]].sort_values(col_temporal, ascending=False), use_container_width=True)
 
     except Exception as e:
-        st.error(f"Error en el Control Laboral: {e}")
+        st.error(f"Error en Control Laboral: {e}")
