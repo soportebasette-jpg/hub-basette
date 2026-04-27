@@ -192,7 +192,7 @@ if not st.session_state["password_correct"]:
         if os.path.exists(LOGO_PRINCIPAL): st.image(LOGO_PRINCIPAL)
         pwd = st.text_input("Introduce Clave Comercial:", type="password")
         if st.button("ACCEDER AL HUB"):
-            if pwd == "Ventas2024*":
+            if pwd == "Ventas2026*":
                 st.session_state["password_correct"] = True
                 st.rerun()
             else: st.error("Clave incorrecta")
