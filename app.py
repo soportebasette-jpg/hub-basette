@@ -574,3 +574,103 @@ elif menu == "📂 REPOSITORIO":
         mostrar_contenido_carpeta("TARIFAS GANA", "TARIFAS GANA ENERGÍA", "⚡")
 
     st.markdown("---")
+# --- CONTROL LABORAL ---
+elif menu == "🕒 CONTROL LABORAL":
+    st.markdown('<div class="block-header">🕒 CONTROL LABORAL Y ASISTENCIA</div>', unsafe_allow_html=True)
+    
+    try:
+        # 1. CONEXIÓN A LOS DATOS (Google Sheets)
+        # Convertimos la URL de edición a URL de exportación CSV para lectura directa
+        sheet_id = "175LGa4j6dAhsjQ7Wiy-8tZnKWuDC9_C9uy6SYC-i-LY"
+        url_csv = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv"
+        df_laboral = pd.read_csv(url_csv)
+
+        # Limpieza básica de columnas (ajusta los nombres si varían en tu Excel)
+        df_laboral['Fecha'] = pd.to_datetime(df_laboral['Fecha'], dayfirst=True)
+        df_laboral['Hora'] = pd.to_datetime(df_laboral['Hora'], format='%H:%M:%S').dt.time
+
+        # 2. FILTRO DE COMERCIAL
+        comerciales_lab = sorted(df_laboral['Comercial'].unique())
+        com_sel = st.selectbox("👤 Selecciona Comercial para Auditoría", comerciales_lab)
+
+        # 3. LÓGICA DE HORARIOS Y CÁLCULOS
+        def calcular_metricas(df, nombre_comercial):
+            datos = df[df['Comercial'] == nombre_comercial].copy()
+            
+            retraso_total = 0
+            horas_faltantes = 0
+            dias_ausencia = []
+            
+            # Rango de fechas del reporte
+            rango_fechas = pd.date_range(start=datos['Fecha'].min(), end=datos['Fecha'].max())
+            
+            for fecha in rango_fechas:
+                # Saltar fines de semana
+                if fecha.weekday() >= 5: continue
+                
+                # Definir Horario según fechas especiales y persona
+                # Semana Santa 2026 (aprox) y Feria Sevilla (ajustar días exactos si es necesario)
+                es_especial = (fecha >= pd.Timestamp('2026-03-29') and fecha <= pd.Timestamp('2026-04-05')) or \
+                              (fecha >= pd.Timestamp('2026-04-19') and fecha <= pd.Timestamp('2026-04-26'))
+                
+                if nombre_comercial == "RAQUEL GUADALUPE":
+                    h_entrada = "09:00:00"
+                    h_salida = "13:30:00" if es_especial else "18:30:00" # Simplificado para el dashboard
+                else:
+                    h_entrada = "09:00:00" if es_especial else "09:30:00"
+                    h_salida = "13:30:00" if es_especial else "14:30:00"
+
+                # Buscar registros del día
+                registros_dia = datos[datos['Fecha'].dt.date == fecha.date()]
+                
+                if registros_dia.empty:
+                    dias_ausencia.append(fecha.strftime('%d/%m/%Y'))
+                else:
+                    # Cálculo de retraso (comparando el primer registro de entrada)
+                    primera_entrada = registros_dia['Hora'].min()
+                    limite_entrada = datetime.strptime(h_entrada, '%H:%M:%S').time()
+                    
+                    if primera_entrada > limite_entrada:
+                        diff = datetime.combine(fecha, primera_entrada) - datetime.combine(fecha, limite_entrada)
+                        retraso_total += diff.total_seconds() / 60
+
+            return int(retraso_total), dias_ausencia
+
+        min_retraso, ausencias = calcular_metricas(df_laboral, com_sel)
+
+        # 4. DASHBOARD VISUAL
+        c1, c2 = st.columns(2)
+        
+        with c1:
+            st.markdown(f"""
+                <div style="background:#161b22; padding:20px; border-radius:15px; border:1px solid #30363d; text-align:center;">
+                    <h3 style="color:#8b949e; margin:0;">Retraso Acumulado</h3>
+                    <h1 style="color:#ff4b4b; font-size:3rem; margin:10px 0;">{min_retraso} <span style="font-size:1rem;">min</span></h1>
+                </div>
+            """, unsafe_allow_html=True)
+
+        with c2:
+            color_aus = "#ff4b4b" if len(ausencias) > 0 else "#238636"
+            st.markdown(f"""
+                <div style="background:#161b22; padding:20px; border-radius:15px; border:1px solid #30363d; text-align:center;">
+                    <h3 style="color:#8b949e; margin:0;">Días de Ausencia</h3>
+                    <h1 style="color:{color_aus}; font-size:3rem; margin:10px 0;">{len(ausencias)}</h1>
+                </div>
+            """, unsafe_allow_html=True)
+
+        # 5. LISTADO DE AUSENCIAS (MARCADAS EN ROJO)
+        if ausencias:
+            st.error(f"🚨 Se han detectado {len(ausencias)} ausencias completas (días laborables sin registros):")
+            cols = st.columns(4)
+            for i, f_aus in enumerate(ausencias):
+                cols[i % 4].markdown(f'<div style="background:#440000; color:white; padding:5px; border-radius:5px; text-align:center; margin-bottom:5px;">{f_aus}</div>', unsafe_allow_html=True)
+        else:
+            st.success("✅ No se detectan ausencias completas en el periodo.")
+
+        # Tabla de registros brutos para verificar
+        with st.expander("Ver todos los registros de entrada/salida"):
+            st.dataframe(df_laboral[df_laboral['Comercial'] == com_sel].sort_values('Fecha', ascending=False), use_container_width=True)
+
+    except Exception as e:
+        st.error(f"Error al conectar con el Control Laboral: {e}")
+        st.info("Asegúrate de que el Google Sheet sea público o compartido correctamente.")
