@@ -520,54 +520,56 @@ elif menu == "📈 DASHBOARD Y RANKING":
 elif menu == "📂 REPOSITORIO":
     st.markdown('<div class="block-header">📂 REPOSITORIO DE DOCUMENTACIÓN</div>', unsafe_allow_html=True)
 
-    # FUNCIÓN DINÁMICA: Lee todos los archivos de una carpeta y crea sus botones
-    def generar_repositorio_dinamico(nombre_carpeta, titulo_visible, icono="📁"):
-        ruta_completa = os.path.join("manuales", nombre_carpeta)
+    # Función Maestra: Lee todo el contenido de una carpeta y crea botones de descarga
+    def mostrar_contenido_carpeta(nombre_carpeta, titulo_visible, icono="📁"):
+        ruta_especifica = os.path.join("manuales", nombre_carpeta)
         
-        if os.path.exists(ruta_completa):
+        if os.path.exists(ruta_especifica):
             with st.expander(f"{icono} {titulo_visible}"):
-                # Obtenemos la lista de todos los archivos en esa subcarpeta
-                archivos = [f for f in os.listdir(ruta_completa) if os.path.isfile(os.path.join(ruta_completa, f))]
+                # Listamos todos los archivos dentro de la subcarpeta
+                archivos = [f for f in os.listdir(ruta_especifica) if os.path.isfile(os.path.join(ruta_especifica, f))]
                 
                 if archivos:
                     for filename in archivos:
-                        ruta_archivo = os.path.join(ruta_completa, filename)
-                        with open(ruta_archivo, "rb") as file_data:
-                            # Detectamos extensión para el icono del botón
-                            ext = filename.split('.')[-1].lower()
-                            mimo = "application/pdf" if ext == "pdf" else f"image/{ext}"
-                            label_icon = "📄" if ext == "pdf" else "🖼️"
-                            
-                            # Botón de descarga para cada archivo encontrado
-                            st.download_button(
-                                label=f"{label_icon} {filename}",
-                                data=file_data.read(),
-                                file_name=filename,
-                                mime=mimo,
-                                key=f"btn_{nombre_carpeta}_{filename}".replace(" ", "_") # ID único vital
-                            )
+                        ruta_archivo = os.path.join(ruta_especifica, filename)
+                        try:
+                            with open(ruta_archivo, "rb") as f:
+                                contenido = f.read()
+                                ext = filename.split('.')[-1].lower()
+                                # Definimos el tipo de archivo para el navegador
+                                m_type = "application/pdf" if ext == "pdf" else f"image/{ext}"
+                                
+                                st.download_button(
+                                    label=f"📄 Ver/Descargar: {filename}",
+                                    data=contenido,
+                                    file_name=filename,
+                                    mime=m_type,
+                                    key=f"btn_{nombre_carpeta}_{filename}".replace(" ", "_")
+                                )
+                        except Exception as e:
+                            st.error(f"Error al leer {filename}: {e}")
                 else:
-                    st.write("⚠️ No hay archivos dentro de esta carpeta.")
+                    st.write("ℹ️ Esta carpeta está vacía.")
         else:
-            # Si la carpeta no existe físicamente, te avisa por aquí
-            st.caption(f"🚫 Carpeta no encontrada: manuales/{nombre_carpeta}")
+            # Si ves este mensaje, es que el nombre de la carpeta en el código no coincide con Windows
+            st.caption(f"🚫 No se encuentra la carpeta: manuales/{nombre_carpeta}")
 
-    # --- DISEÑO EN COLUMNAS ---
-    col_izq, col_der = st.columns(2)
+    # Diseño en dos columnas para que se vea ordenado
+    col_a, col_b = st.columns(2)
 
-    with col_izq:
-        generar_repositorio_dinamico("marcador", "MANUAL DEL MARCADOR", "📂")
-        generar_repositorio_dinamico("argumentarios", "ARGUMENTARIOS DE VENTAS", "📝")
-        generar_repositorio_dinamico("o2", "TARIFAS O2", "📱")
-        generar_repositorio_dinamico("lowi", "TARIFAS LOWI", "📱")
-        generar_repositorio_dinamico("segurma", "DOCUMENTACIÓN SEGURMA", "🛡️")
+    with col_a:
+        mostrar_contenido_carpeta("marcador", "MANUAL DEL MARCADOR", "📂")
+        mostrar_contenido_carpeta("argumentarios", "ARGUMENTARIOS DE VENTAS", "📝")
+        mostrar_contenido_carpeta("o2", "TARIFAS O2", "📱")
+        mostrar_contenido_carpeta("lowi", "TARIFAS LOWI", "📱")
+        mostrar_contenido_carpeta("segurma", "DOCUMENTACIÓN SEGURMA", "🛡️")
 
-    with col_der:
-        generar_repositorio_dinamico("endesa", "TARIFAS ENDESA", "⚡")
-        generar_repositorio_dinamico("iberdrola", "TARIFAS IBERDROLA", "⚡")
-        generar_repositorio_dinamico("naturgy", "TARIFAS NATURGY", "⚡")
-        generar_repositorio_dinamico("total energies", "TARIFAS TOTAL ENERGIES", "⚡")
-        generar_repositorio_dinamico("gana energia", "TARIFAS GANA ENERGÍA", "⚡")
+    with col_b:
+        mostrar_contenido_carpeta("endesa", "TARIFAS ENDESA", "⚡")
+        mostrar_contenido_carpeta("iberdrola", "TARIFAS IBERDROLA", "⚡")
+        mostrar_contenido_carpeta("naturgy", "TARIFAS NATURGY", "⚡")
+        mostrar_contenido_carpeta("total energies", "TARIFAS TOTAL ENERGIES", "⚡")
+        mostrar_contenido_carpeta("gana energia", "TARIFAS GANA ENERGÍA", "⚡")
 
     st.markdown("---")
-    st.info("💡 **Tip:** Si añades o quitas archivos de las carpetas en tu PC, aparecerán o desaparecerán de aquí automáticamente al recargar.")
+    st.info("💡 **Sistema Automático:** Si metes nuevos archivos en las carpetas de tu ordenador, aparecerán aquí solos al recargar la página.")
