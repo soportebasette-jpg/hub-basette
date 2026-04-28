@@ -423,6 +423,7 @@ elif menu == "📈 DASHBOARD Y RANKING":
         de, dt, da = load_and_clean_ranking()
         
         # --- FILTROS Y EXCLUSIÓN DE BAJAS ---
+        # Excluimos a Luis Rodriguez del objetivo y del listado
         comerciales_excluidos = ["LUIS RODRIGUEZ"]
         
         all_anos = sorted(list(set(de['Año']) | set(dt['Año']) | set(da['Año'])))
@@ -455,38 +456,47 @@ elif menu == "📈 DASHBOARD Y RANKING":
         r3 = f_da.groupby('Comercial')[['V_Alarma', 'V_Baja', 'V_Cancelado', 'V_REF']].sum() if not f_da.empty else pd.DataFrame()
         
         rank_calc = pd.concat([r1, r2, r3], axis=1).fillna(0)
-        rank_calc['TOTAL_NETO'] = (rank_calc.get('V_Luz',0) + rank_calc.get('V_Gas',0) + rank_calc.get('V_Fibra',0) + rank_calc.get('V_Alarma',0)) - rank_calc.filter(like='V_Baja').sum(axis=1) - rank_calc.filter(like='V_Cancelado').sum(axis=1)
+        
+        # Consolidamos Bajas y Cancelados (sumando las columnas de los 3 dataframes)
+        rank_calc['Baja'] = rank_calc.filter(like='V_Baja').sum(axis=1)
+        rank_calc['Cancelado'] = rank_calc.filter(like='V_Cancelado').sum(axis=1)
+        
+        # Cálculo TOTAL NETO
+        rank_calc['TOTAL_NETO'] = (rank_calc.get('V_Luz',0) + rank_calc.get('V_Gas',0) + rank_calc.get('V_Fibra',0) + rank_calc.get('V_Alarma',0)) - rank_calc['Baja'] - rank_calc['Cancelado']
         rank_calc['REF_TOTAL'] = rank_calc.filter(like='V_REF').sum(axis=1)
+        
+        # Columna: Lo que le falta a cada uno para llegar a 25
+        rank_calc['Faltan para 25'] = rank_calc['TOTAL_NETO'].apply(lambda x: max(0, 25 - int(x)))
 
         # FRASE DEL DÍA
-        frases = ["EL ÉXITO ES LA SUMA DE PEQUEÑOS ESFUERZOS REPETIDOS.", "TU ÚNICA LIMITACIÓN ES TU MENTE.", "TRABAJA EN SILENCIO, QUE EL ÉXITO HAGA EL RUIDO.", "NO CUENTES LOS DÍAS, HAZ QUE LOS DÍAS CUENTEN.", "LA DISCIPLINA ES EL PUENTE ENTRE METAS Y LOGROS."]
+        frases = ["EL ÉXITO ES LA SUMA DE PEQUEÑOS ESFUERZOS REPETIDOS.", "TU ÚNICA LIMITACIÓN ES TU MENTE.", "TRABAJA EN SILENCIO, QUE EL ÉXITO HAGA EL RUIDO.", "NO CUENTES LOS DÍAS, HAZ QUE LOS DÍAS CUENTEN."]
         frase_hoy = frases[datetime.now().day % len(frases)]
 
-        # --- CABECERA CON GANADOR PEQUEÑO Y FRASE ---
+        # --- CABECERA ---
         st.snow()
         ganador_nombre = rank_calc['TOTAL_NETO'].idxmax() if not rank_calc.empty and rank_calc['TOTAL_NETO'].max() > 0 else "---"
         ganador_ventas = int(rank_calc['TOTAL_NETO'].max()) if not rank_calc.empty else 0
 
         st.markdown(f"""
             <div style="text-align: center; margin-bottom: 20px;">
-                <h1 style="color: #d2ff00; font-size: 35px; font-weight: 800;">"{frase_hoy}"</h1>
-                <div style="background: rgba(210, 255, 0, 0.1); padding: 15px; border-radius: 15px; border: 1px dashed #d2ff00; display: inline-block; margin-top: 10px;">
-                    <p style="color: #8b949e; margin:0; font-size: 0.8rem; letter-spacing: 2px;">TOP VENTAS 🎆</p>
-                    <h2 style="color: white; margin:0; font-size: 1.8rem;">{ganador_nombre} ({ganador_ventas} Ventas)</h2>
+                <h1 style="color: #d2ff00; font-size: 30px; font-weight: 800;">"{frase_hoy}"</h1>
+                <div style="background: rgba(210, 255, 0, 0.1); padding: 12px; border-radius: 12px; border: 1px dashed #d2ff00; display: inline-block; margin-top: 5px;">
+                    <p style="color: #8b949e; margin:0; font-size: 0.7rem; letter-spacing: 2px;">TOP VENTAS 🎆</p>
+                    <h2 style="color: white; margin:0; font-size: 1.6rem;">{ganador_nombre} ({ganador_ventas} Ventas)</h2>
                 </div>
             </div>
         """, unsafe_allow_html=True)
 
-        # --- CUADRO FALTAN PARA OBJETIVO (3 COMERCIALES) ---
-        meta_grupal = 25 * 3
+        # --- CUADRO FALTAN PARA OBJETIVO EQUIPO ---
+        meta_grupal = 25 * 3 # Solo 3 comerciales activos
         ventas_totales = int(rank_calc['TOTAL_NETO'].sum())
         faltan_total = max(0, meta_grupal - ventas_totales)
 
         st.markdown(f"""
             <div style="background: #161b22; padding: 20px; border-radius: 15px; border: 1px solid #30363d; margin-bottom: 20px; text-align: center;">
                 <p style="color: #d2ff00; margin:0; font-weight: bold;">🚀 VENTAS QUE FALTAN PARA OBJETIVO EQUIPO</p>
-                <h1 style="color: white; margin:0; font-size: 4rem;">{faltan_total}</h1>
-                <p style="color: #8b949e; margin:0; font-size: 0.8rem;">Meta: {meta_grupal} (Basado en 3 comerciales activos)</p>
+                <h1 style="color: white; margin:0; font-size: 3.5rem;">{faltan_total}</h1>
+                <p style="color: #8b949e; margin:0; font-size: 0.8rem;">Meta Grupal: {meta_grupal} (Luis Rdz. no cuenta)</p>
             </div>
         """, unsafe_allow_html=True)
 
@@ -494,31 +504,34 @@ elif menu == "📈 DASHBOARD Y RANKING":
         t_rank, t_ene, t_tel, t_ala = st.tabs(["🏆 RANKING", "⚡ ENERGÍA", "📱 TELCO", "🛡️ ALARMAS"])
 
         with t_rank:
-            # Tabla Detallada
+            # Tabla Detallada con todas las columnas solicitadas
             df_tabla = rank_calc.copy()
-            df_tabla = df_tabla.rename(columns={'V_Luz':'Luz','V_Gas':'Gas','V_Fibra':'Fibra','V_Móvil':'Móvil','V_Alarma':'Alarma','REF_TOTAL':'Ref','TOTAL_NETO':'Netas'})
-            st.markdown('<p style="color: #d2ff00; font-weight: bold;">DESGLOSE POR COMERCIAL</p>', unsafe_allow_html=True)
-            st.table(df_tabla[['Luz','Gas','Fibra','Móvil','Alarma','Ref','Netas']].astype(int).sort_values('Netas', ascending=False))
+            df_tabla = df_tabla.rename(columns={
+                'V_Luz':'Luz','V_Gas':'Gas','V_Fibra':'Fibra','V_Móvil':'Móvil',
+                'V_Alarma':'Alarma','REF_TOTAL':'Ref','TOTAL_NETO':'Total Neto'
+            })
+            
+            columnas_finales = ['Luz','Gas','Fibra','Móvil','Alarma','Ref','Baja','Cancelado','Total Neto','Faltan para 25']
+            st.markdown('<p style="color: #d2ff00; font-weight: bold;">DESGLOSE Y OBJETIVOS INDIVIDUALES</p>', unsafe_allow_html=True)
+            st.table(df_tabla[[c for c in columnas_finales if c in df_tabla.columns]].astype(int).sort_values('Total Neto', ascending=False))
 
-            # --- CUADROS DE TOTALES (VUELVEN A APARECER) ---
+            # --- CUADROS DE TOTALES INFERIORES ---
             st.markdown("---")
             m1, m2, m3, m4 = st.columns(4)
             estilo_caja = "background-color: #1c2128; border: 1px solid #d2ff00; padding: 15px; border-radius: 12px; text-align: center;"
             
-            m1.markdown(f'<div style="{estilo_caja}"><p style="color: #8b949e; margin:0; font-size: 0.9rem;">ENERGÍA</p><h2 style="color: white; margin:0;">{int(df_tabla["Luz"].sum() + df_tabla["Gas"].sum())}</h2></div>', unsafe_allow_html=True)
-            m2.markdown(f'<div style="{estilo_caja}"><p style="color: #8b949e; margin:0; font-size: 0.9rem;">FIBRA</p><h2 style="color: white; margin:0;">{int(df_tabla["Fibra"].sum())}</h2></div>', unsafe_allow_html=True)
-            m3.markdown(f'<div style="{estilo_caja}"><p style="color: #8b949e; margin:0; font-size: 0.9rem;">REFERIDOS</p><h2 style="color: white; margin:0;">{int(df_tabla["Ref"].sum())}</h2></div>', unsafe_allow_html=True)
-            m4.markdown(f'<div style="{estilo_caja}"><p style="color: #d2ff00; margin:0; font-size: 0.9rem; font-weight: bold;">TOTAL NETO</p><h2 style="color: white; margin:0;">{ventas_totales}</h2></div>', unsafe_allow_html=True)
+            m1.markdown(f'<div style="{estilo_caja}"><p style="color: #8b949e; margin:0; font-size: 0.85rem;">ENERGÍA</p><h2 style="color: white; margin:0;">{int(df_tabla["Luz"].sum() + df_tabla["Gas"].sum())}</h2></div>', unsafe_allow_html=True)
+            m2.markdown(f'<div style="{estilo_caja}"><p style="color: #8b949e; margin:0; font-size: 0.85rem;">FIBRA</p><h2 style="color: white; margin:0;">{int(df_tabla["Fibra"].sum())}</h2></div>', unsafe_allow_html=True)
+            m3.markdown(f'<div style="{estilo_caja}"><p style="color: #8b949e; margin:0; font-size: 0.85rem;">REFERIDOS</p><h2 style="color: white; margin:0;">{int(df_tabla["Ref"].sum())}</h2></div>', unsafe_allow_html=True)
+            m4.markdown(f'<div style="{estilo_caja}"><p style="color: #d2ff00; margin:0; font-size: 0.85rem; font-weight: bold;">NETO EQUIPO</p><h2 style="color: white; margin:0;">{ventas_totales}</h2></div>', unsafe_allow_html=True)
 
+        # Gráficas sencillas en las otras pestañas
         with t_ene:
-            if not f_de.empty:
-                st.plotly_chart(px.bar(f_de.groupby('Comercial')[['V_Luz', 'V_Gas']].sum().reset_index(), x='Comercial', y=['V_Luz', 'V_Gas'], title="Ventas Energía"), use_container_width=True)
+            if not f_de.empty: st.plotly_chart(px.bar(f_de.groupby('Comercial')[['V_Luz', 'V_Gas']].sum().reset_index(), x='Comercial', y=['V_Luz', 'V_Gas'], title="Ventas Energía"), use_container_width=True)
         with t_tel:
-            if not f_dt.empty:
-                st.plotly_chart(px.bar(f_dt.groupby('Comercial')[['V_Fibra', 'V_Móvil']].sum().reset_index(), x='Comercial', y=['V_Fibra', 'V_Móvil'], title="Ventas Telco"), use_container_width=True)
+            if not f_dt.empty: st.plotly_chart(px.bar(f_dt.groupby('Comercial')[['V_Fibra', 'V_Móvil']].sum().reset_index(), x='Comercial', y=['V_Fibra', 'V_Móvil'], title="Ventas Telco"), use_container_width=True)
         with t_ala:
-            if not f_da.empty:
-                st.plotly_chart(px.bar(f_da.groupby('Comercial')['V_Alarma'].sum().reset_index(), x='Comercial', y='V_Alarma', title="Ventas Alarmas"), use_container_width=True)
+            if not f_da.empty: st.plotly_chart(px.bar(f_da.groupby('Comercial')['V_Alarma'].sum().reset_index(), x='Comercial', y='V_Alarma', title="Ventas Alarmas"), use_container_width=True)
 
     except Exception as e:
         st.error(f"Error: {e}")
