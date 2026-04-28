@@ -418,106 +418,104 @@ elif menu == "📢 ANUNCIOS Y PLAN AMIGO":
                 st.error(f"Falta: {item['file']}")
 
 # --- DASHBOARD Y RANKING ---
-elif menu == "📈 DASHBOARD Y RANKING":
+elif menu == "DASHBOARD":
     try:
+        # 1. Animación de caída de Rosco e imágenes
+        def generar_animacion_caida():
+            img_rosco = get_image_base64("rosco.jpg")
+            img_logo = get_image_base64("tecomparotodo_logo.jpg")
+            
+            if img_rosco:
+                sources = [f"data:image/jpeg;base64,{img_rosco}"]
+                if img_logo: sources.append(f"data:image/jpeg;base64,{img_logo}")
+                
+                falling_html = ""
+                for i in range(25):
+                    src = random.choice(sources)
+                    left, delay, duration = random.randint(0, 95), random.uniform(0, 5), random.uniform(5, 10)
+                    size = random.randint(50, 100)
+                    falling_html += f'<img src="{src}" class="fall" style="left:{left}%; animation-delay:{delay}s; animation-duration:{duration}s; width:{size}px;">'
+                
+                st.markdown(f"""
+                    <div class="falling-wrapper">{falling_html}</div>
+                    <style>
+                        .falling-wrapper {{ position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 9999; pointer-events: none; }}
+                        .fall {{ position: absolute; top: -120px; opacity: 0.7; animation: fall linear infinite; border-radius: 50%; }}
+                        @keyframes fall {{ 0% {{ top: -120px; transform: rotate(0deg); }} 100% {{ top: 110vh; transform: rotate(360deg); }} }}
+                    </style>
+                """, unsafe_allow_html=True)
+
+        generar_animacion_caida()
+
+        # 2. Carga y Filtrado (Excluyendo a Luis Rodriguez de los objetivos)
         de, dt, da = load_and_clean_ranking()
+        comerciales_activos = ["RAQUEL GUADALUPE", "DEBORAH RODRIGUEZ", "BELÉN TRONCOSO"] # Solo los 3 activos
         
-        # --- FILTROS Y EXCLUSIÓN DE BAJAS ---
-        comerciales_excluidos = ["LUIS RODRIGUEZ"]
+        f_de = de[de['Comercial'].isin(comerciales_activos)].copy()
+        f_dt = dt[dt['Comercial'].isin(comerciales_activos)].copy()
+        f_da = da[da['Comercial'].isin(comerciales_activos)].copy()
+
+        # 3. Cálculos de Ventas
+        for df in [f_de, f_dt, f_da]:
+            if not df.empty and 'Estado' in df.columns:
+                df['Baja'] = df['Estado'].apply(lambda x: 1 if str(x).strip().upper() == "BAJA" else 0)
+                df['Cancelado'] = df['Estado'].apply(lambda x: 1 if str(x).strip().upper() == "CANCELADO" else 0)
+
+        r1 = f_de.groupby('Comercial')[['V_Luz', 'V_Gas', 'Baja', 'Cancelado']].sum() if not f_de.empty else pd.DataFrame()
+        r2 = f_dt.groupby('Comercial')[['V_Fibra', 'V_Móvil', 'Baja', 'Cancelado']].sum() if not f_dt.empty else pd.DataFrame()
+        r3 = f_da.groupby('Comercial')[['V_Alarma', 'Baja', 'Cancelado']].sum() if not f_da.empty else pd.DataFrame()
         
-        all_anos = sorted(list(set(de['Año']) | set(dt['Año']) | set(da['Año'])))
-        all_meses = sorted(list(set(de['Mes']) | set(dt['Mes']) | set(da['Mes'])))
-        
-        todos_coms = list(set(de['Comercial']) | set(dt['Comercial']) | set(da['Comercial']))
-        all_coms = sorted([c for c in todos_coms if c not in comerciales_excluidos])
+        rank = pd.concat([r1, r2, r3], axis=1).fillna(0)
+        rank['Total Bajas'] = rank.filter(like='Baja').sum(axis=1)
+        rank['Total Cancel'] = rank.filter(like='Cancelado').sum(axis=1)
+        rank['Total Neto'] = (rank.get('V_Luz',0) + rank.get('V_Gas',0) + rank.get('V_Fibra',0) + rank.get('V_Alarma',0)) - rank['Total Bajas'] - rank['Total Cancel']
+        rank['Faltan para 25'] = rank['Total Neto'].apply(lambda x: max(0, 25 - int(x)))
 
-        c1, c2, c3 = st.columns([1, 2, 2])
-        with c1: f_ano = st.selectbox("📅 Año", all_anos, index=len(all_anos)-1 if all_anos else 0)
-        with c2: f_meses = st.multiselect("📆 Meses", all_meses, default=[all_meses[-1]] if all_meses else [])
-        with c3: f_coms = st.multiselect("👤 Filtrar Comerciales Activos", all_coms, default=all_coms)
-
-        f_de = de[(de['Año']==f_ano) & (de['Mes'].isin(f_meses)) & (de['Comercial'].isin(f_coms))].copy()
-        f_dt = dt[(dt['Año']==f_ano) & (dt['Mes'].isin(f_meses)) & (dt['Comercial'].isin(f_coms))].copy()
-        f_da = da[(da['Año']==f_ano) & (da['Mes'].isin(f_meses)) & (da['Comercial'].isin(f_coms))].copy()
-
-        # --- LÓGICA DE CÁLCULO ---
-        for df_temp in [f_de, f_dt, f_da]:
-            if not df_temp.empty:
-                if 'Canal' in df_temp.columns:
-                    df_temp['V_REF'] = df_temp['Canal'].apply(lambda x: 1 if str(x).strip().upper() == "REF" else 0)
-                if 'V_Movil' in df_temp.columns: df_temp.rename(columns={'V_Movil': 'V_Móvil'}, inplace=True)
-                if 'Estado' in df_temp.columns:
-                    df_temp['V_Baja'] = df_temp['Estado'].apply(lambda x: 1 if str(x).strip().upper() == "BAJA" else 0)
-                    df_temp['V_Cancelado'] = df_temp['Estado'].apply(lambda x: 1 if str(x).strip().upper() == "CANCELADO" else 0)
-
-        r1 = f_de.groupby('Comercial')[['V_Luz', 'V_Gas', 'V_Baja', 'V_Cancelado', 'V_REF']].sum() if not f_de.empty else pd.DataFrame()
-        r2 = f_dt.groupby('Comercial')[['V_Fibra', 'V_Móvil', 'V_Baja', 'V_Cancelado', 'V_REF']].sum() if not f_dt.empty else pd.DataFrame()
-        r3 = f_da.groupby('Comercial')[['V_Alarma', 'V_Baja', 'V_Cancelado', 'V_REF']].sum() if not f_da.empty else pd.DataFrame()
-        
-        rank_calc = pd.concat([r1, r2, r3], axis=1).fillna(0)
-        
-        # Consolidación de Bajas/Cancelados para el cálculo Neto
-        rank_calc['Baja'] = rank_calc.filter(like='V_Baja').sum(axis=1)
-        rank_calc['Cancelado'] = rank_calc.filter(like='V_Cancelado').sum(axis=1)
-        
-        # TOTAL NETO (Ventas reales menos bajas y cancelados)
-        rank_calc['Total Neto'] = (rank_calc.get('V_Luz',0) + rank_calc.get('V_Gas',0) + rank_calc.get('V_Fibra',0) + rank_calc.get('V_Alarma',0)) - rank_calc['Baja'] - rank_calc['Cancelado']
-        rank_calc['Faltan para 25'] = rank_calc['Total Neto'].apply(lambda x: max(0, 25 - int(x)))
-        rank_calc['Ref'] = rank_calc.filter(like='V_REF').sum(axis=1)
-
-        # FRASE Y GANADOR
-        frases = ["EL ÉXITO ES LA SUMA DE PEQUEÑOS ESFUERZOS REPETIDOS.", "TU ÚNICA LIMITACIÓN ES TU MENTE.", "¡A POR EL OBJETIVO!"]
-        frase_hoy = frases[datetime.now().day % len(frases)]
-        st.snow()
-
+        # 4. Frase Motivadora y Ganador Pequeño
+        frases = ["EL ÉXITO ES LA SUMA DE PEQUEÑOS ESFUERZOS.", "TU ÚNICA LIMITACIÓN ES TU MENTE.", "TRABAJA EN SILENCIO, DEJA QUE EL ÉXITO HAGA EL RUIDO."]
         st.markdown(f"""
-            <div style="text-align: center; margin-bottom: 15px;">
-                <h2 style="color: #d2ff00; font-size: 24px; margin-bottom: 5px;">"{frase_hoy}"</h2>
+            <div style="text-align: center; margin-bottom: 20px;">
+                <h1 style="color: #d2ff00; font-size: 2.5rem; font-weight: 800;">"{random.choice(frases)}"</h1>
                 <div style="background: rgba(210, 255, 0, 0.1); padding: 10px; border-radius: 10px; border: 1px dashed #d2ff00; display: inline-block;">
-                    <span style="color: #8b949e; font-size: 0.8rem;">LÍDER ACTUAL:</span>
-                    <strong style="color: white; font-size: 1.2rem; margin-left: 5px;">{rank_calc['Total Neto'].idxmax() if not rank_calc.empty else '---'}</strong>
+                    <p style="color: #8b949e; margin:0; font-size: 0.8rem;">🏆 LÍDER: <span style="color: white; font-size: 1.1rem;">{rank['Total Neto'].idxmax() if not rank.empty else '---'}</span></p>
                 </div>
             </div>
         """, unsafe_allow_html=True)
 
-        # --- CUADRO GRUPAL MÁS PEQUEÑO ---
-        meta_grupal = 75 # 25 * 3 comerciales
-        ventas_totales_netas = int(rank_calc['Total Neto'].sum())
-        faltan_total = max(0, meta_grupal - ventas_totales_netas)
-
+        # 5. Cuadro Objetivo Equipo (Compacto)
+        meta_grupal = 75 # 25 * 3
+        ventas_equipo = int(rank['Total Neto'].sum())
+        faltan_equipo = max(0, meta_grupal - ventas_equipo)
+        
         st.markdown(f"""
-            <div style="background: #161b22; padding: 15px; border-radius: 12px; border: 1px solid #30363d; margin-bottom: 20px; text-align: center; max-width: 500px; margin-left: auto; margin-right: auto;">
-                <p style="color: #d2ff00; margin:0; font-size: 0.9rem; font-weight: bold;">🚀 VENTAS FALTANTES PARA OBJETIVO EQUIPO</p>
-                <h1 style="color: white; margin:0; font-size: 2.8rem;">{faltan_total}</h1>
-                <p style="color: #8b949e; margin:0; font-size: 0.75rem;">Meta Grupal: 75 (3 Comerciales Activos)</p>
+            <div style="background: #161b22; padding: 15px; border-radius: 15px; border: 1px solid #30363d; margin: 0 auto 20px auto; text-align: center; max-width: 400px;">
+                <p style="color: #d2ff00; margin:0; font-weight: bold; font-size: 0.9rem;">🚀 VENTAS PARA OBJETIVO EQUIPO</p>
+                <h1 style="color: white; margin:0; font-size: 3rem;">{faltan_equipo}</h1>
+                <p style="color: #8b949e; margin:0; font-size: 0.7rem;">Meta: 75 (Excluyendo a Luis R.)</p>
             </div>
         """, unsafe_allow_html=True)
 
-        # --- TABLA CON COLORES LLAMATIVOS ---
-        df_display = rank_calc.rename(columns={'V_Luz':'Luz','V_Gas':'Gas','V_Fibra':'Fibra','V_Móvil':'Móvil','V_Alarma':'Alarma'})
-        columnas = ['Luz','Gas','Fibra','Móvil','Alarma','Ref','Baja','Cancelado','Total Neto','Faltan para 25']
+        # 6. Tabla Ranking con Colores Llamativos
+        st.markdown('<p style="color: #d2ff00; font-weight: bold;">RANKING DETALLADO</p>', unsafe_allow_html=True)
+        df_ver = rank.rename(columns={'V_Luz':'Luz','V_Gas':'Gas','V_Fibra':'Fibra','V_Móvil':'Móvil','V_Alarma':'Alarma','Total Bajas':'Bajas','Total Cancel':'Cancel'})
         
-        def highlight_cols(s):
-            color = 'background-color: rgba(210, 255, 0, 0.2); color: #d2ff00; font-weight: bold;'
-            return [color if (s.name in ['Total Neto', 'Faltan para 25']) else '' for v in s]
+        def resaltar_objetivo(s):
+            return ['background-color: #d2ff00; color: black; font-weight: bold' if (s.name in ['Total Neto', 'Faltan para 25']) else '' for v in s]
 
-        st.table(df_display[[c for c in columnas if c in df_display.columns]].astype(int).sort_values('Total Neto', ascending=False).style.apply(highlight_cols, axis=1))
+        st.table(df_ver[['Luz','Gas','Fibra','Móvil','Alarma','Bajas','Cancel','Total Neto','Faltan para 25']].astype(int).sort_values('Total Neto', ascending=False).style.apply(resaltar_objetivo, axis=1))
 
-        # --- TOTALES INFERIORES NETOS (RESTANDO BAJAS) ---
+        # 7. Totales Inferiores Netos (Sin Bajas/Cancelados) con Color Intenso
         st.markdown("---")
-        m1, m2, m3, m4 = st.columns(4)
-        estilo_caja_intenso = "background-color: #0d1117; border: 2px solid #d2ff00; padding: 15px; border-radius: 10px; text-align: center; box-shadow: 0px 0px 10px rgba(210, 255, 0, 0.2);"
+        c1, c2, c3, c4 = st.columns(4)
+        box_style = "background: #0d1117; border: 2px solid #d2ff00; padding: 15px; border-radius: 10px; text-align: center; box-shadow: 0 0 10px #d2ff0055;"
         
-        # Cálculo de totales netos por categoría
-        total_energia_neto = int(df_display['Luz'].sum() + df_display['Gas'].sum() - rank_calc.filter(like='V_Baja').sum().iloc[0] - rank_calc.filter(like='V_Cancelado').sum().iloc[0]) # Simplificado al total del df
-        
-        m1.markdown(f'<div style="{estilo_caja_intenso}"><p style="color: #d2ff00; margin:0; font-size: 0.8rem;">ENERGÍA NETA</p><h2 style="color: white; margin:0;">{max(0, int(df_display["Luz"].sum() + df_display["Gas"].sum() - df_display["Baja"].sum()))}</h2></div>', unsafe_allow_html=True)
-        m2.markdown(f'<div style="{estilo_caja_intenso}"><p style="color: #d2ff00; margin:0; font-size: 0.8rem;">FIBRA NETA</p><h2 style="color: white; margin:0;">{max(0, int(df_display["Fibra"].sum() - df_display["Cancelado"].sum()))}</h2></div>', unsafe_allow_html=True)
-        m3.markdown(f'<div style="{estilo_caja_intenso}"><p style="color: #d2ff00; margin:0; font-size: 0.8rem;">REFERIDOS</p><h2 style="color: white; margin:0;">{int(df_display["Ref"].sum())}</h2></div>', unsafe_allow_html=True)
-        m4.markdown(f'<div style="{estilo_caja_intenso}; background: #d2ff00;"><p style="color: black; margin:0; font-weight: bold; font-size: 0.8rem;">TOTAL NETO EQUIPO</p><h2 style="color: black; margin:0;">{ventas_totales_netas}</h2></div>', unsafe_allow_html=True)
+        c1.markdown(f'<div style="{box_style}"><p style="color: #d2ff00; margin:0; font-size: 0.8rem;">ENERGÍA NETA</p><h2 style="color: white; margin:0;">{int(df_ver["Luz"].sum()+df_ver["Gas"].sum() - df_ver["Bajas"].sum())}</h2></div>', unsafe_allow_html=True)
+        c2.markdown(f'<div style="{box_style}"><p style="color: #d2ff00; margin:0; font-size: 0.8rem;">FIBRA NETA</p><h2 style="color: white; margin:0;">{int(df_ver["Fibra"].sum() - df_ver["Cancel"].sum())}</h2></div>', unsafe_allow_html=True)
+        c3.markdown(f'<div style="{box_style}"><p style="color: #d2ff00; margin:0; font-size: 0.8rem;">MÓVILES</p><h2 style="color: white; margin:0;">{int(df_ver["Móvil"].sum())}</h2></div>', unsafe_allow_html=True)
+        c4.markdown(f'<div style="{box_style} border-color: white;"><p style="color: #d2ff00; margin:0; font-weight: bold;">TOTAL NETO</p><h2 style="color: white; margin:0;">{ventas_equipo}</h2></div>', unsafe_allow_html=True)
 
     except Exception as e:
-        st.error(f"Error: {e}")        st.error(f"Error: {e}")
+        st.error(f"Error en Dashboard: {e}")
 
 #-----REPOSITORIO----
 elif menu == "📂 REPOSITORIO":
