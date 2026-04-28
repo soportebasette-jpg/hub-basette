@@ -420,7 +420,7 @@ elif menu == "📢 ANUNCIOS Y PLAN AMIGO":
 # --- DASHBOARD Y RANKING ---
 elif menu == "📈 DASHBOARD Y RANKING":
     try:
-        # 1. FUNCIÓN PARA IMÁGENES
+        # 1. FUNCIÓN PARA IMÁGENES (Convertir a Base64)
         def get_img_64(file_path):
             import base64
             import os
@@ -429,121 +429,121 @@ elif menu == "📈 DASHBOARD Y RANKING":
                     return base64.b64encode(f.read()).decode()
             return None
 
-        # 2. ANIMACIÓN DE ROSCO (Configurada para que termine)
+        # 2. ANIMACIÓN DIVERSIFICADA (Cae Rosco y otras "cositas")
         rosco_b64 = get_img_64("rosco.jpg")
+        logo_b64 = get_img_64("tecomparotodo_logo.jpg")
+        
         if rosco_b64:
+            sources = [f"data:image/jpeg;base64,{rosco_b64}"]
+            if logo_b64: sources.append(f"data:image/jpeg;base64,{logo_b64}")
+            
             falling_items = ""
-            for i in range(15):  # Menos cantidad para que no sature
-                left = random.randint(0, 95)
-                delay = random.uniform(0, 3)
-                dur = random.uniform(4, 7)
-                size = random.randint(70, 120)
-                falling_items += f'<img src="data:image/jpeg;base64,{rosco_b64}" class="rosco-fall" style="left:{left}%; animation-delay:{delay}s; animation-duration:{dur}s; width:{size}px;">'
+            for i in range(20):
+                src = random.choice(sources)
+                left, delay, dur = random.randint(0, 95), random.uniform(0, 4), random.uniform(5, 8)
+                size = random.randint(60, 100)
+                falling_items += f'<img src="{src}" class="item-fall" style="left:{left}%; animation-delay:{delay}s; animation-duration:{dur}s; width:{size}px;">'
             
             st.markdown(f"""
                 <div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 9999; pointer-events: none;">
                     {falling_items}
                 </div>
                 <style>
-                    .rosco-fall {{ 
-                        position: absolute; 
-                        top: -200px; 
-                        opacity: 0.9; 
-                        animation: fall linear forwards; /* "forwards" hace que se quede al final o desaparezca, no vuelve a empezar */
-                    }}
+                    .item-fall {{ position: absolute; top: -150px; opacity: 0.8; animation: fall linear forwards; border-radius: 50%; }}
                     @keyframes fall {{ 
-                        0% {{ top: -200px; transform: rotate(0deg); opacity: 1; }} 
-                        90% {{ opacity: 1; }}
-                        100% {{ top: 110vh; transform: rotate(360deg); opacity: 0; }} 
+                        0% {{ top: -150px; transform: rotate(0deg); opacity: 1; }} 
+                        100% {{ top: 110vh; transform: rotate(720deg); opacity: 0; }} 
                     }}
                 </style>
             """, unsafe_allow_html=True)
 
-        # 3. CARGA DE DATOS ORIGINALES
+        # 3. CARGA DE DATOS
         de, dt, da = load_and_clean_ranking()
 
-        # 4. FILTROS (Añadidos Mes y Comercial)
-        st.markdown('<p style="color: #d2ff00; font-weight: bold;">🔍 FILTROS DE BÚSQUEDA</p>', unsafe_allow_html=True)
+        # 4. FILTROS (Mes y Comercial)
+        st.markdown('<p style="color: #d2ff00; font-weight: bold; margin-bottom: 5px;">📅 FILTROS DE PERÍODO Y EQUIPO</p>', unsafe_allow_html=True)
         c1, c2 = st.columns(2)
         
         with c1:
             meses_disp = sorted(list(set(de['Mes']) | set(dt['Mes']) | set(da['Mes'])))
-            f_mes = st.multiselect("Seleccionar Mes/es:", meses_disp, default=[meses_disp[-1]] if meses_disp else [])
+            f_mes = st.multiselect("Seleccionar Mes:", meses_disp, default=[meses_disp[-1]] if meses_disp else [])
         
         with c2:
-            # Lista completa incluyendo a Belén y Lorena
+            # Filtramos comerciales activos (Lorena, Deborah, Belén) - Luis queda fuera
             coms_disp = sorted(list(set(de['Comercial']) | set(dt['Comercial']) | set(da['Comercial'])))
-            # Excluimos a Luis Rdz por defecto si quieres, pero dejamos a los activos
-            f_coms = st.multiselect("Seleccionar Comerciales:", coms_disp, default=[c for c in coms_disp if c != "LUIS RODRIGUEZ"])
+            f_coms = st.multiselect("Seleccionar Comerciales:", coms_disp, default=[c for c in coms_disp if "LUIS" not in c.upper()])
 
-        # Aplicar filtros
+        # Aplicar filtros a los 3 DataFrames
         f_de = de[(de['Mes'].isin(f_mes)) & (de['Comercial'].isin(f_coms))].copy()
         f_dt = dt[(dt['Mes'].isin(f_mes)) & (dt['Comercial'].isin(f_coms))].copy()
         f_da = da[(da['Mes'].isin(f_mes)) & (da['Comercial'].isin(f_coms))].copy()
 
-        # 5. CÁLCULO DE MÉTRICAS
+        # 5. CÁLCULO DE REFERIDOS Y ESTADOS
         for df_tmp in [f_de, f_dt, f_da]:
             if not df_tmp.empty:
+                # Contar Referidos si la columna Canal es 'REF'
+                df_tmp['V_REF'] = df_tmp['Canal'].apply(lambda x: 1 if str(x).strip().upper() == "REF" else 0) if 'Canal' in df_tmp.columns else 0
+                # Estados
                 df_tmp['Baja'] = df_tmp['Estado'].apply(lambda x: 1 if str(x).strip().upper() == "BAJA" else 0) if 'Estado' in df_tmp.columns else 0
                 df_tmp['Cancelado'] = df_tmp['Estado'].apply(lambda x: 1 if str(x).strip().upper() == "CANCELADO" else 0) if 'Estado' in df_tmp.columns else 0
 
-        r1 = f_de.groupby('Comercial')[['V_Luz', 'V_Gas', 'Baja', 'Cancelado']].sum() if not f_de.empty else pd.DataFrame()
-        r2 = f_dt.groupby('Comercial')[['V_Fibra', 'V_Móvil', 'Baja', 'Cancelado']].sum() if not f_dt.empty else pd.DataFrame()
-        r3 = f_da.groupby('Comercial')[['V_Alarma', 'Baja', 'Cancelado']].sum() if not f_da.empty else pd.DataFrame()
+        r1 = f_de.groupby('Comercial')[['V_Luz', 'V_Gas', 'V_REF', 'Baja', 'Cancelado']].sum() if not f_de.empty else pd.DataFrame()
+        r2 = f_dt.groupby('Comercial')[['V_Fibra', 'V_Móvil', 'V_REF', 'Baja', 'Cancelado']].sum() if not f_dt.empty else pd.DataFrame()
+        r3 = f_da.groupby('Comercial')[['V_Alarma', 'V_REF', 'Baja', 'Cancelado']].sum() if not f_da.empty else pd.DataFrame()
         
         rank = pd.concat([r1, r2, r3], axis=1).fillna(0)
-        rank['T_Baja'] = rank.filter(like='Baja').sum(axis=1)
-        rank['T_Cancel'] = rank.filter(like='Cancelado').sum(axis=1)
         
-        # TOTAL NETO (Sin contar Móviles para el ranking de líder)
-        rank['Total Neto'] = (rank.get('V_Luz',0)+rank.get('V_Gas',0)+rank.get('V_Fibra',0)+rank.get('V_Alarma',0)) - rank['T_Baja'] - rank['T_Cancel']
+        # Consolidar columnas duplicadas tras el concat
+        rank['Ref_Total'] = rank.filter(like='V_REF').sum(axis=1)
+        rank['Bajas'] = rank.filter(like='Baja').sum(axis=1)
+        rank['Cancel'] = rank.filter(like='Cancelado').sum(axis=1)
+        
+        # TOTAL NETO (Sin Móviles para el ranking de LORENA)
+        rank['Total Neto'] = (rank.get('V_Luz',0)+rank.get('V_Gas',0)+rank.get('V_Fibra',0)+rank.get('V_Alarma',0)) - rank['Bajas'] - rank['Cancel']
         rank['Faltan para 25'] = rank['Total Neto'].apply(lambda x: max(0, 25 - int(x)))
 
-        # 6. FRASE Y LÍDER (LORENA basándose en Total Neto)
-        lider_actual = rank['Total Neto'].idxmax() if not rank.empty else "---"
-        
+        # 6. CABECERA: FRASE Y LÍDER (Lorena suele ser el idxmax ahora)
         st.markdown(f"""
-            <div style="text-align: center; padding: 10px;">
-                <h1 style="color: #d2ff00; font-size: 2.2rem; margin-bottom: 5px;">"TRABAJA EN SILENCIO, QUE EL ÉXITO HAGA EL RUIDO"</h1>
+            <div style="text-align: center; margin-bottom: 20px;">
+                <h1 style="color: #d2ff00; font-size: 2rem;">"CADA DÍA ES UNA OPORTUNIDAD PARA SUPERARSE"</h1>
                 <div style="background: rgba(210, 255, 0, 0.1); padding: 10px; border-radius: 10px; border: 1px dashed #d2ff00; display: inline-block;">
-                    <p style="color: white; margin:0; font-size: 1.2rem;">🥇 Nº 1 DEL RANKING: <b style="color: #d2ff00;">{lider_actual}</b></p>
-                    <p style="color: #8b949e; margin:0; font-size: 0.8rem;">(Basado en ventas totales netas sin móviles)</p>
+                    <p style="color: white; margin:0;">🥇 Nº 1 ACTUAL: <b style="color: #d2ff00; font-size: 1.3rem;">{rank['Total Neto'].idxmax() if not rank.empty else '---'}</b></p>
                 </div>
             </div>
         """, unsafe_allow_html=True)
 
-        # 7. OBJETIVO EQUIPO
-        meta_grupal = 25 * len(f_coms) if f_coms else 75
-        v_totales = int(rank['Total Neto'].sum())
-        v_faltan = max(0, meta_grupal - v_totales)
+        # 7. CUADRO OBJETIVO EQUIPO (Fijo para 3 comerciales = 75 ventas)
+        meta_fija = 75 
+        v_equipo = int(rank['Total Neto'].sum())
+        v_quedan = max(0, meta_fija - v_equipo)
         
         st.markdown(f"""
-            <div style="background: #161b22; padding: 15px; border-radius: 15px; border: 1px solid #30363d; margin: 15px auto; text-align: center; max-width: 400px;">
-                <p style="color: #d2ff00; margin:0; font-weight: bold; font-size: 0.9rem;">🚀 FALTAN PARA OBJETIVO EQUIPO</p>
-                <h1 style="color: white; margin:0; font-size: 3rem;">{v_faltan}</h1>
-                <p style="color: #8b949e; margin:0; font-size: 0.7rem;">Meta del grupo seleccionado: {meta_grupal} ventas netas</p>
+            <div style="background: #161b22; padding: 15px; border-radius: 15px; border: 1px solid #30363d; margin: 0 auto 25px auto; text-align: center; max-width: 380px;">
+                <p style="color: #d2ff00; margin:0; font-weight: bold; font-size: 0.9rem;">🚀 FALTAN PARA OBJETIVO EQUIPO (3 PERSONAS)</p>
+                <h1 style="color: white; margin:0; font-size: 3.2rem;">{v_quedan}</h1>
+                <p style="color: #8b949e; margin:0; font-size: 0.75rem;">Meta: 75 Ventas Netas</p>
             </div>
         """, unsafe_allow_html=True)
 
-        # 8. TABLA DETALLADA (Belén, Lorena, Deborah...)
-        df_vis = rank.rename(columns={'V_Luz':'Luz','V_Gas':'Gas','V_Fibra':'Fibra','V_Móvil':'Móvil','V_Alarma':'Alarma','T_Baja':'Bajas','T_Cancel':'Cancelados'})
-        cols_finales = ['Luz','Gas','Fibra','Móvil','Alarma','Bajas','Cancelados','Total Neto','Faltan para 25']
+        # 8. TABLA DE RANKING CON COLUMNA REF
+        df_vis = rank.rename(columns={'V_Luz':'Luz','V_Gas':'Gas','V_Fibra':'Fibra','V_Móvil':'Móvil','V_Alarma':'Alarma','Ref_Total':'REF'})
+        columnas_finales = ['Luz','Gas','Fibra','Móvil','Alarma','REF','Bajas','Cancel','Total Neto','Faltan para 25']
         
-        st.table(df_vis[[c for c in cols_finales if c in df_vis.columns]].astype(int).sort_values('Total Neto', ascending=False).style.apply(
-            lambda x: ['background-color: rgba(210, 255, 0, 0.25); color: #d2ff00; font-weight: bold' if x.name in ['Total Neto', 'Faltan para 25'] else '' for i in x], axis=1))
+        st.table(df_vis[[c for c in columnas_finales if c in df_vis.columns]].astype(int).sort_values('Total Neto', ascending=False).style.apply(
+            lambda x: ['background-color: rgba(210, 255, 0, 0.2); color: #d2ff00; font-weight: bold' if x.name in ['Total Neto', 'Faltan para 25'] else '' for i in x], axis=1))
 
-        # 9. TOTALES INFERIORES
+        # 9. TOTALES INFERIORES (INTENSOS)
         st.markdown("---")
         c1, c2, c3, c4 = st.columns(4)
-        c_style = "background: #0d1117; border: 2px solid #d2ff00; padding: 15px; border-radius: 12px; text-align: center;"
+        est = "background: #0d1117; border: 2px solid #d2ff00; padding: 15px; border-radius: 10px; text-align: center;"
         
-        c1.markdown(f'<div style="{c_style}"><p style="color:#d2ff00;font-size:0.8rem;margin:0;">ENERGÍA NETA</p><h2 style="color:white;margin:0;">{int(df_vis["Luz"].sum()+df_vis["Gas"].sum()-df_vis["Bajas"].sum())}</h2></div>', unsafe_allow_html=True)
-        c2.markdown(f'<div style="{c_style}"><p style="color:#d2ff00;font-size:0.8rem;margin:0;">FIBRA NETA</p><h2 style="color:white;margin:0;">{int(df_vis["Fibra"].sum()-df_vis["Cancelados"].sum())}</h2></div>', unsafe_allow_html=True)
-        c3.markdown(f'<div style="{c_style}"><p style="color:#d2ff00;font-size:0.8rem;margin:0;">MÓVILES TOTALES</p><h2 style="color:white;margin:0;">{int(df_vis["Móvil"].sum())}</h2></div>', unsafe_allow_html=True)
-        c4.markdown(f'<div style="{c_style} background:#d2ff00;"><p style="color:black;font-weight:bold;margin:0;">TOTAL NETO EQUIPO</p><h2 style="color:black;margin:0;">{v_totales}</h2></div>', unsafe_allow_html=True)
+        c1.markdown(f'<div style="{est}"><p style="color:#d2ff00;font-size:0.8rem;margin:0;">ENERGÍA NETA</p><h2 style="color:white;margin:0;">{int(df_vis["Luz"].sum()+df_vis["Gas"].sum()-df_vis["Bajas"].sum())}</h2></div>', unsafe_allow_html=True)
+        c2.markdown(f'<div style="{est}"><p style="color:#d2ff00;font-size:0.8rem;margin:0;">FIBRA NETA</p><h2 style="color:white;margin:0;">{int(df_vis["Fibra"].sum()-df_vis["Cancel"].sum())}</h2></div>', unsafe_allow_html=True)
+        c3.markdown(f'<div style="{est}"><p style="color:#d2ff00;font-size:0.8rem;margin:0;">REF TOTAL MES</p><h2 style="color:white;margin:0;">{int(df_vis["REF"].sum())}</h2></div>', unsafe_allow_html=True)
+        c4.markdown(f'<div style="{est} background:#d2ff00;"><p style="color:black;font-weight:bold;margin:0;">EQUIPO NETO</p><h2 style="color:black;margin:0;">{v_equipo}</h2></div>', unsafe_allow_html=True)
 
     except Exception as e:
-        st.error(f"Error en el Dashboard: {str(e)}")
+        st.error(f"Error en Dashboard: {e}")
 
 #-----REPOSITORIO----
 elif menu == "📂 REPOSITORIO":
