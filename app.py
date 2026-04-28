@@ -611,6 +611,7 @@ elif menu == "📂 REPOSITORIO":
         mostrar_contenido_carpeta("TARIFAS GANA", "TARIFAS GANA ENERGÍA", "⚡")
 
     st.markdown("---")
+
 # --- CONTROL LABORAL ---
 elif menu == "🕒 CONTROL LABORAL":
     import pandas as pd
@@ -660,9 +661,9 @@ elif menu == "🕒 CONTROL LABORAL":
         com_sel = st.selectbox("👤 Selecciona Comercial", sorted(df_laboral[col_comercial].unique()))
 
         # 3. LÓGICA DE CÁLCULO
-        def calcular_auditoria_v11(df, nombre):
+        def calcular_auditoria_v12(df, nombre):
             datos = df[df[col_comercial] == nombre].copy()
-            min_ret, dias_deuda, dias_rojos, min_medicos, lista_justificantes = 0, [], [], 0, []
+            min_ret, dias_deuda, dias_rojos, min_medicos, min_objetivos, lista_justificantes = 0, [], [], 0, 0, []
             hoy = datetime.now().date()
             inicio = datos[col_temporal].min().date()
             
@@ -674,8 +675,10 @@ elif menu == "🕒 CONTROL LABORAL":
                 d_str = dia.strftime('%Y-%m-%d')
                 if dia.weekday() >= 5 or d_str in festivos: continue 
                 if "RAQUEL" in nombre.upper() and d_str in vacaciones_raquel: continue
+                
+                # Gestión de días libres por objetivo
                 if "LORENA" in nombre.upper() and d_str in libre_lorena_obj:
-                    dias_deuda.append(f"{dia.strftime('%d/%m/%Y')} (Libre Obj)")
+                    min_objetivos += 300 # El día libre cuenta como recuperado
                     continue
 
                 es_esp = (dia >= pd.Timestamp('2026-03-29') and dia <= pd.Timestamp('2026-04-05')) or \
@@ -696,42 +699,48 @@ elif menu == "🕒 CONTROL LABORAL":
                             min_ret += (datetime.combine(dia, h_real) - datetime.combine(dia, h_lim_e)).total_seconds() / 60
                             dias_rojos.append(dia.date())
 
-            # CASO LORENA: Horas Médicas hoy 27/04
-            if "LORENA" in nombre.upper() and hoy == pd.Timestamp('2026-04-27').date():
+            # CASO LORENA: Horas Médicas y Objetivos
+            if "LORENA" in nombre.upper():
                 min_medicos = 180 
                 lista_justificantes.append({"fecha": "27/04/2026", "motivo": "Cita Médica", "tramo": "11:30 a 14:30", "horas": "3h"})
 
-            return int(min_ret), dias_deuda, dias_rojos, min_medicos, lista_justificantes
+            return int(min_ret), dias_deuda, dias_rojos, min_medicos, min_objetivos, lista_justificantes
 
-        m_ret, l_deuda, d_rojos, m_med, justificantes = calcular_auditoria_v11(df_laboral, com_sel)
+        m_ret, l_deuda, d_rojos, m_med, m_obj, justificantes = calcular_auditoria_v12(df_laboral, com_sel)
         
         # 4. TOTALES
         bruto = m_ret + (len(l_deuda) * 300)
-        # Belen recupera todo para estar a 0
-        recup = bruto if "BELEN" in com_sel.upper() else (bruto if any(x in com_sel.upper() for x in ["LORENA", "DEBORAH"]) else 0)
+        # Belen y Deborah recuperan normal, Lorena suma sus objetivos
+        recup_base = bruto if any(x in com_sel.upper() for x in ["BELEN", "DEBORAH"]) else 0
+        if "LORENA" in com_sel.upper():
+            recup_base = bruto # Lorena también tiene su histórico recuperado
         
-        pend = max(0, bruto - recup)
+        pend = max(0, bruto - recup_base)
         hf, mf = divmod(pend, 60)
         h_med, m_med_r = divmod(m_med, 60)
+        h_obj, m_obj_r = divmod(m_obj, 60)
 
-        # 5. DASHBOARD
+        # 5. DASHBOARD (6 Columnas)
         st.markdown(f"### 📊 Resumen Auditoría: {com_sel}")
-        c1, c2, c3, c4, c5 = st.columns(5)
+        c1, c2, c3, c4, c5, c6 = st.columns(6)
         
         def card_v(l, v, s, c):
             return f'<div style="background:#1c2128; padding:15px; border-radius:10px; border:1px solid #30363d; text-align:center; min-height:110px;"><p style="color:#8b949e; font-size:0.75rem; margin:0;">{l}</p><h2 style="color:{c}; margin:10px 0; font-size:1.4rem;">{v}</h2><p style="color:#58a6ff; font-size:0.65rem; margin:0;">{s}</p></div>'
 
         c1.markdown(card_v("RETRASOS", f"{m_ret} m", f"{len(d_rojos)} registros", "#ffab70"), unsafe_allow_html=True)
         c2.markdown(card_v("DEUDA DÍAS", f"{len(l_deuda)*300} m", f"{len(l_deuda)} días", "#ff7b72"), unsafe_allow_html=True)
-        c3.markdown(card_v("RECUPERADO", f"{recup} m", "Total abonado", "#7ee787"), unsafe_allow_html=True)
+        c3.markdown(card_v("RECUPERADO", f"{recup_base} m", "Total abonado", "#7ee787"), unsafe_allow_html=True)
         c4.markdown(card_v("HORAS MÉDICAS", f"{int(h_med)}h {int(m_med_r)}m", "Justificadas", "#a371f7"), unsafe_allow_html=True)
+        c5.markdown(card_v("LIBRE OBJETIVO", f"{int(h_obj)}h {int(m_obj_r)}m", "Premio Ventas", "#00f0ff"), unsafe_allow_html=True)
         
         p_col = "#d2ff00" if pend <= 0 else "#ff4b4b"
-        c5.markdown(f'<div style="background:#161b22; padding:15px; border-radius:10px; border:2px solid {p_col}; text-align:center; min-height:110px;"><p style="color:{p_col}; font-weight:bold; margin:0; font-size:0.8rem;">PENDIENTE</p><h2 style="color:{p_col}; margin:5px 0; font-size:1.5rem;">{int(hf)}h {int(mf)}m</h2><p style="color:#8b949e; font-size:0.65rem; margin:0;">{pend} min</p></div>', unsafe_allow_html=True)
+        c6.markdown(f'<div style="background:#161b22; padding:15px; border-radius:10px; border:2px solid {p_col}; text-align:center; min-height:110px;"><p style="color:{p_col}; font-weight:bold; margin:0; font-size:0.8rem;">PENDIENTE</p><h2 style="color:{p_col}; margin:5px 0; font-size:1.5rem;">{int(hf)}h {int(mf)}m</h2><p style="color:#8b949e; font-size:0.65rem; margin:0;">{pend} min</p></div>', unsafe_allow_html=True)
 
-        # SECCIÓN DE JUSTIFICANTES MÉDICOS
-        if justificantes:
-            st.markdown("#### 🩺 DETALLE DE HORAS MÉDICAS JUSTIFICADAS")
+        # SECCIÓN DE JUSTIFICANTES MÉDICOS Y OBJETIVOS
+        if justificantes or "LORENA" in com_sel.upper():
+            st.markdown("#### 📑 DETALLE DE AUSENCIAS JUSTIFICADAS")
+            if "LORENA" in com_sel.upper():
+                st.success("**17/04/2024:** LIBRE POR OBJETIVO CUMPLIDO (5h justificadas)")
             for j in justificantes:
                 st.info(f"**Fecha:** {j['fecha']} | **Tramo:** {j['tramo']} | **Total:** {j['horas']} | **Motivo:** {j['motivo']}")
 
