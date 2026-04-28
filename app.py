@@ -204,7 +204,7 @@ with st.sidebar:
     st.markdown("---")
     menu = st.sidebar.radio(
     "Navegación",
-    ["🚀 CRM", "📊 PRECIOS", "⚖️ COMPARADOR", "📢 ANUNCIOS Y PLAN AMIGO", "📈 DASHBOARD Y RANKING", "📂 REPOSITORIO", "🕒 CONTROL LABORAL"]
+    ["🚀 CRM", "📊 PRECIOS", "⚖️ COMPARADOR LUZ", "📢 ANUNCIOS Y PLAN AMIGO", "📈 DASHBOARD Y RANKING", "📂 REPOSITORIO", "🕒 CONTROL LABORAL"]
 )
 
 # --- CRM ---
@@ -319,8 +319,8 @@ elif menu == "📊 PRECIOS":
             with ad_tv_cols[i]:
                 st.markdown(f'<div class="price-card"><div class="price-title">ADICIONAL {gb}</div><div class="price-val">{pre}</div><div class="price-sub">Precio / Mes</div></div>', unsafe_allow_html=True)
 
-# --- COMPARADOR ---
-elif menu == "⚖️ COMPARADOR":
+# --- COMPARADOR LUZ ---
+elif menu == "⚖️ COMPARADOR LUZ":
     st.header("Estudio de Ahorro Personalizado")
     
     c1, c2 = st.columns(2)
