@@ -449,7 +449,7 @@ elif menu == "📈 DASHBOARD Y RANKING":
                         position: absolute; 
                         top: -150px; 
                         opacity: 0.8; 
-                        animation: fall linear forwards; /* "forwards" hace que no se repita infinitamente */
+                        animation: fall linear forwards; 
                     }}
                     @keyframes fall {{ 
                         0% {{ top: -150px; transform: rotate(0deg); opacity: 1; }} 
@@ -482,7 +482,7 @@ elif menu == "📈 DASHBOARD Y RANKING":
         f_dt = dt[(dt['Mes'].isin(f_mes)) & (dt['Comercial'].isin(f_coms))].copy()
         f_da = da[(da['Mes'].isin(f_mes)) & (da['Comercial'].isin(f_coms))].copy()
 
-        # 5. PROCESAMIENTO DETALLADO (Segmentado por categoría)
+        # 5. PROCESAMIENTO DETALLADO
         if not f_de.empty:
             f_de['V_REF'] = f_de['Canal'].apply(lambda x: 1 if str(x).strip().upper() == "REF" else 0) if 'Canal' in f_de.columns else 0
             f_de['Baja_E'] = f_de['Estado'].apply(lambda x: 1 if str(x).strip().upper() == "BAJA" else 0) if 'Estado' in f_de.columns else 0
@@ -508,9 +508,9 @@ elif menu == "📈 DASHBOARD Y RANKING":
         rank['Cancel_Total'] = rank.filter(like='Cancel_').sum(axis=1)
         
         # LÓGICA DE LÍDER (Ventas brutas sin Móvil)
-        rank['Ventas_Sin_Movil'] = (rank.get('V_Luz',0) + rank.get('V_Gas',0) + rank.get('V_Fibra',0) + rank.get('V_Alarma',0))
+        rank['Ventas_Sin_Movil'] = (rank.get('V_Luz', 0) + rank.get('V_Gas', 0) + rank.get('V_Fibra', 0) + rank.get('V_Alarma', 0))
         
-        # Nº 1 DEL MES (COMERCIAL QUE MÁS VENTAS TOTALES SIN MÓVIL LLEVA)
+        # Nº 1 DEL MES (COMERCIAL CON MÁXIMO EN VENTAS BRUTAS SIN MÓVIL)
         lider_real = rank['Ventas_Sin_Movil'].idxmax() if not rank.empty and rank['Ventas_Sin_Movil'].max() > 0 else "---"
         
         # Total Neto para el objetivo individual
@@ -532,11 +532,11 @@ elif menu == "📈 DASHBOARD Y RANKING":
         v_falta_equipo = max(0, 75 - v_equipo_neta)
         st.markdown(f'<div style="background:#161b22;padding:15px;border-radius:15px;border:1px solid #30363d;margin:0 auto 20px auto;text-align:center;max-width:320px;"><p style="color:#d2ff00;margin:0;font-weight:bold;font-size:0.9rem;">🚀 FALTAN PARA EL OBJETIVO</p><h1 style="color:white;margin:0;font-size:2.8rem;">{v_falta_equipo}</h1></div>', unsafe_allow_html=True)
 
-        # 8. TABLA DE RANKING
+        # 8. TABLA DE RANKING (ORDENADA POR VENTAS BRUTAS SIN MÓVIL PARA QUE EL Nº1 COINCIDA ARRIBA)
         df_vis = rank.rename(columns={'V_Luz':'Luz','V_Gas':'Gas','V_Fibra':'Fibra','V_Móvil':'Móvil','V_Alarma':'Alarma','Bajas_Total':'Bajas','Cancel_Total':'Cancelados'})
         cols_tab = ['Luz','Gas','Fibra','Móvil','Alarma','REF','Bajas','Cancelados','Total Neto','Faltan para 25']
-        # Mantenemos el orden por Total Neto pero el Líder arriba se calcula por Brutas
-        st.table(df_vis[[c for c in cols_tab if c in df_vis.columns]].astype(int).sort_values('Total Neto', ascending=False).style.apply(
+        
+        st.table(df_vis[[c for c in cols_tab if c in df_vis.columns]].astype(int).sort_values('Ventas_Sin_Movil', ascending=False).style.apply(
             lambda x: ['background-color: rgba(210, 255, 0, 0.2); color: #d2ff00; font-weight: bold' if x.name in ['Total Neto', 'Faltan para 25'] else '' for i in x], axis=1))
 
         # 9. TOTALES INFERIORES BRUTOS
@@ -550,7 +550,7 @@ elif menu == "📈 DASHBOARD Y RANKING":
         c3.markdown(f'<div style="{box}"><p style="color:#d2ff00;font-size:0.8rem;margin:0;">ALARMA BRUTA</p><h2 style="color:white;margin:0;">{int(rank["V_Alarma"].sum()) if "V_Alarma" in rank else 0}</h2></div>', unsafe_allow_html=True)
         c4.markdown(f'<div style="{box} background:#d2ff00;"><p style="color:black;font-weight:bold;margin:0;">TOTAL BRUTO</p><h2 style="color:black;margin:0;">{int(rank["Ventas_Sin_Movil"].sum())}</h2></div>', unsafe_allow_html=True)
 
-        # 10. NUEVOS CUADROS: CANCELACIONES Y BAJAS (ENERGÍA Y FIBRA)
+        # 10. NUEVOS CUADROS: CANCELACIONES Y BAJAS
         st.markdown("<br>", unsafe_allow_html=True)
         cx1, cx2, cx3, cx4 = st.columns(4)
         box_alt = "background:#161b22; border:1px solid #ff4b4b; padding:15px; border-radius:10px; text-align:center;"
@@ -562,7 +562,6 @@ elif menu == "📈 DASHBOARD Y RANKING":
 
     except Exception as e:
         st.error(f"Error en Dashboard: {e}")
-
 
 #-----REPOSITORIO----
 elif menu == "📂 REPOSITORIO":
