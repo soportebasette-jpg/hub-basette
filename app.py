@@ -435,60 +435,68 @@ elif menu == "⚖️ COMPARADOR LUZ":
 elif menu == "⚖️ COMPARADOR GAS":
     st.header("Estudio de Ahorro de Gas Personalizado")
 
-    # Definición de tarifas de gas (puedes mover esto a tu sección de configuración/datos)
+    # 1. BASE DE DATOS DE TARIFAS DE GAS (Basado en la imagen de PRECIOS)
     tarifas_gas = [
-        {"COMPAÑÍA": "NATURGY", "TARIFA": "Gas RL.1", "FIJO": 5.44, "ENERGIA": 0.082, "logo": "logos/naturgy.png"},
-        {"COMPAÑÍA": "NATURGY", "TARIFA": "Gas RL.2", "FIJO": 10.32, "ENERGIA": 0.078, "logo": "logos/naturgy.png"},
-        {"COMPAÑÍA": "GANA ENERGÍA", "TARIFA": "Gas RL.1", "FIJO": 4.95, "ENERGIA": 0.079, "logo": "logos/gana.png"},
-        {"COMPAÑÍA": "GANA ENERGÍA", "TARIFA": "Gas RL.2", "FIJO": 9.50, "ENERGIA": 0.075, "logo": "logos/gana.png"},
+        {"COMPAÑÍA": "NATURGY", "TARIFA": "GAS RL.1 (3.1)", "FIJO": 5.44, "ENERGIA": 0.082, "logo": "logos/naturgy.png"},
+        {"COMPAÑÍA": "NATURGY", "TARIFA": "GAS RL.2 (3.2)", "FIJO": 10.32, "ENERGIA": 0.078, "logo": "logos/naturgy.png"},
+        {"COMPAÑÍA": "GANA ENERGÍA", "TARIFA": "GAS RL.1 (3.1)", "FIJO": 4.95, "ENERGIA": 0.079, "logo": "logos/gana.png"},
+        {"COMPAÑÍA": "GANA ENERGÍA", "TARIFA": "GAS RL.2 (3.2)", "FIJO": 9.50, "ENERGIA": 0.075, "logo": "logos/gana.png"},
+        {"COMPAÑÍA": "TOTALENERGIES", "TARIFA": "GAS RL.1 (TOTAL)", "FIJO": 5.20, "ENERGIA": 0.081, "logo": "logos/total.png"},
+        {"COMPAÑÍA": "TOTALENERGIES", "TARIFA": "GAS RL.2 (TOTAL)", "FIJO": 9.90, "ENERGIA": 0.077, "logo": "logos/total.png"},
     ]
 
     c1, c2 = st.columns(2)
     with c1:
         cliente = st.text_input("Nombre del cliente", "Nombre Apellidos")
-        f_act = st.number_input("Factura actual con IVA (EUR)", value=0.0)
-        dias_factura = st.number_input("Días del periodo de factura", value=30)
+        f_act = st.number_input("Factura actual con IVA (EUR)", value=0.0, key="gas_f_act")
+        dias_factura = st.number_input("Días del periodo de factura", value=30, key="gas_dias")
         alquiler_contador = st.number_input("Alquiler de contador (EUR/mes)", value=0.69)
         # Selector de IVA
-        iva_sel = st.selectbox("IVA a aplicar (%)", [21, 10, 5], index=0)
+        iva_sel = st.selectbox("IVA a aplicar (%)", [21, 10, 5], index=0, key="gas_iva")
         iva_factor = 1 + (iva_sel / 100)
     
     with c2:
-        comp_sel = st.selectbox("Compañía Propuesta", sorted(list(set(t["COMPAÑÍA"] for t in tarifas_gas))))
+        comp_sel = st.selectbox("Compañía Propuesta", sorted(list(set(t["COMPAÑÍA"] for t in tarifas_gas))), key="gas_comp")
         tarifas_f = [t["TARIFA"] for t in tarifas_gas if t["COMPAÑÍA"] == comp_sel]
-        tarifa_sel_nombre = st.selectbox("Tarifa Seleccionada", tarifas_f)
+        tarifa_sel_nombre = st.selectbox("Tarifa Seleccionada", tarifas_f, key="gas_tarifa")
+        
+        # Seleccionamos la tarifa para obtener los precios y el logo
         sel = next(t for t in tarifas_gas if t["COMPAÑÍA"] == comp_sel and t["TARIFA"] == tarifa_sel_nombre)
         
+        # Mostrar Logo de la compañía de gas
         if os.path.exists(sel.get("logo", "")): 
             st.image(sel["logo"], width=120)
+        else:
+            st.info(f"Logo de {comp_sel} (No encontrado)")
         
-        consumo_kwh = st.number_input("Consumo total del periodo (kWh)", value=0.0)
+        consumo_kwh = st.number_input("Consumo total del periodo (kWh)", value=0.0, key="gas_kwh")
 
     # --- LÓGICA DE CÁLCULO GAS ---
-    # Impuesto de Hidrocarburos (aprox. 0.00234 €/kWh)
-    imp_hidrocarburos = consumo_kwh * 0.00234
-    
-    # Precios de tarifa
+    # Los precios se actualizan automáticamente según la tarifa 'sel'
     p_fijo_mensual = float(str(sel.get('FIJO', 0)).replace(',', '.'))
     p_energia_kwh = float(str(sel.get('ENERGIA', 0)).replace(',', '.'))
     
-    # Proporción de término fijo por días
-    coste_fijo = (p_fijo_mensual / 30) * dias_factura
-    coste_variable = consumo_kwh * p_energia_kwh
-    coste_alquiler = (alquiler_contador / 30) * dias_factura
+    # Impuesto de Hidrocarburos (Tarifa estándar 0.00234 €/kWh)
+    imp_hidrocarburos = consumo_kwh * 0.00234
     
-    subtotal = coste_fijo + coste_variable + imp_hidrocarburos + coste_alquiler
+    # Cálculos prorrateados por días
+    coste_fijo_periodo = (p_fijo_mensual / 30) * dias_factura
+    coste_variable_periodo = consumo_kwh * p_energia_kwh
+    coste_alquiler_periodo = (alquiler_contador / 30) * dias_factura
+    
+    subtotal = coste_fijo_periodo + coste_variable_periodo + imp_hidrocarburos + coste_alquiler_periodo
     coste_total_iva = subtotal * iva_factor
     ahorro = f_act - coste_total_iva
 
     st.info(f"""
-    **Precios Propuestos:** Término Fijo: **{p_fijo_mensual:.2f}** €/mes | Energía: **{p_energia_kwh:.4f}** €/kWh  
-    Imp. Hidrocarburos: **{imp_hidrocarburos:.2f}** € | IVA: **{iva_sel}%**
+    **Tarifa Seleccionada:** {tarifa_sel_nombre}  
+    **Precios Aplicados:** Fijo: **{p_fijo_mensual:.2f}** €/mes | Energía: **{p_energia_kwh:.4f}** €/kWh  
+    **Extras:** Imp. Hidrocarburos: **{imp_hidrocarburos:.2f}** € | IVA: **{iva_sel}%**
     """)
     
     st.markdown(f'<div style="background:#d2ff00; padding:20px; border-radius:10px; text-align:center;"><h2 style="color:black;">AHORRO ESTIMADO GAS: {ahorro:.2f} €</h2></div>', unsafe_allow_html=True)
     
-    if st.button("GENERAR ESTUDIO PDF GAS"):
+    if st.button("GENERAR ESTUDIO PDF GAS PROFESIONAL"):
         pdf = FPDF()
         pdf.add_page()
         if os.path.exists(LOGO_PRINCIPAL): pdf.image(LOGO_PRINCIPAL, 10, 8, 33)
@@ -508,7 +516,7 @@ elif menu == "⚖️ COMPARADOR GAS":
             ("Termino Fijo", f"{p_fijo_mensual} EUR/mes"),
             ("Termino Energia", f"{p_energia_kwh} EUR/kWh"),
             ("Imp. Hidrocarburos", f"{imp_hidrocarburos:.2f} EUR"),
-            ("Alquiler Contador", f"{coste_alquiler:.2f} EUR"),
+            ("Alquiler Contador", f"{coste_alquiler_periodo:.2f} EUR"),
             ("IVA Aplicado", f"{iva_sel}%"),
             ("Consumo Total", f"{consumo_kwh:.2f} kWh")
         ]
@@ -516,17 +524,16 @@ elif menu == "⚖️ COMPARADOR GAS":
             pdf.cell(95, 8, d, border=1); pdf.cell(95, 8, str(v), border=1, ln=True)
             
         pdf.ln(5); pdf.set_font("Arial", "B", 12); pdf.cell(95, 10, "Factura Actual", border=1); pdf.cell(95, 10, f"{f_act:.2f} EUR", border=1, ln=True)
-        pdf.cell(95, 10, f"Nueva Factura Gas", border=1); pdf.cell(95, 10, f"{coste_total_iva:.2f} EUR", border=1, ln=True)
+        pdf.cell(95, 10, f"Nueva Factura ({iva_sel}% IVA)", border=1); pdf.cell(95, 10, f"{coste_total_iva:.2f} EUR", border=1, ln=True)
         
         pdf.ln(5); pdf.set_fill_color(210, 255, 0); pdf.set_font("Arial", "B", 14)
-        pdf.cell(190, 15, f"AHORRO TOTAL: {ahorro:.2f} EUR", ln=True, align="C", fill=True)
+        pdf.cell(190, 15, f"AHORRO TOTAL GAS: {ahorro:.2f} EUR", ln=True, align="C", fill=True)
         
         pdf.ln(10); pdf.set_font("Arial", "B", 12); pdf.cell(190, 10, "PLAN AMIGO BASETTE", ln=True)
         if os.path.exists(QR_PLAN_AMIGO):
             pdf.image(QR_PLAN_AMIGO, 80, pdf.get_y(), 50)
             
         st.download_button(label="📥 DESCARGAR ESTUDIO GAS PDF", data=pdf.output(dest='S').encode('latin-1', 'replace'), file_name=f"Estudio_Gas_{cliente}.pdf")
-
 # --- ANUNCIOS Y PLAN AMIGO ---
 elif menu == "📢 ANUNCIOS Y PLAN AMIGO":
     st.header("📢 Anuncios y Plan Amigo")
