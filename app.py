@@ -435,7 +435,7 @@ elif menu == "⚖️ COMPARADOR LUZ":
 elif menu == "⚖️ COMPARADOR GAS":
     st.header("Estudio de Ahorro de Gas Personalizado")
 
-    # 1. BASE DE DATOS DE TARIFAS DE GAS (Precios Naturgy Corregidos)
+    # 1. BASE DE DATOS ACTUALIZADA (Precios Naturgy y Total corregidos)
     tarifas_gas = [
         {"COMPAÑÍA": "NATURGY", "TARIFA": "GAS RL.1 (3.1)", "FIJO": 5.34, "ENERGIA": 0.0840, "logo": "manuales/logo_naturgy.png"},
         {"COMPAÑÍA": "NATURGY", "TARIFA": "GAS RL.2 (3.2)", "FIJO": 10.03, "ENERGIA": 0.0810, "logo": "manuales/logo_naturgy.png"},
@@ -451,7 +451,7 @@ elif menu == "⚖️ COMPARADOR GAS":
         f_act = st.number_input("Factura actual con IVA (EUR)", value=0.0, key="gas_f_act")
         dias_factura = st.number_input("Días del periodo de factura", value=30, key="gas_dias")
         alquiler_contador = st.number_input("Alquiler de contador (EUR/mes)", value=0.69)
-        # Selección de IVA restringida a 21 y 10
+        # IVA restringido solo a 21 y 10
         iva_sel = st.selectbox("IVA a aplicar (%)", [21, 10], index=0, key="gas_iva")
         iva_factor = 1 + (iva_sel / 100)
     
@@ -460,7 +460,6 @@ elif menu == "⚖️ COMPARADOR GAS":
         tarifas_f = [t["TARIFA"] for t in tarifas_gas if t["COMPAÑÍA"] == comp_sel]
         tarifa_sel_nombre = st.selectbox("Tarifa Seleccionada", tarifas_f, key="gas_tarifa")
         
-        # Búsqueda de la tarifa para extraer precios y logo
         sel = next((t for t in tarifas_gas if t["COMPAÑÍA"] == comp_sel and t["TARIFA"] == tarifa_sel_nombre), tarifas_gas[0])
 
         if os.path.exists(sel["logo"]): 
@@ -468,7 +467,7 @@ elif menu == "⚖️ COMPARADOR GAS":
         
         consumo_kwh = st.number_input("Consumo total del periodo (kWh)", value=0.0, key="gas_kwh")
 
-    # --- LÓGICA DE CÁLCULO ---
+    # --- CÁLCULOS ---
     p_fijo_mensual = float(sel['FIJO'])
     p_energia_kwh = float(sel['ENERGIA'])
     imp_hidrocarburos = consumo_kwh * 0.00234
@@ -481,7 +480,7 @@ elif menu == "⚖️ COMPARADOR GAS":
     coste_total_iva = subtotal * iva_factor
     ahorro = f_act - coste_total_iva
 
-    st.info(f"**PRECIOS APLICADOS:** Fijo: **{p_fijo_mensual:.2f}** €/mes | Energía: **{p_energia_kwh:.4f}** €/kWh")
+    st.info(f"**PRECIOS NATURGY:** Fijo: **{p_fijo_mensual:.2f}** € | Energía: **{p_energia_kwh:.4f}** €/kWh")
     st.markdown(f'<div style="background:#d2ff00; padding:20px; border-radius:10px; text-align:center;"><h2 style="color:black;">AHORRO ESTIMADO: {ahorro:.2f} €</h2></div>', unsafe_allow_html=True)
     
     if st.button("GENERAR ESTUDIO PDF"):
@@ -489,12 +488,15 @@ elif menu == "⚖️ COMPARADOR GAS":
             pdf = FPDF()
             pdf.add_page()
             
-            # LOGO IZQUIERDA (TECOMPAROTODO)
-            LOGO_PDF_IZQ = "manuales/tecomparotodo_logo.png"
-            if os.path.exists(LOGO_PDF_IZQ):
-                pdf.image(LOGO_PDF_IZQ, 10, 8, 45)
+            # LÓGICA DE LOGO PRINCIPAL (Busca en manuales y fuera)
+            logo_path = "manuales/tecomparotodo_logo.png"
+            if not os.path.exists(logo_path):
+                logo_path = "tecomparotodo_logo.png"
             
-            # LOGO DERECHA (COMPAÑÍA)
+            if os.path.exists(logo_path):
+                pdf.image(logo_path, 10, 8, 45)
+            
+            # LOGO DE LA COMPAÑÍA
             if os.path.exists(sel["logo"]): 
                 pdf.image(sel["logo"], 160, 8, 35)
             
@@ -515,7 +517,6 @@ elif menu == "⚖️ COMPARADOR GAS":
             pdf.set_font("Arial", "B", 11)
             pdf.cell(190, 8, " DETALLE DE LA PROPUESTA", ln=True, fill=True)
             
-            # Datos formateados (sin tildes para evitar errores de FPDF)
             items_pdf = [
                 ("Compania", comp_sel),
                 ("Tarifa", tarifa_sel_nombre),
