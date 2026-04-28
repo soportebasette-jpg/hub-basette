@@ -435,13 +435,13 @@ elif menu == "⚖️ COMPARADOR LUZ":
 elif menu == "⚖️ COMPARADOR GAS":
     st.header("Estudio de Ahorro de Gas Personalizado")
 
-    # 1. BASE DE DATOS DE TARIFAS DE GAS (Precios y Rutas Actualizadas)
+    # 1. BASE DE DATOS DE TARIFAS DE GAS (Precios corregidos y rutas de logos)
     tarifas_gas = [
         {"COMPAÑÍA": "NATURGY", "TARIFA": "GAS RL.1 (3.1)", "FIJO": 6.13, "ENERGIA": 0.0768, "logo": "manuales/logo_naturgy.png"},
         {"COMPAÑÍA": "NATURGY", "TARIFA": "GAS RL.2 (3.2)", "FIJO": 11.45, "ENERGIA": 0.0724, "logo": "manuales/logo_naturgy.png"},
         {"COMPAÑÍA": "GANA ENERGÍA", "TARIFA": "GAS RL.1 (3.1)", "FIJO": 4.95, "ENERGIA": 0.0790, "logo": "manuales/logo_gana.png"},
         {"COMPAÑÍA": "GANA ENERGÍA", "TARIFA": "GAS RL.2 (3.2)", "FIJO": 9.50, "ENERGIA": 0.0750, "logo": "manuales/logo_gana.png"},
-        {"COMPAÑÍA": "TOTALENERGIES", "TARIFA": "GAS RL.1 (TOTAL)", "FIJO": 5.43, "ENERGIA": 0.0754, "logo": "manuales/logo_totalenergy.png"},
+        {"COMPAÑÍA": "TOTALENERGIES", "TARIFA": "GAS RL.1 (TOTAL)", "FIJO": 5.43, "ENERGIA": 0.0500, "logo": "manuales/logo_totalenergy.png"},
         {"COMPAÑÍA": "TOTALENERGIES", "TARIFA": "GAS RL.2 (TOTAL)", "FIJO": 10.99, "ENERGIA": 0.0709, "logo": "manuales/logo_totalenergy.png"},
     ]
 
@@ -459,10 +459,9 @@ elif menu == "⚖️ COMPARADOR GAS":
         tarifas_f = [t["TARIFA"] for t in tarifas_gas if t["COMPAÑÍA"] == comp_sel]
         tarifa_sel_nombre = st.selectbox("Tarifa Seleccionada", tarifas_f, key="gas_tarifa")
         
-        # Selección de datos en tiempo real
+        # Selección de datos
         sel = next((t for t in tarifas_gas if t["COMPAÑÍA"] == comp_sel and t["TARIFA"] == tarifa_sel_nombre), tarifas_gas[0])
 
-        # Logo de compañía (en manuales/)
         if os.path.exists(sel["logo"]): 
             st.image(sel["logo"], width=150)
         
@@ -477,75 +476,77 @@ elif menu == "⚖️ COMPARADOR GAS":
     coste_variable_periodo = consumo_kwh * p_energia_kwh
     coste_alquiler_periodo = (alquiler_contador / 30) * dias_factura
     
-    subtotal = coste_fijo_periodo + coste_variable_periodo + imp_hidrocarburos + coste_alquiler_periodo
+    subtotal = (coste_fijo_periodo + coste_variable_periodo + imp_hidrocarburos + coste_alquiler_periodo)
     coste_total_iva = subtotal * iva_factor
     ahorro = f_act - coste_total_iva
 
-    st.info(f"**Tarifa:** {tarifa_sel_nombre} | **Fijo:** {p_fijo_mensual}€ | **Energía:** {p_energia_kwh}€")
+    st.info(f"**PRECIOS:** Fijo: {p_fijo_mensual}€/mes | Energía: {p_energia_kwh}€/kWh")
     st.markdown(f'<div style="background:#d2ff00; padding:20px; border-radius:10px; text-align:center;"><h2 style="color:black;">AHORRO ESTIMADO: {ahorro:.2f} €</h2></div>', unsafe_allow_html=True)
     
-    if st.button("GENERAR ESTUDIO PDF GAS"):
-        pdf = FPDF()
-        pdf.add_page()
-        
-        # LOGO IZQUIERDA (Suelto en la raíz)
-        LOGO_PDF_IZQ = "tecomparotodo_logo.png"
-        if os.path.exists(LOGO_PDF_IZQ): 
-            pdf.image(LOGO_PDF_IZQ, 10, 8, 45)
-        
-        # LOGO DERECHA (En manuales/)
-        if os.path.exists(sel["logo"]): 
-            pdf.image(sel["logo"], 160, 8, 35)
-        
-        pdf.ln(30)
-        pdf.set_font("Arial", "B", 18)
-        pdf.cell(190, 10, "ESTUDIO COMPARATIVO DE GAS", ln=True, align="C")
-        
-        pdf.ln(5)
-        pdf.set_font("Arial", "B", 11)
-        pdf.set_fill_color(240, 240, 240)
-        pdf.cell(190, 8, f" DATOS DEL CLIENTE: {cliente.upper()}", ln=True, fill=True)
-        
-        pdf.set_font("Arial", "", 10)
-        pdf.cell(95, 8, f"Fecha: {datetime.now().strftime('%d/%m/%Y')}", border=1)
-        pdf.cell(95, 8, f"Periodo: {dias_factura} dias", border=1, ln=True)
-        
-        pdf.ln(5)
-        pdf.set_font("Arial", "B", 11)
-        pdf.cell(190, 8, " DETALLE DE LA PROPUESTA", ln=True, fill=True)
-        
-        pdf.set_font("Arial", "", 10)
-        items = [
-            ("Compañía", comp_sel),
-            ("Tarifa", tarifa_sel_nombre),
-            ("Término Fijo", f"{p_fijo_mensual:.2f} €/mes"),
-            ("Término Energía", f"{p_energia_kwh:.4f} €/kWh"),
-            ("Imp. Hidrocarburos", f"{imp_hidrocarburos:.2f} €"),
-            ("Alquiler Contador", f"{coste_alquiler_periodo:.2f} €"),
-            ("Consumo", f"{consumo_kwh} kWh")
-        ]
-        for d, v in items:
-            pdf.cell(95, 8, d, border=1)
-            pdf.cell(95, 8, v, border=1, ln=True)
+    if st.button("GENERAR ESTUDIO PDF"):
+        try:
+            pdf = FPDF()
+            pdf.add_page()
             
-        pdf.ln(5)
-        pdf.set_font("Arial", "B", 12)
-        pdf.cell(95, 10, "Factura Actual", border=1)
-        pdf.cell(95, 10, f"{f_act:.2f} EUR", border=1, ln=True)
-        pdf.cell(95, 10, f"Nueva Factura ({iva_sel}%)", border=1)
-        pdf.cell(95, 10, f"{coste_total_iva:.2f} EUR", border=1, ln=True)
-        
-        pdf.ln(5)
-        pdf.set_fill_color(210, 255, 0)
-        pdf.set_font("Arial", "B", 14)
-        pdf.cell(190, 15, f"AHORRO ESTIMADO: {ahorro:.2f} EUR", ln=True, align="C", fill=True)
-        
-        if os.path.exists(QR_PLAN_AMIGO):
-            pdf.image(QR_PLAN_AMIGO, 85, pdf.get_y()+5, 35)
+            # LOGOS (Ruta raíz para principal, manuales para compañías)
+            LOGO_PDF_IZQ = "tecomparotodo_logo.png"
+            if os.path.exists(LOGO_PDF_IZQ): 
+                pdf.image(LOGO_PDF_IZQ, 10, 8, 45)
             
-        st.download_button("📥 DESCARGAR ESTUDIO PDF", 
-                           data=pdf.output(dest='S').encode('latin-1', 'replace'), 
-                           file_name=f"Estudio_Gas_{cliente}.pdf")
+            if os.path.exists(sel["logo"]): 
+                pdf.image(sel["logo"], 160, 8, 35)
+            
+            pdf.ln(30)
+            pdf.set_font("Arial", "B", 18)
+            pdf.cell(190, 10, "ESTUDIO COMPARATIVO DE GAS", ln=True, align="C")
+            
+            pdf.ln(5)
+            pdf.set_font("Arial", "B", 11)
+            pdf.set_fill_color(240, 240, 240)
+            pdf.cell(190, 8, f" DATOS DEL CLIENTE: {cliente.upper()}", ln=True, fill=True)
+            
+            pdf.set_font("Arial", "", 10)
+            pdf.cell(95, 8, f"Fecha: {datetime.now().strftime('%d/%m/%Y')}", border=1)
+            pdf.cell(95, 8, f"Periodo: {dias_factura} dias", border=1, ln=True)
+            
+            pdf.ln(5)
+            pdf.set_font("Arial", "B", 11)
+            pdf.cell(190, 8, " DETALLE DE LA PROPUESTA", ln=True, fill=True)
+            
+            # Evitamos caracteres especiales para evitar error en PDF
+            items = [
+                ("Compania", comp_sel),
+                ("Tarifa", tarifa_sel_nombre),
+                ("Termino Fijo", f"{p_fijo_mensual:.2f} EUR/mes"),
+                ("Termino Energia", f"{p_energia_kwh:.4f} EUR/kWh"),
+                ("Imp. Hidrocarburos", f"{imp_hidrocarburos:.2f} EUR"),
+                ("Alquiler Contador", f"{coste_alquiler_periodo:.2f} EUR"),
+                ("Consumo", f"{consumo_kwh} kWh")
+            ]
+            pdf.set_font("Arial", "", 10)
+            for d, v in items:
+                pdf.cell(95, 8, d, border=1)
+                pdf.cell(95, 8, str(v), border=1, ln=True)
+                
+            pdf.ln(5)
+            pdf.set_font("Arial", "B", 12)
+            pdf.cell(95, 10, "Factura Actual", border=1)
+            pdf.cell(95, 10, f"{f_act:.2f} EUR", border=1, ln=True)
+            pdf.cell(95, 10, f"Nueva Factura ({iva_sel}%)", border=1)
+            pdf.cell(95, 10, f"{coste_total_iva:.2f} EUR", border=1, ln=True)
+            
+            pdf.ln(5)
+            pdf.set_fill_color(210, 255, 0)
+            pdf.set_font("Arial", "B", 14)
+            pdf.cell(190, 15, f"AHORRO ESTIMADO: {ahorro:.2f} EUR", ln=True, align="C", fill=True)
+            
+            if os.path.exists(QR_PLAN_AMIGO):
+                pdf.image(QR_PLAN_AMIGO, 85, pdf.get_y()+5, 35)
+                
+            pdf_out = pdf.output(dest='S').encode('latin-1', 'replace')
+            st.download_button("📥 DESCARGAR ESTUDIO PDF", data=pdf_out, file_name=f"Estudio_Gas_{cliente}.pdf")
+        except Exception as e:
+            st.error(f"Error al generar el PDF: {e}")
 # --- ANUNCIOS Y PLAN AMIGO ---
 elif menu == "📢 ANUNCIOS Y PLAN AMIGO":
     st.header("📢 Anuncios y Plan Amigo")
