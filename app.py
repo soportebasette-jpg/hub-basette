@@ -457,14 +457,14 @@ elif menu == "📈 DASHBOARD Y RANKING":
         
         rank_calc = pd.concat([r1, r2, r3], axis=1).fillna(0)
         
-        # Cálculo TOTAL (Sin móviles) y Faltantes
+        # Cálculo TOTAL (Luz+Gas+Fibra+Alarma - Bajas - Cancelados). Móvil NO suma.
         rank_calc['TOTAL_NETO'] = (rank_calc.get('V_Luz',0) + rank_calc.get('V_Gas',0) + rank_calc.get('V_Fibra',0) + rank_calc.get('V_Alarma',0)) - rank_calc.filter(like='V_Baja').sum(axis=1) - rank_calc.filter(like='V_Cancelado').sum(axis=1)
         rank_calc['FALTAN_PARA_25'] = rank_calc['TOTAL_NETO'].apply(lambda x: max(0, 25 - int(x)))
         rank_calc['REF_TOTAL'] = rank_calc.filter(like='V_REF').sum(axis=1)
 
         # MOSTRAR IMAGEN ROSCO
-        col_img1, col_img2, col_img3 = st.columns([1, 0.8, 1])
-        with col_img2:
+        col_r1, col_r2, col_r3 = st.columns([1, 0.8, 1])
+        with col_r2:
             if os.path.exists("rosco.jpg"):
                 st.image("rosco.jpg", use_container_width=True)
 
@@ -476,7 +476,7 @@ elif menu == "📈 DASHBOARD Y RANKING":
             ganador_nombre = "ESPERANDO VENTAS..."
             ganador_ventas = 0
 
-        # --- DISEÑO: FRASE GIGANTE Y NÚMERO 1 ---
+        # --- DISEÑO: FRASE Y NÚMERO 1 ---
         frases_dia = ["EL ÉXITO ES LA SUMA DE PEQUEÑOS ESFUERZOS REPETIDOS DÍA TRAS DÍA.", "TU ÚNICA LIMITACIÓN ES TU MENTE. ¡A POR TODAS!", "TRABAJA EN SILENCIO, QUE EL ÉXITO SE ENCARGUE DE HACER EL RUIDO.", "NO CUENTES LOS DÍAS, HAZ QUE LOS DÍAS CUENTEN.", "LA DISCIPLINA ES EL PUENTE ENTRE LAS METAS Y LOS LOGROS.", "LA EXCELENCIA NO ES UN ACTO, SINO UN HÁBITO."]
         frase_hoy = frases_dia[datetime.now().day % len(frases_dia)]
 
@@ -497,51 +497,53 @@ elif menu == "📈 DASHBOARD Y RANKING":
         with t_rank:
             st.markdown('<div class="block-header">RANKING DE PRODUCTIVIDAD (META 25)</div>', unsafe_allow_html=True)
             
-            # Limpiar tabla para mostrar (sin decimales)
+            # Limpiar tabla para mostrar (convertir a entero para quitar decimales)
             rank_display = rank_calc.copy()
             rank_display = rank_display.rename(columns={
                 'V_Luz': 'Luz', 'V_Gas': 'Gas', 'V_Fibra': 'Fibra', 
                 'V_Móvil': 'Móvil', 'V_Alarma': 'Alarma', 'REF_TOTAL': 'Referidos',
-                'TOTAL_NETO': 'Total Neto', 'FALTAN_PARA_25': 'Faltan para Objetivo'
+                'TOTAL_NETO': 'Total Neto', 'FALTAN_PARA_25': 'Faltan para 25'
             })
             
-            # Consolidar Bajas/Cancelados
+            # Sumar bajas y cancelados para mostrar columna única
             for st_col in ['Baja', 'Cancelado']:
                 v_tag = f'V_{st_col}'
-                rank_display[st_col] = rank_display.filter(like=v_tag).sum(axis=1) if not rank_display.filter(like=v_tag).empty else 0
+                rank_display[st_col] = rank_display.filter(like=v_tag).sum(axis=1).astype(int) if not rank_display.filter(like=v_tag).empty else 0
 
-            cols_f = ['Luz', 'Gas', 'Fibra', 'Móvil', 'Alarma', 'Referidos', 'Baja', 'Cancelado', 'Total Neto', 'Faltan para Objetivo']
-            # Convertir todo a entero para quitar decimales
+            cols_f = ['Luz', 'Gas', 'Fibra', 'Móvil', 'Alarma', 'Referidos', 'Baja', 'Cancelado', 'Total Neto', 'Faltan para 25']
             st.table(rank_display[[c for c in cols_f if c in rank_display.columns]].astype(int).sort_values('Total Neto', ascending=False))
 
             st.markdown("---")
-            # --- CUADROS DE ABAJO CON MEJOR COLOR ---
+            # --- SECCIÓN DE TOTALES RE-DISEÑADA PARA VISIBILIDAD ---
             m1, m2, m3, m4 = st.columns(4)
-            estilo_caja = "background-color: #1c2128; border: 2px solid #d2ff00; padding: 20px; border-radius: 15px; text-align: center;"
+            # Fondo oscuro, borde verde neón y letras blancas/amarillas
+            estilo_metrica = "background-color: #1c2128; border: 2px solid #d2ff00; padding: 20px; border-radius: 15px; text-align: center; box-shadow: 0 4px 15px rgba(210, 255, 0, 0.1);"
             
-            m1.markdown(f'<div style="{estilo_caja}"><p style="color: #8b949e; margin:0; font-size: 1rem;">Ventas Energía</p><h2 style="color: #ffffff; margin:0; font-size: 2.2rem;">{int(rank_display["Luz"].sum() + rank_display["Gas"].sum())}</h2></div>', unsafe_allow_html=True)
-            m2.markdown(f'<div style="{estilo_caja}"><p style="color: #8b949e; margin:0; font-size: 1rem;">Ventas Fibra</p><h2 style="color: #ffffff; margin:0; font-size: 2.2rem;">{int(rank_display["Fibra"].sum())}</h2></div>', unsafe_allow_html=True)
-            m3.markdown(f'<div style="{estilo_caja}"><p style="color: #8b949e; margin:0; font-size: 1rem;">Total Referidos</p><h2 style="color: #ffffff; margin:0; font-size: 2.2rem;">{int(rank_display["Referidos"].sum())}</h2></div>', unsafe_allow_html=True)
-            m4.markdown(f'<div style="{estilo_caja}"><p style="color: #d2ff00; margin:0; font-size: 1rem; font-weight: bold;">Netas Equipo</p><h2 style="color: #ffffff; margin:0; font-size: 2.2rem;">{int(rank_display["Total Neto"].sum())}</h2></div>', unsafe_allow_html=True)
+            m1.markdown(f'<div style="{estilo_metrica}"><p style="color: #8b949e; margin:0; font-weight: bold;">ENERGÍA TOTAL</p><h2 style="color: #ffffff; margin:0;">{int(rank_display["Luz"].sum() + rank_display["Gas"].sum())}</h2></div>', unsafe_allow_html=True)
+            m2.markdown(f'<div style="{estilo_metrica}"><p style="color: #8b949e; margin:0; font-weight: bold;">FIBRA TOTAL</p><h2 style="color: #ffffff; margin:0;">{int(rank_display["Fibra"].sum())}</h2></div>', unsafe_allow_html=True)
+            m3.markdown(f'<div style="{estilo_metrica}"><p style="color: #8b949e; margin:0; font-weight: bold;">REFERIDOS TOTAL</p><h2 style="color: #ffffff; margin:0;">{int(rank_display["Referidos"].sum())}</h2></div>', unsafe_allow_html=True)
+            m4.markdown(f'<div style="{estilo_metrica}"><p style="color: #d2ff00; margin:0; font-weight: 900;">VENTAS NETAS EQUIPO</p><h2 style="color: #ffffff; margin:0;">{int(rank_display["Total Neto"].sum())}</h2></div>', unsafe_allow_html=True)
 
         with t_ene:
             if not f_de.empty:
                 col_e1, col_e2 = st.columns(2)
-                with col_e1: st.plotly_chart(px.pie(f_de, names='Comercial', values='V_Luz', title="Distribución Luz"), use_container_width=True)
-                with col_e2: st.plotly_chart(px.bar(f_de.groupby('Comercial')[['V_Luz', 'V_Gas']].sum().reset_index(), x='Comercial', y=['V_Luz', 'V_Gas'], title="Ventas Energía"), use_container_width=True)
+                with col_e1: st.plotly_chart(px.pie(f_de, names='Comercial', values='V_Luz', title="Luz por Comercial"), use_container_width=True)
+                with col_e2: st.plotly_chart(px.bar(f_de.groupby('Comercial')[['V_Luz', 'V_Gas']].sum().reset_index(), x='Comercial', y=['V_Luz', 'V_Gas'], title="Energía Total"), use_container_width=True)
         with t_tel:
             if not f_dt.empty:
                 col_t1, col_t2 = st.columns(2)
-                with col_t1: st.plotly_chart(px.pie(f_dt, names='Comercial', values='V_Fibra', title="Distribución Fibra"), use_container_width=True)
-                with col_t2: st.plotly_chart(px.bar(f_dt.groupby('Comercial')[['V_Fibra', 'V_Móvil']].sum().reset_index(), x='Comercial', y=['V_Fibra', 'V_Móvil'], title="Ventas Telco"), use_container_width=True)
+                with col_t1: st.plotly_chart(px.pie(f_dt, names='Comercial', values='V_Fibra', title="Fibra por Comercial"), use_container_width=True)
+                with col_t2: st.plotly_chart(px.bar(f_dt.groupby('Comercial')[['V_Fibra', 'V_Móvil']].sum().reset_index(), x='Comercial', y=['V_Fibra', 'V_Móvil'], title="Telco Total"), use_container_width=True)
         with t_ala:
             if not f_da.empty:
                 col_a1, col_a2 = st.columns(2)
-                with col_a1: st.plotly_chart(px.pie(f_da, names='Comercial', values='V_Alarma', title="Distribución Alarmas"), use_container_width=True)
+                with col_a1: st.plotly_chart(px.pie(f_da, names='Comercial', values='V_Alarma', title="Alarmas por Comercial"), use_container_width=True)
                 with col_a2: st.plotly_chart(px.bar(f_da.groupby('Comercial')['V_Alarma'].sum().reset_index(), x='V_Alarma', y='Comercial', orientation='h', title="Ranking Alarmas"), use_container_width=True)
 
     except Exception as e:
-        st.error(f"Error cargando el Dashboard: {e}")#-----REPOSITORIO----
+        st.error(f"Error cargando el Dashboard: {e}")
+
+#-----REPOSITORIO----
 elif menu == "📂 REPOSITORIO":
     import os  # Crucial para que funcionen las carpetas
     st.markdown('<div class="block-header">📂 REPOSITORIO DE DOCUMENTACIÓN</div>', unsafe_allow_html=True)
