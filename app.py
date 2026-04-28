@@ -863,10 +863,22 @@ elif menu == "📈 DASHBOARD Y RANKING":
         rank['Total Neto'] = rank['Ventas_Sin_Movil'] - rank['Bajas_Total'] - rank['Cancel_Total']
         rank['Faltan para 25'] = rank.index.to_series().apply(lambda x: max(0, 25 - int(rank.loc[x, 'Total Neto'])) if "LUIS" not in str(x).upper() else 0)
 
-        # 6. CABECERA TÍTULO (Sin Nº1)
-        st.markdown("""
+        # DETERMINAR EL Nº1 EN VENTAS NETAS
+        nombre_n1 = "---"
+        ventas_n1 = 0
+        if not rank.empty:
+            top_comercial = rank.sort_values('Total Neto', ascending=False).iloc[0]
+            nombre_n1 = top_comercial.name
+            ventas_n1 = int(top_comercial['Total Neto'])
+
+        # 6. CABECERA TÍTULO (Con Nº1)
+        st.markdown(f"""
             <div style="text-align: center; margin: 20px 0;">
                 <h1 style="color: #d2ff00; font-size: 2.1rem; margin-bottom:5px;">"EL ÉXITO ES EL RESULTADO DE LA DISCIPLINA DIARIA"</h1>
+                <div style="background: rgba(210, 255, 0, 0.1); border: 2px solid #d2ff00; display: inline-block; padding: 10px 30px; border-radius: 50px; margin-top: 10px;">
+                    <span style="color: white; font-size: 1.2rem;">🏆 Nº1 EN VENTAS NETAS: </span>
+                    <span style="color: #d2ff00; font-size: 1.5rem; font-weight: bold;">{nombre_n1.upper()} ({ventas_n1})</span>
+                </div>
             </div>
         """, unsafe_allow_html=True)
 
