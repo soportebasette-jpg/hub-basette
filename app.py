@@ -435,8 +435,7 @@ elif menu == "⚖️ COMPARADOR LUZ":
 elif menu == "⚖️ COMPARADOR GAS":
     st.header("Estudio de Ahorro de Gas Personalizado")
 
-    # 1. BASE DE DATOS DE TARIFAS DE GAS ACTUALIZADA
-    # Ubicación: manuales/
+    # 1. BASE DE DATOS DE TARIFAS DE GAS (Rutas y Precios corregidos)
     tarifas_gas = [
         {"COMPAÑÍA": "NATURGY", "TARIFA": "GAS RL.1 (3.1)", "FIJO": 5.44, "ENERGIA": 0.082, "logo": "manuales/logo_naturgy.png"},
         {"COMPAÑÍA": "NATURGY", "TARIFA": "GAS RL.2 (3.2)", "FIJO": 10.32, "ENERGIA": 0.078, "logo": "manuales/logo_naturgy.png"},
@@ -463,25 +462,29 @@ elif menu == "⚖️ COMPARADOR GAS":
         tarifas_f = [t["TARIFA"] for t in tarifas_gas if t["COMPAÑÍA"] == comp_sel]
         tarifa_sel_nombre = st.selectbox("Tarifa Seleccionada", tarifas_f, key="gas_tarifa")
         
-        # Lógica robusta para encontrar la tarifa exacta y que los precios cambien
-        sel = next((t for t in tarifas_gas if t["COMPAÑÍA"] == comp_sel and t["TARIFA"] == tarifa_sel_nombre), tarifas_gas[0])
-        
-        # Mostrar Logo de la compañía desde la carpeta manuales/
-        if os.path.exists(sel["logo"]): 
+        # BUSCADOR CRÍTICO: Esto fuerza que sel cambie cada vez que el selectbox se mueve
+        sel = None
+        for t in tarifas_gas:
+            if t["COMPAÑÍA"] == comp_sel and t["TARIFA"] == tarifa_sel_nombre:
+                sel = t
+                break
+
+        # Mostrar Logo de la compañía
+        if sel and os.path.exists(sel["logo"]): 
             st.image(sel["logo"], width=150)
         else:
-            st.warning(f"No se encuentra: {sel['logo']}")
+            st.warning("Logo no encontrado en carpeta manuales/")
         
         consumo_kwh = st.number_input("Consumo total del periodo (kWh)", value=0.0, key="gas_kwh")
 
-    # --- CÁLCULOS ---
+    # --- CÁLCULOS (Se ejecutan con los datos de 'sel' recién encontrados) ---
     p_fijo_mensual = float(sel['FIJO'])
     p_energia_kwh = float(sel['ENERGIA'])
     
     # Impuesto de Hidrocarburos
     imp_hidrocarburos = consumo_kwh * 0.00234
     
-    # Prorrateo
+    # Prorrateo y Totales
     coste_fijo_periodo = (p_fijo_mensual / 30) * dias_factura
     coste_variable_periodo = consumo_kwh * p_energia_kwh
     coste_alquiler_periodo = (alquiler_contador / 30) * dias_factura
@@ -491,9 +494,7 @@ elif menu == "⚖️ COMPARADOR GAS":
     ahorro = f_act - coste_total_iva
 
     st.info(f"""
-    **Propuesta Seleccionada:** {comp_sel} - {tarifa_sel_nombre}  
-    **Precios:** Fijo: **{p_fijo_mensual:.2f}** €/mes | Energía: **{p_energia_kwh:.4f}** €/kWh  
-    **IVA:** {iva_sel}% | **Hidrocarburos:** {imp_hidrocarburos:.2f}€
+    **DATOS APLICADOS:** Fijo: **{p_fijo_mensual:.2f}** €/mes | Energía: **{p_energia_kwh:.4f}** €/kWh | IVA: **{iva_sel}%**
     """)
     
     st.markdown(f'<div style="background:#d2ff00; padding:20px; border-radius:10px; text-align:center;"><h2 style="color:black;">AHORRO ESTIMADO GAS: {ahorro:.2f} €</h2></div>', unsafe_allow_html=True)
@@ -502,7 +503,7 @@ elif menu == "⚖️ COMPARADOR GAS":
         pdf = FPDF()
         pdf.add_page()
         
-        # LOGO PRINCIPAL ACTUALIZADO
+        # LOGO PRINCIPAL PDF
         LOGO_PDF = "manuales/tecomparotodo_logo.png"
         if os.path.exists(LOGO_PDF): 
             pdf.image(LOGO_PDF, 10, 8, 45)
@@ -556,8 +557,6 @@ elif menu == "⚖️ COMPARADOR GAS":
         pdf.cell(190, 15, f"AHORRO TOTAL GAS: {ahorro:.2f} EUR", ln=True, align="C", fill=True)
         
         pdf.ln(10)
-        pdf.set_font("Arial", "B", 12)
-        pdf.cell(190, 10, "PLAN AMIGO BASETTE", ln=True)
         if os.path.exists(QR_PLAN_AMIGO):
             pdf.image(QR_PLAN_AMIGO, 80, pdf.get_y(), 40)
             
