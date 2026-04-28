@@ -352,14 +352,18 @@ elif menu == "⚖️ COMPARADOR":
     with cc3:
         con_valle = st.number_input("Consumo Valle (kWh)", value=0.0)
 
-    # Lógica de Precios Corregida para Naturgy 3T y Gana 3T
+    # Lógica de Precios Corregida para Naturgy 3T y Gana Energía 3T
     try:
         if comp_sel.upper() == "NATURGY" and "3T" in tarifa_sel_nombre.upper():
             p_punta = 0.180
             p_llano = 0.107
             p_valle = 0.0718
-        elif "3T" in tarifa_sel_nombre.upper() or comp_sel.upper() in ["NATURGY", "GANA ENERGÍA"]:
-            # Intenta coger los valores de la base de datos si existen, si no usa los de Naturgy por defecto
+        elif comp_sel.upper() == "GANA ENERGÍA" and "3T" in tarifa_sel_nombre.upper():
+            p_punta = 0.171
+            p_llano = 0.104
+            p_valle = 0.08
+        elif "3T" in tarifa_sel_nombre.upper():
+            # Intenta coger los valores de la base de datos si existen
             p_punta = float(str(sel.get('E1', 0.180)).replace(',', '.'))
             p_llano = float(str(sel.get('E2', 0.107)).replace(',', '.'))
             p_valle = float(str(sel.get('E3', 0.0718)).replace(',', '.'))
@@ -371,7 +375,6 @@ elif menu == "⚖️ COMPARADOR":
         p_punta, p_llano, p_valle = 0.180, 0.107, 0.0718
 
     # CÁLCULOS
-    # Usamos P1 y P2 de la tarifa seleccionada (sel)
     p1_val = float(str(sel.get("P1", 0)).replace(',', '.'))
     p2_val = float(str(sel.get("P2", 0)).replace(',', '.'))
     
@@ -428,6 +431,54 @@ elif menu == "⚖️ COMPARADOR":
             
         st.download_button(label="📥 DESCARGAR ESTUDIO PDF", data=pdf.output(dest='S').encode('latin-1', 'replace'), file_name=f"Estudio_{cliente}.pdf")
 
+# --- ANUNCIOS Y PLAN AMIGO ---
+elif menu == "📢 ANUNCIOS Y PLAN AMIGO":
+    st.header("📢 Anuncios y Plan Amigo")
+    st.markdown('<div class="block-header">🎁 PLAN AMIGO</div>', unsafe_allow_html=True)
+    col1, col2 = st.columns(2)
+    with col1:
+        st.subheader("Enlace Plan Amigo")
+        st.code("https://forms.gle/mU6XzRvywDoBQ5Q47")
+        st.link_button("Ir al Formulario", "https://forms.gle/mU6XzRvywDoBQ5Q47")
+    with col2:
+        st.subheader("QR Plan Amigo")
+        if os.path.exists(QR_PLAN_AMIGO):
+            st.image(QR_PLAN_AMIGO, width=250)
+            with open(QR_PLAN_AMIGO, "rb") as file:
+                st.download_button("Descargar QR", file, "qr-plan-amigo.png")
+        else:
+            st.error("Archivo QR no encontrado.")
+
+    st.markdown('<div class="block-header">🖼️ MATERIAL PUBLICITARIO</div>', unsafe_allow_html=True)
+    st.write("Visualiza y descarga los últimos anuncios:")
+    
+    path_anuncios = "anunciosbasette/"
+    lista_anuncios = [
+        {"file": "Anuncio1_qr.png", "name": "Anuncio 1 QR"},
+        {"file": "Anuncio2_qr.png", "name": "Anuncio 2 QR"},
+        {"file": "PUBLI3.jpg", "name": "Publicidad 3"},
+        {"file": "anuncio alarma1.png", "name": "Anuncio Alarma 1"},
+        {"file": "anuncio1.png", "name": "Anuncio 1"},
+        {"file": "anuncio2.png", "name": "Anuncio 2"}
+    ]
+    
+    cols_anuncios = st.columns(3)
+    for idx, item in enumerate(lista_anuncios):
+        with cols_anuncios[idx % 3]:
+            full_path = f"{path_anuncios}{item['file']}"
+            if os.path.exists(full_path):
+                st.image(full_path, use_container_width=True)
+                with open(full_path, "rb") as f_anuncio:
+                    data_anuncio = f_anuncio.read()
+                    st.download_button(
+                        label=f"Descargar {item['name']}",
+                        data=data_anuncio,
+                        file_name=item['file'],
+                        mime="image/png" if item['file'].lower().endswith('.png') else "image/jpeg",
+                        key=f"btn_anuncio_{idx}"
+                    )
+            else:
+                st.error(f"Falta: {item['file']}")
 # --- ANUNCIOS Y PLAN AMIGO ---
 elif menu == "📢 ANUNCIOS Y PLAN AMIGO":
     st.header("📢 Anuncios y Plan Amigo")
