@@ -420,10 +420,11 @@ elif menu == "📢 ANUNCIOS Y PLAN AMIGO":
 # --- DASHBOARD Y RANKING ---
 elif menu == "📈 DASHBOARD Y RANKING":
     try:
+        # 1. Carga de datos (Asumiendo que tienes estas funciones definidas arriba)
         de, dt, da = load_and_clean_ranking()
         
         # --- FILTROS Y EXCLUSIÓN DE BAJAS ---
-        # Definimos comerciales activos (Excluimos a Luis Rodriguez del objetivo)
+        # Definimos comerciales activos (Excluimos a Luis Rodriguez del objetivo grupal)
         comerciales_excluidos = ["LUIS RODRIGUEZ"]
         
         all_anos = sorted(list(set(de['Año']) | set(dt['Año']) | set(da['Año'])))
@@ -459,12 +460,11 @@ elif menu == "📈 DASHBOARD Y RANKING":
         
         rank_calc = pd.concat([r1, r2, r3], axis=1).fillna(0)
         
-        # Cálculo TOTAL NETO (Sin móviles)
+        # Cálculo TOTAL NETO (Ventas reales menos bajas/cancelados)
         rank_calc['TOTAL_NETO'] = (rank_calc.get('V_Luz',0) + rank_calc.get('V_Gas',0) + rank_calc.get('V_Fibra',0) + rank_calc.get('V_Alarma',0)) - rank_calc.filter(like='V_Baja').sum(axis=1) - rank_calc.filter(like='V_Cancelado').sum(axis=1)
-        rank_calc['FALTAN_PARA_25'] = rank_calc['TOTAL_NETO'].apply(lambda x: max(0, 25 - int(x)))
         rank_calc['REF_TOTAL'] = rank_calc.filter(like='V_REF').sum(axis=1)
 
-        # EFECTO VISUAL (Fuegos artificiales/Nieve)
+        # ACTIVAR FUEGOS ARTIFICIALES SI HAY VENTAS
         if not rank_calc.empty and rank_calc['TOTAL_NETO'].max() > 0:
             st.snow()
             ganador_nombre = rank_calc['TOTAL_NETO'].idxmax()
@@ -473,73 +473,63 @@ elif menu == "📈 DASHBOARD Y RANKING":
             ganador_nombre = "ESPERANDO VENTAS..."
             ganador_ventas = 0
 
-        # --- CABECERA: FRASE Y GANADOR ---
-        frases_dia = ["EL ÉXITO ES LA SUMA DE PEQUEÑOS ESFUERZOS REPETIDOS DÍA TRAS DÍA.", "TU ÚNICA LIMITACIÓN ES TU MENTE. ¡A POR TODAS!", "NO CUENTES LOS DÍAS, HAZ QUE LOS DÍAS CUENTEN."]
-        frase_hoy = frases_dia[datetime.now().day % len(frases_dia)]
-
+        # --- CABECERA ---
         st.markdown(f"""
-            <div style="background: linear-gradient(135deg, #1c2128 0%, #0d1117 100%); padding: 30px; border-radius: 20px; border: 2px solid #d2ff00; text-align: center; margin-bottom: 25px;">
-                <h1 style="color: #d2ff00; font-size: 45px; font-weight: 900;">"{frase_hoy}"</h1>
-                <div style="background: rgba(210, 255, 0, 0.1); padding: 20px; border-radius: 15px; border: 1px dashed #d2ff00; display: inline-block; margin-top: 10px;">
-                    <p style="color: #8b949e; letter-spacing: 4px; margin:0;">LÍDER DE VENTAS 🎆</p>
-                    <h2 style="color: white; font-size: 3rem; margin:0;">{ganador_nombre}</h2>
-                    <h3 style="color: #d2ff00; font-size: 2.5rem; margin:0;">{ganador_ventas} VENTAS NETAS</h3>
-                </div>
+            <div style="background: linear-gradient(135deg, #1c2128 0%, #0d1117 100%); padding: 25px; border-radius: 20px; border: 2px solid #d2ff00; text-align: center; margin-bottom: 25px;">
+                <h2 style="color: #8b949e; letter-spacing: 2px; font-size: 1rem; margin-bottom: 5px;">TOP VENTAS DEL MES 🎆</h2>
+                <h1 style="color: white; font-size: 3.5rem; margin: 0;">{ganador_nombre}</h1>
+                <h2 style="color: #d2ff00; font-size: 2.5rem; margin: 0;">{ganador_ventas} VENTAS NETAS</h2>
             </div>
         """, unsafe_allow_html=True)
 
-        # --- CUADRO DE OBJETIVO GRUPAL (SÓLO 3 COMERCIALES) ---
+        # --- CUADRO DE OBJETIVO (3 COMERCIALES ACTIVOS) ---
         objetivo_individual = 25
-        comerciales_activos = len(f_coms)
-        meta_grupal = comerciales_activos * objetivo_individual
-        ventas_totales = int(rank_calc['TOTAL_NETO'].sum())
-        faltantes_total = max(0, meta_grupal - ventas_totales)
+        num_com_activos = 3 # Según tu indicación (excluyendo a Luis)
+        meta_equipo = objetivo_individual * num_com_activos
+        ventas_equipo = int(rank_calc['TOTAL_NETO'].sum())
+        faltan_equipo = max(0, meta_equipo - ventas_equipo)
 
         st.markdown(f"""
-            <div style="background: #161b22; padding: 25px; border-radius: 15px; border: 1px solid #30363d; margin-bottom: 30px; text-align: center;">
-                <h3 style="color: #d2ff00; margin-bottom: 15px;">🚀 SEGUIMIENTO DE OBJETIVO EQUIPO</h3>
-                <div style="display: flex; justify-content: space-around; align-items: center; flex-wrap: wrap;">
-                    <div style="margin: 10px;">
-                        <p style="color: #8b949e; margin:0;">Meta Global ({comerciales_activos} Coms)</p>
-                        <h2 style="color: white; margin:0;">{meta_grupal}</h2>
+            <div style="background: #161b22; padding: 20px; border-radius: 15px; border: 1px solid #30363d; margin-bottom: 30px; text-align: center;">
+                <div style="display: flex; justify-content: space-around; align-items: center;">
+                    <div>
+                        <p style="color: #8b949e; margin:0;">Ventas Equipo</p>
+                        <h2 style="color: white; margin:0;">{ventas_equipo}</h2>
                     </div>
-                    <div style="margin: 10px; background: rgba(210, 255, 0, 0.2); padding: 15px; border-radius: 10px; border: 1px solid #d2ff00;">
-                        <p style="color: #d2ff00; margin:0; font-weight: bold; font-size: 1.1rem;">FALTAN PARA LLEGAR AL OBJETIVO</p>
-                        <h1 style="color: white; margin:0; font-size: 3.5rem;">{faltantes_total}</h1>
+                    <div style="background: rgba(210, 255, 0, 0.15); padding: 15px 30px; border-radius: 12px; border: 2px solid #d2ff00;">
+                        <p style="color: #d2ff00; margin:0; font-weight: bold; letter-spacing: 1px;">FALTAN PARA OBJETIVO</p>
+                        <h1 style="color: white; margin:0; font-size: 4rem;">{faltan_equipo}</h1>
+                        <p style="color: #8b949e; margin:0; font-size: 0.8rem;">Meta: {meta_equipo} (25 x 3 Coms)</p>
                     </div>
-                    <div style="margin: 10px;">
-                        <p style="color: #8b949e; margin:0;">Ventas Actuales</p>
-                        <h2 style="color: white; margin:0;">{ventas_totales}</h2>
+                    <div>
+                        <p style="color: #8b949e; margin:0;">Meta Individual</p>
+                        <h2 style="color: white; margin:0;">{objetivo_individual}</h2>
                     </div>
                 </div>
             </div>
         """, unsafe_allow_html=True)
 
-        # --- TABS ---
-        t_rank, t_ene, t_tel, t_ala = st.tabs(["🏆 RANKING", "⚡ ENERGÍA", "📱 TELCO", "🛡️ ALARMAS"])
+        # --- TABLA DE RANKING ---
+        st.markdown('<h3 style="color: #d2ff00;">🏆 RANKING DETALLADO</h3>', unsafe_allow_html=True)
+        df_rank = rank_calc.copy()
+        df_rank = df_rank.rename(columns={'TOTAL_NETO': 'Total Neto', 'REF_TOTAL': 'Referidos'})
+        st.table(df_rank[['Total Neto', 'Referidos']].astype(int).sort_values('Total Neto', ascending=False))
 
-        with t_rank:
-            st.markdown('<div class="block-header">RANKING DETALLADO (SIN DECIMALES)</div>', unsafe_allow_html=True)
-            
-            df_tabla = rank_calc.copy()
-            df_tabla = df_tabla.rename(columns={
-                'V_Luz': 'Luz', 'V_Gas': 'Gas', 'V_Fibra': 'Fibra', 'V_Móvil': 'Móvil', 
-                'V_Alarma': 'Alarma', 'REF_TOTAL': 'Referidos', 'TOTAL_NETO': 'Total Neto',
-                'FALTAN_PARA_25': 'Faltan para Objetivo (25)'
-            })
-            
-            # Consolidar Bajas y Cancelados
-            for col_st in ['Baja', 'Cancelado']:
-                v_tag = f'V_{col_st}'
-                df_tabla[col_st] = df_tabla.filter(like=v_tag).sum(axis=1).astype(int) if not df_tabla.filter(like=v_tag).empty else 0
+        # --- TOTALES INFERIORES (VISIBILIDAD CORREGIDA) ---
+        st.markdown("---")
+        m1, m2, m3, m4 = st.columns(4)
+        
+        # Aquí definimos el estilo correctamente para evitar el SyntaxError
+        estilo_caja = "background-color: #1c2128; border: 1px solid #30363d; padding: 20px; border-radius: 15px; text-align: center;"
+        
+        m1.markdown(f'<div style="{estilo_caja}"><p style="color: #8b949e; margin:0;">ENERGÍA</p><h2 style="color: #ffffff; margin:0;">{int(rank_calc.get("V_Luz",0).sum() + rank_calc.get("V_Gas",0).sum())}</h2></div>', unsafe_allow_html=True)
+        m2.markdown(f'<div style="{estilo_caja}"><p style="color: #8b949e; margin:0;">FIBRA</p><h2 style="color: #ffffff; margin:0;">{int(rank_calc.get("V_Fibra",0).sum())}</h2></div>', unsafe_allow_html=True)
+        m3.markdown(f'<div style="{estilo_caja}"><p style="color: #8b949e; margin:0;">REFERIDOS</p><h2 style="color: #ffffff; margin:0;">{int(rank_calc["REF_TOTAL"].sum())}</h2></div>', unsafe_allow_html=True)
+        m4.markdown(f'<div style="{estilo_caja}; border-color: #d2ff00;"><p style="color: #d2ff00; margin:0; font-weight: bold;">TOTAL NETO</p><h2 style="color: #ffffff; margin:0;">{ventas_equipo}</h2></div>', unsafe_allow_html=True)
 
-            cols_mostrar = ['Luz', 'Gas', 'Fibra', 'Móvil', 'Alarma', 'Referidos', 'Baja', 'Cancelado', 'Total Neto', 'Faltan para Objetivo (25)']
-            st.table(df_tabla[[c for c in cols_mostrar if c in df_tabla.columns]].astype(int).sort_values('Total Neto', ascending=False))
+    except Exception as e:
+        st.error(f"Error en Dashboard: {e}")
 
-            # --- TOTALES INFERIORES CON ALTA VISIBILIDAD ---
-            st.markdown("---")
-            m1, m2, m3, m4 = st.columns(4)
-            estilo_totales = "background-color: #1c21
 #-----REPOSITORIO----
 elif menu == "📂 REPOSITORIO":
     import os  # Crucial para que funcionen las carpetas
