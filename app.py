@@ -329,12 +329,11 @@ elif menu == "⚖️ COMPARADOR LUZ":
         f_act = st.number_input("Factura actual con IVA (EUR)", value=0.0)
         potencia = st.number_input("Potencia contratada (kW)", value=4.6)
         dias_factura = st.number_input("Días del periodo de factura", value=30)
-        # Selector de IVA
+        # Selector de IVA restringido
         iva_sel = st.selectbox("IVA a aplicar (%)", [21, 10], index=0)
         iva_factor = 1 + (iva_sel / 100)
     
     with c2:
-        # Filtramos compañías que tengan los tramos configurados
         comp_sel = st.selectbox("Compañía Propuesta", sorted(list(set(t["COMPAÑÍA"] for t in tarifas_luz))))
         tarifas_f = [t["TARIFA"] for t in tarifas_luz if t["COMPAÑÍA"] == comp_sel]
         tarifa_sel_nombre = st.selectbox("Tarifa Seleccionada", tarifas_f)
@@ -352,23 +351,17 @@ elif menu == "⚖️ COMPARADOR LUZ":
     with cc3:
         con_valle = st.number_input("Consumo Valle (kWh)", value=0.0)
 
-    # Lógica de Precios Corregida para Naturgy 3T y Gana Energía 3T
+    # Lógica de Precios
     try:
         if comp_sel.upper() == "NATURGY" and "3T" in tarifa_sel_nombre.upper():
-            p_punta = 0.180
-            p_llano = 0.107
-            p_valle = 0.0718
+            p_punta, p_llano, p_valle = 0.180, 0.107, 0.0718
         elif comp_sel.upper() == "GANA ENERGÍA" and "3T" in tarifa_sel_nombre.upper():
-            p_punta = 0.171
-            p_llano = 0.104
-            p_valle = 0.08
+            p_punta, p_llano, p_valle = 0.171, 0.104, 0.08
         elif "3T" in tarifa_sel_nombre.upper():
-            # Intenta coger los valores de la base de datos si existen
             p_punta = float(str(sel.get('E1', 0.180)).replace(',', '.'))
             p_llano = float(str(sel.get('E2', 0.107)).replace(',', '.'))
             p_valle = float(str(sel.get('E3', 0.0718)).replace(',', '.'))
         else:
-            # Tarifa plana o estándar
             val_e = sel.get('ENERGIA', 0.180)
             p_punta = p_llano = p_valle = float(str(val_e).split('/')[0].replace(',', '.')) if isinstance(val_e, str) else val_e
     except:
@@ -385,51 +378,77 @@ elif menu == "⚖️ COMPARADOR LUZ":
     ahorro = f_act - coste_total_iva
     consumo_total = con_punta + con_llano + con_valle
 
-    st.info(f"""
-    **Precios Aplicados:** Punta: **{p_punta:.4f}** €/kWh | Llano: **{p_llano:.4f}** €/kWh | Valle: **{p_valle:.4f}** €/kWh  
-    Potencia P1: **{p1_val}** €/kW día | IVA Aplicado: **{iva_sel}%**
-    """)
-    
     st.markdown(f'<div style="background:#d2ff00; padding:20px; border-radius:10px; text-align:center;"><h2 style="color:black;">AHORRO ESTIMADO: {ahorro:.2f} €</h2></div>', unsafe_allow_html=True)
     
     if st.button("GENERAR ESTUDIO PDF PROFESIONAL"):
-        pdf = FPDF()
-        pdf.add_page()
-        if os.path.exists(LOGO_PRINCIPAL): pdf.image(LOGO_PRINCIPAL, 10, 8, 33)
-        if os.path.exists(sel.get("logo", "")): pdf.image(sel["logo"], 165, 8, 30)
-        
-        pdf.ln(30); pdf.set_font("Arial", "B", 18); pdf.cell(190, 10, "ESTUDIO COMPARATIVO DE AHORRO", ln=True, align="C")
-        pdf.ln(5); pdf.set_font("Arial", "B", 11); pdf.set_fill_color(240, 240, 240)
-        pdf.cell(190, 8, f" DATOS DEL CLIENTE: {cliente.upper()}", ln=True, fill=True)
-        pdf.set_font("Arial", "", 10); pdf.cell(95, 8, f"Fecha: {datetime.now().strftime('%d/%m/%Y')}", border=1)
-        pdf.cell(95, 8, f"Periodo: {dias_factura} dias", border=1, ln=True); pdf.ln(5)
-        
-        pdf.set_font("Arial", "B", 11); pdf.cell(190, 8, " DETALLE DE LA PROPUESTA (3 TRAMOS)", ln=True, fill=True)
-        pdf.set_font("Arial", "", 10)
-        propuesta_data = [
-            ("Compania", comp_sel),
-            ("Tarifa", tarifa_sel_nombre),
-            ("Potencia", f"{potencia} kW"),
-            ("Precio Punta", f"{p_punta:.4f} EUR/kWh"),
-            ("Precio Llano", f"{p_llano:.4f} EUR/kWh"),
-            ("Precio Valle", f"{p_valle:.4f} EUR/kWh"),
-            ("IVA Aplicado", f"{iva_sel}%"),
-            ("Consumo Total", f"{consumo_total:.2f} kWh")
-        ]
-        for d, v in propuesta_data:
-            pdf.cell(95, 8, d, border=1); pdf.cell(95, 8, str(v), border=1, ln=True)
+        try:
+            pdf = FPDF()
+            pdf.add_page()
             
-        pdf.ln(5); pdf.set_font("Arial", "B", 12); pdf.cell(95, 10, "Factura Actual", border=1); pdf.cell(95, 10, f"{f_act:.2f} EUR", border=1, ln=True)
-        pdf.cell(95, 10, f"Nueva Factura ({iva_sel}% IVA)", border=1); pdf.cell(95, 10, f"{coste_total_iva:.2f} EUR", border=1, ln=True)
-        
-        pdf.ln(5); pdf.set_fill_color(210, 255, 0); pdf.set_font("Arial", "B", 14)
-        pdf.cell(190, 15, f"AHORRO TOTAL: {ahorro:.2f} EUR", ln=True, align="C", fill=True)
-        
-        pdf.ln(10); pdf.set_font("Arial", "B", 12); pdf.cell(190, 10, "PLAN AMIGO BASETTE", ln=True)
-        if os.path.exists(QR_PLAN_AMIGO):
-            pdf.image(QR_PLAN_AMIGO, 80, pdf.get_y(), 50)
+            # --- LÓGICA LOGO IZQUIERDA (tecomparotodo_logo.jpg) ---
+            # Buscamos el archivo JPG en manuales o raíz
+            logo_izq = "manuales/tecomparotodo_logo.jpg" if os.path.exists("manuales/tecomparotodo_logo.jpg") else "tecomparotodo_logo.jpg"
             
-        st.download_button(label="📥 DESCARGAR ESTUDIO PDF", data=pdf.output(dest='S').encode('latin-1', 'replace'), file_name=f"Estudio_{cliente}.pdf")
+            if os.path.exists(logo_izq):
+                pdf.image(logo_izq, 10, 8, 45) # Tamaño ajustado para visibilidad
+            
+            # Logo de la compañía (Derecha)
+            if os.path.exists(sel.get("logo", "")): 
+                pdf.image(sel["logo"], 165, 8, 30)
+            
+            pdf.ln(30)
+            pdf.set_font("Arial", "B", 18)
+            pdf.cell(190, 10, "ESTUDIO COMPARATIVO DE AHORRO", ln=True, align="C")
+            
+            pdf.ln(5)
+            pdf.set_font("Arial", "B", 11)
+            pdf.set_fill_color(240, 240, 240)
+            pdf.cell(190, 8, f" DATOS DEL CLIENTE: {cliente.upper()}", ln=True, fill=True)
+            
+            pdf.set_font("Arial", "", 10)
+            pdf.cell(95, 8, f"Fecha: {datetime.now().strftime('%d/%m/%Y')}", border=1)
+            pdf.cell(95, 8, f"Periodo: {dias_factura} dias", border=1, ln=True)
+            
+            pdf.ln(5)
+            pdf.set_font("Arial", "B", 11)
+            pdf.cell(190, 8, " DETALLE DE LA PROPUESTA (3 TRAMOS)", ln=True, fill=True)
+            
+            pdf.set_font("Arial", "", 10)
+            propuesta_data = [
+                ("Compania", comp_sel),
+                ("Tarifa", tarifa_sel_nombre),
+                ("Potencia", f"{potencia} kW"),
+                ("Precio Punta", f"{p_punta:.4f} EUR/kWh"),
+                ("Precio Llano", f"{p_llano:.4f} EUR/kWh"),
+                ("Precio Valle", f"{p_valle:.4f} EUR/kWh"),
+                ("IVA Aplicado", f"{iva_sel}%"),
+                ("Consumo Total", f"{consumo_total:.2f} kWh")
+            ]
+            for d, v in propuesta_data:
+                pdf.cell(95, 8, d, border=1)
+                pdf.cell(95, 8, str(v), border=1, ln=True)
+            
+            pdf.ln(5)
+            pdf.set_font("Arial", "B", 12)
+            pdf.cell(95, 10, "Factura Actual", border=1)
+            pdf.cell(95, 10, f"{f_act:.2f} EUR", border=1, ln=True)
+            pdf.cell(95, 10, f"Nueva Factura ({iva_sel}% IVA)", border=1)
+            pdf.cell(95, 10, f"{coste_total_iva:.2f} EUR", border=1, ln=True)
+            
+            pdf.ln(5)
+            pdf.set_fill_color(210, 255, 0)
+            pdf.set_font("Arial", "B", 14)
+            pdf.cell(190, 15, f"AHORRO TOTAL: {ahorro:.2f} EUR", ln=True, align="C", fill=True)
+            
+            # QR opcional
+            if 'QR_PLAN_AMIGO' in globals() and os.path.exists(QR_PLAN_AMIGO):
+                pdf.ln(5)
+                pdf.image(QR_PLAN_AMIGO, 85, pdf.get_y(), 40)
+            
+            pdf_out = pdf.output(dest='S').encode('latin-1', 'replace')
+            st.download_button(label="📥 DESCARGAR ESTUDIO PDF", data=pdf_out, file_name=f"Estudio_{cliente}.pdf")
+        except Exception as e:
+            st.error(f"Error al generar el PDF: {e}")
 
 # --- COMPARADOR GAS ---
 elif menu == "⚖️ COMPARADOR GAS":
