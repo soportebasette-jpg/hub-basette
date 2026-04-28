@@ -435,7 +435,7 @@ elif menu == "⚖️ COMPARADOR LUZ":
 elif menu == "⚖️ COMPARADOR GAS":
     st.header("Estudio de Ahorro de Gas Personalizado")
 
-    # 1. BASE DE DATOS ACTUALIZADA (Precios Naturgy y Total corregidos)
+    # 1. BASE DE DATOS ACTUALIZADA
     tarifas_gas = [
         {"COMPAÑÍA": "NATURGY", "TARIFA": "GAS RL.1 (3.1)", "FIJO": 5.34, "ENERGIA": 0.0840, "logo": "manuales/logo_naturgy.png"},
         {"COMPAÑÍA": "NATURGY", "TARIFA": "GAS RL.2 (3.2)", "FIJO": 10.03, "ENERGIA": 0.0810, "logo": "manuales/logo_naturgy.png"},
@@ -451,7 +451,6 @@ elif menu == "⚖️ COMPARADOR GAS":
         f_act = st.number_input("Factura actual con IVA (EUR)", value=0.0, key="gas_f_act")
         dias_factura = st.number_input("Días del periodo de factura", value=30, key="gas_dias")
         alquiler_contador = st.number_input("Alquiler de contador (EUR/mes)", value=0.69)
-        # IVA restringido solo a 21 y 10
         iva_sel = st.selectbox("IVA a aplicar (%)", [21, 10], index=0, key="gas_iva")
         iva_factor = 1 + (iva_sel / 100)
     
@@ -480,7 +479,6 @@ elif menu == "⚖️ COMPARADOR GAS":
     coste_total_iva = subtotal * iva_factor
     ahorro = f_act - coste_total_iva
 
-    st.info(f"**PRECIOS NATURGY:** Fijo: **{p_fijo_mensual:.2f}** € | Energía: **{p_energia_kwh:.4f}** €/kWh")
     st.markdown(f'<div style="background:#d2ff00; padding:20px; border-radius:10px; text-align:center;"><h2 style="color:black;">AHORRO ESTIMADO: {ahorro:.2f} €</h2></div>', unsafe_allow_html=True)
     
     if st.button("GENERAR ESTUDIO PDF"):
@@ -488,15 +486,23 @@ elif menu == "⚖️ COMPARADOR GAS":
             pdf = FPDF()
             pdf.add_page()
             
-            # LÓGICA DE LOGO PRINCIPAL (Busca en manuales y fuera)
-            logo_path = "manuales/tecomparotodo_logo.png"
-            if not os.path.exists(logo_path):
-                logo_path = "tecomparotodo_logo.png"
+            # --- LÓGICA DE LOGO PRINCIPAL (JPG) ---
+            # Probamos las dos ubicaciones posibles con la extensión correcta .jpg
+            logo_principal = None
+            opciones_logo = ["manuales/tecomparotodo_logo.jpg", "tecomparotodo_logo.jpg"]
             
-            if os.path.exists(logo_path):
-                pdf.image(logo_path, 10, 8, 45)
+            for ruta in opciones_logo:
+                if os.path.exists(ruta):
+                    logo_principal = ruta
+                    break
             
-            # LOGO DE LA COMPAÑÍA
+            if logo_principal:
+                # Ubicado arriba a la izquierda
+                pdf.image(logo_principal, 10, 8, 45)
+            else:
+                st.error("No se encuentra el archivo tecomparotodo_logo.jpg")
+            
+            # Logo de la compañía (Derecha)
             if os.path.exists(sel["logo"]): 
                 pdf.image(sel["logo"], 160, 8, 35)
             
@@ -544,14 +550,12 @@ elif menu == "⚖️ COMPARADOR GAS":
             pdf.set_font("Arial", "B", 14)
             pdf.cell(190, 15, f"AHORRO ESTIMADO: {ahorro:.2f} EUR", ln=True, align="C", fill=True)
             
-            if 'QR_PLAN_AMIGO' in globals() and os.path.exists(QR_PLAN_AMIGO):
-                pdf.image(QR_PLAN_AMIGO, 85, pdf.get_y()+5, 35)
-                
             pdf_data = pdf.output(dest='S').encode('latin-1', 'replace')
             st.download_button("📥 DESCARGAR ESTUDIO PDF", data=pdf_data, file_name=f"Estudio_Gas_{cliente}.pdf")
             
         except Exception as e:
             st.error(f"Error al generar el PDF: {e}")
+
 # --- ANUNCIOS Y PLAN AMIGO ---
 elif menu == "📢 ANUNCIOS Y PLAN AMIGO":
     st.header("📢 Anuncios y Plan Amigo")
