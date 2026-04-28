@@ -510,8 +510,8 @@ elif menu == "📈 DASHBOARD Y RANKING":
         # LÓGICA DE LÍDER (Ventas brutas sin Móvil)
         rank['Ventas_Sin_Movil'] = (rank.get('V_Luz',0) + rank.get('V_Gas',0) + rank.get('V_Fibra',0) + rank.get('V_Alarma',0))
         
-        # Nº 1 DEL MES (Lorena si tiene el máximo)
-        lider_real = rank['Ventas_Sin_Movil'].idxmax() if not rank.empty else "---"
+        # Nº 1 DEL MES (Basado en Ventas_Sin_Movil)
+        lider_real = rank['Ventas_Sin_Movil'].idxmax() if not rank.empty and rank['Ventas_Sin_Movil'].max() > 0 else "---"
         
         # Total Neto para el objetivo individual
         rank['Total Neto'] = rank['Ventas_Sin_Movil'] - rank['Bajas_Total'] - rank['Cancel_Total']
@@ -532,10 +532,10 @@ elif menu == "📈 DASHBOARD Y RANKING":
         v_falta_equipo = max(0, 75 - v_equipo_neta)
         st.markdown(f'<div style="background:#161b22;padding:15px;border-radius:15px;border:1px solid #30363d;margin:0 auto 20px auto;text-align:center;max-width:320px;"><p style="color:#d2ff00;margin:0;font-weight:bold;font-size:0.9rem;">🚀 FALTAN PARA EL OBJETIVO</p><h1 style="color:white;margin:0;font-size:2.8rem;">{v_falta_equipo}</h1></div>', unsafe_allow_html=True)
 
-        # 8. TABLA DE RANKING
+        # 8. TABLA DE RANKING (ORDENADA POR VENTAS SIN MOVIL)
         df_vis = rank.rename(columns={'V_Luz':'Luz','V_Gas':'Gas','V_Fibra':'Fibra','V_Móvil':'Móvil','V_Alarma':'Alarma','Bajas_Total':'Bajas','Cancel_Total':'Cancelados'})
         cols_tab = ['Luz','Gas','Fibra','Móvil','Alarma','REF','Bajas','Cancelados','Total Neto','Faltan para 25']
-        st.table(df_vis[[c for c in cols_tab if c in df_vis.columns]].astype(int).sort_values('Total Neto', ascending=False).style.apply(
+        st.table(df_vis[[c for c in cols_tab if c in df_vis.columns]].astype(int).sort_values('Ventas_Sin_Movil', ascending=False).style.apply(
             lambda x: ['background-color: rgba(210, 255, 0, 0.2); color: #d2ff00; font-weight: bold' if x.name in ['Total Neto', 'Faltan para 25'] else '' for i in x], axis=1))
 
         # 9. TOTALES INFERIORES BRUTOS
@@ -561,6 +561,7 @@ elif menu == "📈 DASHBOARD Y RANKING":
 
     except Exception as e:
         st.error(f"Error en Dashboard: {e}")
+
 #-----REPOSITORIO----
 elif menu == "📂 REPOSITORIO":
     import os  # Crucial para que funcionen las carpetas
