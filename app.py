@@ -420,102 +420,112 @@ elif menu == "📢 ANUNCIOS Y PLAN AMIGO":
 # --- DASHBOARD Y RANKING ---
 elif menu == "DASHBOARD":
     try:
-        # 1. Animación de caída de Rosco e imágenes
-        def generar_animacion_caida():
-            img_rosco = get_image_base64("rosco.jpg")
-            img_logo = get_image_base64("tecomparotodo_logo.jpg")
+        # 1. FUNCIÓN INTERNA PARA IMÁGENES (Evita errores si no está definida arriba)
+        def get_img_64(path):
+            import base64
+            import os
+            if os.path.exists(path):
+                with open(path, "rb") as f:
+                    return base64.b64encode(f.read()).decode()
+            return None
+
+        # 2. ANIMACIÓN DE CAÍDA (Rosco y Logos)
+        img_rosco = get_img_64("rosco.jpg")
+        img_logo = get_img_64("tecomparotodo_logo.jpg")
+        
+        if img_rosco:
+            sources = [f"data:image/jpeg;base64,{img_rosco}"]
+            if img_logo: sources.append(f"data:image/jpeg;base64,{img_logo}")
             
-            if img_rosco:
-                sources = [f"data:image/jpeg;base64,{img_rosco}"]
-                if img_logo: sources.append(f"data:image/jpeg;base64,{img_logo}")
-                
-                falling_html = ""
-                for i in range(25):
-                    src = random.choice(sources)
-                    left, delay, duration = random.randint(0, 95), random.uniform(0, 5), random.uniform(5, 10)
-                    size = random.randint(50, 100)
-                    falling_html += f'<img src="{src}" class="fall" style="left:{left}%; animation-delay:{delay}s; animation-duration:{duration}s; width:{size}px;">'
-                
-                st.markdown(f"""
-                    <div class="falling-wrapper">{falling_html}</div>
-                    <style>
-                        .falling-wrapper {{ position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 9999; pointer-events: none; }}
-                        .fall {{ position: absolute; top: -120px; opacity: 0.7; animation: fall linear infinite; border-radius: 50%; }}
-                        @keyframes fall {{ 0% {{ top: -120px; transform: rotate(0deg); }} 100% {{ top: 110vh; transform: rotate(360deg); }} }}
-                    </style>
-                """, unsafe_allow_html=True)
+            falling_html = ""
+            for i in range(25):
+                src = random.choice(sources)
+                left, delay, duration = random.randint(0, 95), random.uniform(0, 5), random.uniform(5, 10)
+                size = random.randint(50, 100)
+                falling_html += f'<img src="{src}" class="fall" style="left:{left}%; animation-delay:{delay}s; animation-duration:{duration}s; width:{size}px;">'
+            
+            st.markdown(f"""
+                <div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 9999; pointer-events: none;">
+                    {falling_html}
+                </div>
+                <style>
+                    .fall {{ position: absolute; top: -120px; opacity: 0.7; animation: fall linear infinite; border-radius: 50%; }}
+                    @keyframes fall {{ 0% {{ top: -120px; transform: rotate(0deg); }} 100% {{ top: 110vh; transform: rotate(360deg); }} }}
+                </style>
+            """, unsafe_allow_html=True)
 
-        generar_animacion_caida()
-
-        # 2. Carga y Filtrado (Excluyendo a Luis Rodriguez de los objetivos)
+        # 3. CARGA DE DATOS
         de, dt, da = load_and_clean_ranking()
-        comerciales_activos = ["RAQUEL GUADALUPE", "DEBORAH RODRIGUEZ", "BELÉN TRONCOSO"] # Solo los 3 activos
+        # Solo contamos a los 3 comerciales activos (Luis Rdz. fuera)
+        comerciales_activos = ["RAQUEL GUADALUPE", "DEBORAH RODRIGUEZ", "BELÉN TRONCOSO"]
         
         f_de = de[de['Comercial'].isin(comerciales_activos)].copy()
         f_dt = dt[dt['Comercial'].isin(comerciales_activos)].copy()
         f_da = da[da['Comercial'].isin(comerciales_activos)].copy()
 
-        # 3. Cálculos de Ventas
+        # 4. PROCESAMIENTO DE DATOS
         for df in [f_de, f_dt, f_da]:
-            if not df.empty and 'Estado' in df.columns:
-                df['Baja'] = df['Estado'].apply(lambda x: 1 if str(x).strip().upper() == "BAJA" else 0)
-                df['Cancelado'] = df['Estado'].apply(lambda x: 1 if str(x).strip().upper() == "CANCELADO" else 0)
+            if not df.empty:
+                if 'Estado' in df.columns:
+                    df['Baja'] = df['Estado'].apply(lambda x: 1 if str(x).strip().upper() == "BAJA" else 0)
+                    df['Cancelado'] = df['Estado'].apply(lambda x: 1 if str(x).strip().upper() == "CANCELADO" else 0)
+                else:
+                    df['Baja'], df['Cancelado'] = 0, 0
 
         r1 = f_de.groupby('Comercial')[['V_Luz', 'V_Gas', 'Baja', 'Cancelado']].sum() if not f_de.empty else pd.DataFrame()
         r2 = f_dt.groupby('Comercial')[['V_Fibra', 'V_Móvil', 'Baja', 'Cancelado']].sum() if not f_dt.empty else pd.DataFrame()
         r3 = f_da.groupby('Comercial')[['V_Alarma', 'Baja', 'Cancelado']].sum() if not f_da.empty else pd.DataFrame()
         
         rank = pd.concat([r1, r2, r3], axis=1).fillna(0)
-        rank['Total Bajas'] = rank.filter(like='Baja').sum(axis=1)
-        rank['Total Cancel'] = rank.filter(like='Cancelado').sum(axis=1)
-        rank['Total Neto'] = (rank.get('V_Luz',0) + rank.get('V_Gas',0) + rank.get('V_Fibra',0) + rank.get('V_Alarma',0)) - rank['Total Bajas'] - rank['Total Cancel']
+        rank['T_Baja'] = rank.filter(like='Baja').sum(axis=1)
+        rank['T_Cancel'] = rank.filter(like='Cancelado').sum(axis=1)
+        rank['Total Neto'] = (rank.get('V_Luz',0)+rank.get('V_Gas',0)+rank.get('V_Fibra',0)+rank.get('V_Alarma',0)) - rank['T_Baja'] - rank['T_Cancel']
         rank['Faltan para 25'] = rank['Total Neto'].apply(lambda x: max(0, 25 - int(x)))
 
-        # 4. Frase Motivadora y Ganador Pequeño
-        frases = ["EL ÉXITO ES LA SUMA DE PEQUEÑOS ESFUERZOS.", "TU ÚNICA LIMITACIÓN ES TU MENTE.", "TRABAJA EN SILENCIO, DEJA QUE EL ÉXITO HAGA EL RUIDO."]
+        # 5. FRASE MOTIVADORA Y GANADOR
+        frases = ["EL ÉXITO ES LA SUMA DE PEQUEÑOS ESFUERZOS.", "TU ÚNICA LIMITACIÓN ES TU MENTE.", "¡EQUIPO BASSETTE AL PODER!"]
         st.markdown(f"""
-            <div style="text-align: center; margin-bottom: 20px;">
-                <h1 style="color: #d2ff00; font-size: 2.5rem; font-weight: 800;">"{random.choice(frases)}"</h1>
-                <div style="background: rgba(210, 255, 0, 0.1); padding: 10px; border-radius: 10px; border: 1px dashed #d2ff00; display: inline-block;">
-                    <p style="color: #8b949e; margin:0; font-size: 0.8rem;">🏆 LÍDER: <span style="color: white; font-size: 1.1rem;">{rank['Total Neto'].idxmax() if not rank.empty else '---'}</span></p>
+            <div style="text-align: center; margin-bottom: 20px; padding: 20px;">
+                <h1 style="color: #d2ff00; font-size: 2.2rem;">"{random.choice(frases)}"</h1>
+                <div style="background: rgba(210, 255, 0, 0.1); padding: 8px; border-radius: 8px; border: 1px dashed #d2ff00; display: inline-block;">
+                    <p style="color: white; margin:0;">🏆 NÚMERO 1: <b>{rank['Total Neto'].idxmax() if not rank.empty else '---'}</b></p>
                 </div>
             </div>
         """, unsafe_allow_html=True)
 
-        # 5. Cuadro Objetivo Equipo (Compacto)
-        meta_grupal = 75 # 25 * 3
-        ventas_equipo = int(rank['Total Neto'].sum())
-        faltan_equipo = max(0, meta_grupal - ventas_equipo)
+        # 6. CUADRO OBJETIVO EQUIPO (REDUCIDO)
+        meta_grupal = 75 
+        ventas_totales = int(rank['Total Neto'].sum())
+        faltan_total = max(0, meta_grupal - ventas_totales)
         
         st.markdown(f"""
-            <div style="background: #161b22; padding: 15px; border-radius: 15px; border: 1px solid #30363d; margin: 0 auto 20px auto; text-align: center; max-width: 400px;">
-                <p style="color: #d2ff00; margin:0; font-weight: bold; font-size: 0.9rem;">🚀 VENTAS PARA OBJETIVO EQUIPO</p>
-                <h1 style="color: white; margin:0; font-size: 3rem;">{faltan_equipo}</h1>
-                <p style="color: #8b949e; margin:0; font-size: 0.7rem;">Meta: 75 (Excluyendo a Luis R.)</p>
+            <div style="background: #161b22; padding: 10px; border-radius: 12px; border: 1px solid #30363d; margin: 0 auto 20px auto; text-align: center; max-width: 350px;">
+                <p style="color: #d2ff00; margin:0; font-weight: bold; font-size: 0.8rem;">🚀 VENTAS FALTANTES PARA OBJETIVO EQUIPO</p>
+                <h1 style="color: white; margin:0; font-size: 2.5rem;">{faltan_total}</h1>
+                <p style="color: #8b949e; margin:0; font-size: 0.7rem;">Meta: 75 (25 x 3 Comerciales)</p>
             </div>
         """, unsafe_allow_html=True)
 
-        # 6. Tabla Ranking con Colores Llamativos
-        st.markdown('<p style="color: #d2ff00; font-weight: bold;">RANKING DETALLADO</p>', unsafe_allow_html=True)
-        df_ver = rank.rename(columns={'V_Luz':'Luz','V_Gas':'Gas','V_Fibra':'Fibra','V_Móvil':'Móvil','V_Alarma':'Alarma','Total Bajas':'Bajas','Total Cancel':'Cancel'})
+        # 7. TABLA RANKING (COLORES LLAMATIVOS)
+        df_vis = rank.rename(columns={'V_Luz':'Luz','V_Gas':'Gas','V_Fibra':'Fibra','V_Móvil':'Móvil','V_Alarma':'Alarma','T_Baja':'Bajas','T_Cancel':'Cancelados'})
+        cols = ['Luz','Gas','Fibra','Móvil','Alarma','Bajas','Cancelados','Total Neto','Faltan para 25']
         
-        def resaltar_objetivo(s):
-            return ['background-color: #d2ff00; color: black; font-weight: bold' if (s.name in ['Total Neto', 'Faltan para 25']) else '' for v in s]
+        st.table(df_vis[[c for c in cols if c in df_vis.columns]].astype(int).sort_values('Total Neto', ascending=False).style.apply(
+            lambda x: ['background-color: rgba(210, 255, 0, 0.3); color: #d2ff00; font-weight: bold' if x.name in ['Total Neto', 'Faltan para 25'] else '' for i in x], axis=1))
 
-        st.table(df_ver[['Luz','Gas','Fibra','Móvil','Alarma','Bajas','Cancel','Total Neto','Faltan para 25']].astype(int).sort_values('Total Neto', ascending=False).style.apply(resaltar_objetivo, axis=1))
-
-        # 7. Totales Inferiores Netos (Sin Bajas/Cancelados) con Color Intenso
+        # 8. TOTALES INFERIORES NETOS (COLOR INTENSO)
         st.markdown("---")
         c1, c2, c3, c4 = st.columns(4)
-        box_style = "background: #0d1117; border: 2px solid #d2ff00; padding: 15px; border-radius: 10px; text-align: center; box-shadow: 0 0 10px #d2ff0055;"
+        est = "background: #0d1117; border: 2px solid #d2ff00; padding: 15px; border-radius: 10px; text-align: center;"
         
-        c1.markdown(f'<div style="{box_style}"><p style="color: #d2ff00; margin:0; font-size: 0.8rem;">ENERGÍA NETA</p><h2 style="color: white; margin:0;">{int(df_ver["Luz"].sum()+df_ver["Gas"].sum() - df_ver["Bajas"].sum())}</h2></div>', unsafe_allow_html=True)
-        c2.markdown(f'<div style="{box_style}"><p style="color: #d2ff00; margin:0; font-size: 0.8rem;">FIBRA NETA</p><h2 style="color: white; margin:0;">{int(df_ver["Fibra"].sum() - df_ver["Cancel"].sum())}</h2></div>', unsafe_allow_html=True)
-        c3.markdown(f'<div style="{box_style}"><p style="color: #d2ff00; margin:0; font-size: 0.8rem;">MÓVILES</p><h2 style="color: white; margin:0;">{int(df_ver["Móvil"].sum())}</h2></div>', unsafe_allow_html=True)
-        c4.markdown(f'<div style="{box_style} border-color: white;"><p style="color: #d2ff00; margin:0; font-weight: bold;">TOTAL NETO</p><h2 style="color: white; margin:0;">{ventas_equipo}</h2></div>', unsafe_allow_html=True)
+        c1.markdown(f'<div style="{est}"><p style="color: #d2ff00; margin:0; font-size: 0.8rem;">ENERGÍA NETA</p><h2 style="color: white; margin:0;">{int(df_vis["Luz"].sum()+df_vis["Gas"].sum()-df_vis["Bajas"].sum())}</h2></div>', unsafe_allow_html=True)
+        c2.markdown(f'<div style="{est}"><p style="color: #d2ff00; margin:0; font-size: 0.8rem;">FIBRA NETA</p><h2 style="color: white; margin:0;">{int(df_vis["Fibra"].sum()-df_vis["Cancelados"].sum())}</h2></div>', unsafe_allow_html=True)
+        c3.markdown(f'<div style="{est}"><p style="color: #d2ff00; margin:0; font-size: 0.8rem;">MÓVILES</p><h2 style="color: white; margin:0;">{int(df_vis["Móvil"].sum())}</h2></div>', unsafe_allow_html=True)
+        c4.markdown(f'<div style="{est} background: #d2ff00;"><p style="color: black; margin:0; font-weight: bold;">TOTAL NETO</p><h2 style="color: black; margin:0;">{ventas_totales}</h2></div>', unsafe_allow_html=True)
 
     except Exception as e:
-        st.error(f"Error en Dashboard: {e}")
+        st.error(f"Error en el Dashboard: {e}")
+        st.info("Asegúrate de que 'load_and_clean_ranking' devuelva datos válidos.")
 
 #-----REPOSITORIO----
 elif menu == "📂 REPOSITORIO":
