@@ -204,7 +204,7 @@ with st.sidebar:
     st.markdown("---")
     menu = st.sidebar.radio(
     "Navegación",
-    ["🚀 CRM", "📊 PRECIOS", "⚖️ COMPARADOR LUZ", "📢 ANUNCIOS Y PLAN AMIGO", "📈 DASHBOARD Y RANKING", "📂 REPOSITORIO", "🕒 CONTROL LABORAL"]
+    ["🚀 CRM", "📊 PRECIOS", "⚖️ COMPARADOR LUZ", "⚖️ COMPARADOR GAS", "📢 ANUNCIOS Y PLAN AMIGO", "📈 DASHBOARD Y RANKING", "📂 REPOSITORIO", "🕒 CONTROL LABORAL"]
 )
 
 # --- CRM ---
@@ -430,6 +430,102 @@ elif menu == "⚖️ COMPARADOR LUZ":
             pdf.image(QR_PLAN_AMIGO, 80, pdf.get_y(), 50)
             
         st.download_button(label="📥 DESCARGAR ESTUDIO PDF", data=pdf.output(dest='S').encode('latin-1', 'replace'), file_name=f"Estudio_{cliente}.pdf")
+
+# --- COMPARADOR GAS ---
+elif menu == "⚖️ COMPARADOR GAS":
+    st.header("Estudio de Ahorro de Gas Personalizado")
+
+    # Definición de tarifas de gas (puedes mover esto a tu sección de configuración/datos)
+    tarifas_gas = [
+        {"COMPAÑÍA": "NATURGY", "TARIFA": "Gas RL.1", "FIJO": 5.44, "ENERGIA": 0.082, "logo": "logos/naturgy.png"},
+        {"COMPAÑÍA": "NATURGY", "TARIFA": "Gas RL.2", "FIJO": 10.32, "ENERGIA": 0.078, "logo": "logos/naturgy.png"},
+        {"COMPAÑÍA": "GANA ENERGÍA", "TARIFA": "Gas RL.1", "FIJO": 4.95, "ENERGIA": 0.079, "logo": "logos/gana.png"},
+        {"COMPAÑÍA": "GANA ENERGÍA", "TARIFA": "Gas RL.2", "FIJO": 9.50, "ENERGIA": 0.075, "logo": "logos/gana.png"},
+    ]
+
+    c1, c2 = st.columns(2)
+    with c1:
+        cliente = st.text_input("Nombre del cliente", "Nombre Apellidos")
+        f_act = st.number_input("Factura actual con IVA (EUR)", value=0.0)
+        dias_factura = st.number_input("Días del periodo de factura", value=30)
+        alquiler_contador = st.number_input("Alquiler de contador (EUR/mes)", value=0.69)
+        # Selector de IVA
+        iva_sel = st.selectbox("IVA a aplicar (%)", [21, 10, 5], index=0)
+        iva_factor = 1 + (iva_sel / 100)
+    
+    with c2:
+        comp_sel = st.selectbox("Compañía Propuesta", sorted(list(set(t["COMPAÑÍA"] for t in tarifas_gas))))
+        tarifas_f = [t["TARIFA"] for t in tarifas_gas if t["COMPAÑÍA"] == comp_sel]
+        tarifa_sel_nombre = st.selectbox("Tarifa Seleccionada", tarifas_f)
+        sel = next(t for t in tarifas_gas if t["COMPAÑÍA"] == comp_sel and t["TARIFA"] == tarifa_sel_nombre)
+        
+        if os.path.exists(sel.get("logo", "")): 
+            st.image(sel["logo"], width=120)
+        
+        consumo_kwh = st.number_input("Consumo total del periodo (kWh)", value=0.0)
+
+    # --- LÓGICA DE CÁLCULO GAS ---
+    # Impuesto de Hidrocarburos (aprox. 0.00234 €/kWh)
+    imp_hidrocarburos = consumo_kwh * 0.00234
+    
+    # Precios de tarifa
+    p_fijo_mensual = float(str(sel.get('FIJO', 0)).replace(',', '.'))
+    p_energia_kwh = float(str(sel.get('ENERGIA', 0)).replace(',', '.'))
+    
+    # Proporción de término fijo por días
+    coste_fijo = (p_fijo_mensual / 30) * dias_factura
+    coste_variable = consumo_kwh * p_energia_kwh
+    coste_alquiler = (alquiler_contador / 30) * dias_factura
+    
+    subtotal = coste_fijo + coste_variable + imp_hidrocarburos + coste_alquiler
+    coste_total_iva = subtotal * iva_factor
+    ahorro = f_act - coste_total_iva
+
+    st.info(f"""
+    **Precios Propuestos:** Término Fijo: **{p_fijo_mensual:.2f}** €/mes | Energía: **{p_energia_kwh:.4f}** €/kWh  
+    Imp. Hidrocarburos: **{imp_hidrocarburos:.2f}** € | IVA: **{iva_sel}%**
+    """)
+    
+    st.markdown(f'<div style="background:#d2ff00; padding:20px; border-radius:10px; text-align:center;"><h2 style="color:black;">AHORRO ESTIMADO GAS: {ahorro:.2f} €</h2></div>', unsafe_allow_html=True)
+    
+    if st.button("GENERAR ESTUDIO PDF GAS"):
+        pdf = FPDF()
+        pdf.add_page()
+        if os.path.exists(LOGO_PRINCIPAL): pdf.image(LOGO_PRINCIPAL, 10, 8, 33)
+        if os.path.exists(sel.get("logo", "")): pdf.image(sel["logo"], 165, 8, 30)
+        
+        pdf.ln(30); pdf.set_font("Arial", "B", 18); pdf.cell(190, 10, "ESTUDIO COMPARATIVO DE GAS", ln=True, align="C")
+        pdf.ln(5); pdf.set_font("Arial", "B", 11); pdf.set_fill_color(240, 240, 240)
+        pdf.cell(190, 8, f" DATOS DEL CLIENTE: {cliente.upper()}", ln=True, fill=True)
+        pdf.set_font("Arial", "", 10); pdf.cell(95, 8, f"Fecha: {datetime.now().strftime('%d/%m/%Y')}", border=1)
+        pdf.cell(95, 8, f"Periodo: {dias_factura} dias", border=1, ln=True); pdf.ln(5)
+        
+        pdf.set_font("Arial", "B", 11); pdf.cell(190, 8, " DETALLE DE LA PROPUESTA GAS", ln=True, fill=True)
+        pdf.set_font("Arial", "", 10)
+        propuesta_data = [
+            ("Compania", comp_sel),
+            ("Tarifa", tarifa_sel_nombre),
+            ("Termino Fijo", f"{p_fijo_mensual} EUR/mes"),
+            ("Termino Energia", f"{p_energia_kwh} EUR/kWh"),
+            ("Imp. Hidrocarburos", f"{imp_hidrocarburos:.2f} EUR"),
+            ("Alquiler Contador", f"{coste_alquiler:.2f} EUR"),
+            ("IVA Aplicado", f"{iva_sel}%"),
+            ("Consumo Total", f"{consumo_kwh:.2f} kWh")
+        ]
+        for d, v in propuesta_data:
+            pdf.cell(95, 8, d, border=1); pdf.cell(95, 8, str(v), border=1, ln=True)
+            
+        pdf.ln(5); pdf.set_font("Arial", "B", 12); pdf.cell(95, 10, "Factura Actual", border=1); pdf.cell(95, 10, f"{f_act:.2f} EUR", border=1, ln=True)
+        pdf.cell(95, 10, f"Nueva Factura Gas", border=1); pdf.cell(95, 10, f"{coste_total_iva:.2f} EUR", border=1, ln=True)
+        
+        pdf.ln(5); pdf.set_fill_color(210, 255, 0); pdf.set_font("Arial", "B", 14)
+        pdf.cell(190, 15, f"AHORRO TOTAL: {ahorro:.2f} EUR", ln=True, align="C", fill=True)
+        
+        pdf.ln(10); pdf.set_font("Arial", "B", 12); pdf.cell(190, 10, "PLAN AMIGO BASETTE", ln=True)
+        if os.path.exists(QR_PLAN_AMIGO):
+            pdf.image(QR_PLAN_AMIGO, 80, pdf.get_y(), 50)
+            
+        st.download_button(label="📥 DESCARGAR ESTUDIO GAS PDF", data=pdf.output(dest='S').encode('latin-1', 'replace'), file_name=f"Estudio_Gas_{cliente}.pdf")
 
 # --- ANUNCIOS Y PLAN AMIGO ---
 elif menu == "📢 ANUNCIOS Y PLAN AMIGO":
