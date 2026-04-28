@@ -329,11 +329,12 @@ elif menu == "⚖️ COMPARADOR":
         f_act = st.number_input("Factura actual con IVA (EUR)", value=0.0)
         potencia = st.number_input("Potencia contratada (kW)", value=4.6)
         dias_factura = st.number_input("Días del periodo de factura", value=30)
-        # NUEVO: Selector de IVA
+        # Selector de IVA
         iva_sel = st.selectbox("IVA a aplicar (%)", [21, 10], index=0)
         iva_factor = 1 + (iva_sel / 100)
     
     with c2:
+        # Filtramos compañías que tengan los tramos configurados
         comp_sel = st.selectbox("Compañía Propuesta", sorted(list(set(t["COMPAÑÍA"] for t in tarifas_luz))))
         tarifas_f = [t["TARIFA"] for t in tarifas_luz if t["COMPAÑÍA"] == comp_sel]
         tarifa_sel_nombre = st.selectbox("Tarifa Seleccionada", tarifas_f)
@@ -351,28 +352,39 @@ elif menu == "⚖️ COMPARADOR":
     with cc3:
         con_valle = st.number_input("Consumo Valle (kWh)", value=0.0)
 
+    # Lógica de Precios Corregida para Naturgy 3T y Gana 3T
     try:
-        if "3T" in tarifa_sel_nombre.upper() or comp_sel.upper() in ["NATURGY", "GANA ENERGÍA"]:
-            p_punta = float(str(sel.get('E1', 0.15)).replace(',', '.'))
-            p_llano = float(str(sel.get('E2', 0.12)).replace(',', '.'))
-            p_valle = float(str(sel.get('E3', 0.10)).replace(',', '.'))
+        if comp_sel.upper() == "NATURGY" and "3T" in tarifa_sel_nombre.upper():
+            p_punta = 0.180
+            p_llano = 0.107
+            p_valle = 0.0718
+        elif "3T" in tarifa_sel_nombre.upper() or comp_sel.upper() in ["NATURGY", "GANA ENERGÍA"]:
+            # Intenta coger los valores de la base de datos si existen, si no usa los de Naturgy por defecto
+            p_punta = float(str(sel.get('E1', 0.180)).replace(',', '.'))
+            p_llano = float(str(sel.get('E2', 0.107)).replace(',', '.'))
+            p_valle = float(str(sel.get('E3', 0.0718)).replace(',', '.'))
         else:
-            p_punta = p_llano = p_valle = float(str(sel['ENERGIA']).split('/')[0].replace(',', '.')) if isinstance(sel['ENERGIA'], str) else sel['ENERGIA']
+            # Tarifa plana o estándar
+            val_e = sel.get('ENERGIA', 0.180)
+            p_punta = p_llano = p_valle = float(str(val_e).split('/')[0].replace(',', '.')) if isinstance(val_e, str) else val_e
     except:
-        p_punta, p_llano, p_valle = 0.15, 0.12, 0.10
+        p_punta, p_llano, p_valle = 0.180, 0.107, 0.0718
 
     # CÁLCULOS
-    coste_p = (potencia * sel.get("P1", 0) * dias_factura) + (potencia * sel.get("P2", 0) * dias_factura)
+    # Usamos P1 y P2 de la tarifa seleccionada (sel)
+    p1_val = float(str(sel.get("P1", 0)).replace(',', '.'))
+    p2_val = float(str(sel.get("P2", 0)).replace(',', '.'))
+    
+    coste_p = (potencia * p1_val * dias_factura) + (potencia * p2_val * dias_factura)
     coste_e = (con_punta * p_punta) + (con_llano * p_llano) + (con_valle * p_valle)
     
-    # Aplicación del IVA seleccionado
     coste_total_iva = (coste_p + coste_e) * iva_factor
     ahorro = f_act - coste_total_iva
     consumo_total = con_punta + con_llano + con_valle
 
     st.info(f"""
-    **Precios Aplicados:** Punta: **{p_punta}** €/kWh | Llano: **{p_llano}** €/kWh | Valle: **{p_valle}** €/kWh  
-    Potencia P1: **{sel.get('P1', 0)}** €/kW día | IVA Aplicado: **{iva_sel}%**
+    **Precios Aplicados:** Punta: **{p_punta:.4f}** €/kWh | Llano: **{p_llano:.4f}** €/kWh | Valle: **{p_valle:.4f}** €/kWh  
+    Potencia P1: **{p1_val}** €/kW día | IVA Aplicado: **{iva_sel}%**
     """)
     
     st.markdown(f'<div style="background:#d2ff00; padding:20px; border-radius:10px; text-align:center;"><h2 style="color:black;">AHORRO ESTIMADO: {ahorro:.2f} €</h2></div>', unsafe_allow_html=True)
@@ -395,9 +407,9 @@ elif menu == "⚖️ COMPARADOR":
             ("Compania", comp_sel),
             ("Tarifa", tarifa_sel_nombre),
             ("Potencia", f"{potencia} kW"),
-            ("Precio Punta", f"{p_punta} EUR/kWh"),
-            ("Precio Llano", f"{p_llano} EUR/kWh"),
-            ("Precio Valle", f"{p_valle} EUR/kWh"),
+            ("Precio Punta", f"{p_punta:.4f} EUR/kWh"),
+            ("Precio Llano", f"{p_llano:.4f} EUR/kWh"),
+            ("Precio Valle", f"{p_valle:.4f} EUR/kWh"),
             ("IVA Aplicado", f"{iva_sel}%"),
             ("Consumo Total", f"{consumo_total:.2f} kWh")
         ]
@@ -416,6 +428,54 @@ elif menu == "⚖️ COMPARADOR":
             
         st.download_button(label="📥 DESCARGAR ESTUDIO PDF", data=pdf.output(dest='S').encode('latin-1', 'replace'), file_name=f"Estudio_{cliente}.pdf")
 
+# --- ANUNCIOS Y PLAN AMIGO ---
+elif menu == "📢 ANUNCIOS Y PLAN AMIGO":
+    st.header("📢 Anuncios y Plan Amigo")
+    st.markdown('<div class="block-header">🎁 PLAN AMIGO</div>', unsafe_allow_html=True)
+    col1, col2 = st.columns(2)
+    with col1:
+        st.subheader("Enlace Plan Amigo")
+        st.code("https://forms.gle/mU6XzRvywDoBQ5Q47")
+        st.link_button("Ir al Formulario", "https://forms.gle/mU6XzRvywDoBQ5Q47")
+    with col2:
+        st.subheader("QR Plan Amigo")
+        if os.path.exists(QR_PLAN_AMIGO):
+            st.image(QR_PLAN_AMIGO, width=250)
+            with open(QR_PLAN_AMIGO, "rb") as file:
+                st.download_button("Descargar QR", file, "qr-plan-amigo.png")
+        else:
+            st.error("Archivo QR no encontrado.")
+
+    st.markdown('<div class="block-header">🖼️ MATERIAL PUBLICITARIO</div>', unsafe_allow_html=True)
+    st.write("Visualiza y descarga los últimos anuncios:")
+    
+    path_anuncios = "anunciosbasette/"
+    lista_anuncios = [
+        {"file": "Anuncio1_qr.png", "name": "Anuncio 1 QR"},
+        {"file": "Anuncio2_qr.png", "name": "Anuncio 2 QR"},
+        {"file": "PUBLI3.jpg", "name": "Publicidad 3"},
+        {"file": "anuncio alarma1.png", "name": "Anuncio Alarma 1"},
+        {"file": "anuncio1.png", "name": "Anuncio 1"},
+        {"file": "anuncio2.png", "name": "Anuncio 2"}
+    ]
+    
+    cols_anuncios = st.columns(3)
+    for idx, item in enumerate(lista_anuncios):
+        with cols_anuncios[idx % 3]:
+            full_path = f"{path_anuncios}{item['file']}"
+            if os.path.exists(full_path):
+                st.image(full_path, use_container_width=True)
+                with open(full_path, "rb") as f_anuncio:
+                    data_anuncio = f_anuncio.read()
+                    st.download_button(
+                        label=f"Descargar {item['name']}",
+                        data=data_anuncio,
+                        file_name=item['file'],
+                        mime="image/png" if item['file'].lower().endswith('.png') else "image/jpeg",
+                        key=f"btn_anuncio_{idx}"
+                    )
+            else:
+                st.error(f"Falta: {item['file']}")
 # --- ANUNCIOS Y PLAN AMIGO ---
 elif menu == "📢 ANUNCIOS Y PLAN AMIGO":
     st.header("📢 Anuncios y Plan Amigo")
