@@ -420,7 +420,7 @@ elif menu == "📢 ANUNCIOS Y PLAN AMIGO":
 # --- DASHBOARD Y RANKING ---
 elif menu == "📈 DASHBOARD Y RANKING":
     try:
-        # 1. FUNCIÓN PARA IMÁGENES (Convertir a Base64)
+        # 1. FUNCIÓN PARA IMÁGENES
         def get_img_64(file_path):
             import base64
             import os
@@ -429,7 +429,7 @@ elif menu == "📈 DASHBOARD Y RANKING":
                     return base64.b64encode(f.read()).decode()
             return None
 
-        # 2. ANIMACIÓN DIVERSIFICADA (Cae Rosco y otras "cositas")
+        # 2. ANIMACIÓN DIVERSIFICADA (Rosco y Logo)
         rosco_b64 = get_img_64("rosco.jpg")
         logo_b64 = get_img_64("tecomparotodo_logo.jpg")
         
@@ -438,7 +438,7 @@ elif menu == "📈 DASHBOARD Y RANKING":
             if logo_b64: sources.append(f"data:image/jpeg;base64,{logo_b64}")
             
             falling_items = ""
-            for i in range(20):
+            for i in range(15):
                 src = random.choice(sources)
                 left, delay, dur = random.randint(0, 95), random.uniform(0, 4), random.uniform(5, 8)
                 size = random.randint(60, 100)
@@ -460,7 +460,7 @@ elif menu == "📈 DASHBOARD Y RANKING":
         # 3. CARGA DE DATOS
         de, dt, da = load_and_clean_ranking()
 
-        # 4. FILTROS (Mes y Comercial)
+        # 4. FILTROS
         st.markdown('<p style="color: #d2ff00; font-weight: bold; margin-bottom: 5px;">📅 FILTROS DE PERÍODO Y EQUIPO</p>', unsafe_allow_html=True)
         c1, c2 = st.columns(2)
         
@@ -469,21 +469,18 @@ elif menu == "📈 DASHBOARD Y RANKING":
             f_mes = st.multiselect("Seleccionar Mes:", meses_disp, default=[meses_disp[-1]] if meses_disp else [])
         
         with c2:
-            # Filtramos comerciales activos (Lorena, Deborah, Belén) - Luis queda fuera
             coms_disp = sorted(list(set(de['Comercial']) | set(dt['Comercial']) | set(da['Comercial'])))
-            f_coms = st.multiselect("Seleccionar Comerciales:", coms_disp, default=[c for c in coms_disp if "LUIS" not in c.upper()])
+            f_coms = st.multiselect("Seleccionar Comerciales:", coms_disp, default=coms_disp)
 
-        # Aplicar filtros a los 3 DataFrames
+        # Aplicar filtros
         f_de = de[(de['Mes'].isin(f_mes)) & (de['Comercial'].isin(f_coms))].copy()
         f_dt = dt[(dt['Mes'].isin(f_mes)) & (dt['Comercial'].isin(f_coms))].copy()
         f_da = da[(da['Mes'].isin(f_mes)) & (da['Comercial'].isin(f_coms))].copy()
 
-        # 5. CÁLCULO DE REFERIDOS Y ESTADOS
+        # 5. PROCESAMIENTO (REF, BAJAS, CANCELADOS)
         for df_tmp in [f_de, f_dt, f_da]:
             if not df_tmp.empty:
-                # Contar Referidos si la columna Canal es 'REF'
                 df_tmp['V_REF'] = df_tmp['Canal'].apply(lambda x: 1 if str(x).strip().upper() == "REF" else 0) if 'Canal' in df_tmp.columns else 0
-                # Estados
                 df_tmp['Baja'] = df_tmp['Estado'].apply(lambda x: 1 if str(x).strip().upper() == "BAJA" else 0) if 'Estado' in df_tmp.columns else 0
                 df_tmp['Cancelado'] = df_tmp['Estado'].apply(lambda x: 1 if str(x).strip().upper() == "CANCELADO" else 0) if 'Estado' in df_tmp.columns else 0
 
@@ -492,55 +489,56 @@ elif menu == "📈 DASHBOARD Y RANKING":
         r3 = f_da.groupby('Comercial')[['V_Alarma', 'V_REF', 'Baja', 'Cancelado']].sum() if not f_da.empty else pd.DataFrame()
         
         rank = pd.concat([r1, r2, r3], axis=1).fillna(0)
-        
-        # Consolidar columnas duplicadas tras el concat
         rank['Ref_Total'] = rank.filter(like='V_REF').sum(axis=1)
         rank['Bajas'] = rank.filter(like='Baja').sum(axis=1)
         rank['Cancel'] = rank.filter(like='Cancelado').sum(axis=1)
         
-        # TOTAL NETO (Sin Móviles para el ranking de LORENA)
+        # TOTAL NETO (Ranking basado en servicios fijos)
         rank['Total Neto'] = (rank.get('V_Luz',0)+rank.get('V_Gas',0)+rank.get('V_Fibra',0)+rank.get('V_Alarma',0)) - rank['Bajas'] - rank['Cancel']
-        rank['Faltan para 25'] = rank['Total Neto'].apply(lambda x: max(0, 25 - int(x)))
+        
+        # Objetivo individual (Luis 0, Activos 25)
+        rank['Faltan para 25'] = rank.index.to_series().apply(lambda x: max(0, 25 - int(rank.loc[x, 'Total Neto'])) if "LUIS" not in str(x).upper() else 0)
 
-        # 6. CABECERA: FRASE Y LÍDER (Lorena suele ser el idxmax ahora)
+        # 6. CABECERA
         st.markdown(f"""
             <div style="text-align: center; margin-bottom: 20px;">
-                <h1 style="color: #d2ff00; font-size: 2rem;">"CADA DÍA ES UNA OPORTUNIDAD PARA SUPERARSE"</h1>
+                <h1 style="color: #d2ff00; font-size: 2.2rem;">"EL ÉXITO ES EL RESULTADO DE LA DISCIPLINA DIARIA"</h1>
                 <div style="background: rgba(210, 255, 0, 0.1); padding: 10px; border-radius: 10px; border: 1px dashed #d2ff00; display: inline-block;">
                     <p style="color: white; margin:0;">🥇 Nº 1 ACTUAL: <b style="color: #d2ff00; font-size: 1.3rem;">{rank['Total Neto'].idxmax() if not rank.empty else '---'}</b></p>
                 </div>
             </div>
         """, unsafe_allow_html=True)
 
-        # 7. CUADRO OBJETIVO EQUIPO (Fijo para 3 comerciales = 75 ventas)
+        # 7. CUADRO OBJETIVO EQUIPO (REDUCIDO)
         meta_fija = 75 
-        v_equipo = int(rank['Total Neto'].sum())
-        v_quedan = max(0, meta_fija - v_equipo)
+        v_totales_equipo = int(rank['Total Neto'].sum())
+        v_quedan_equipo = max(0, meta_fija - v_totales_equipo)
         
         st.markdown(f"""
-            <div style="background: #161b22; padding: 15px; border-radius: 15px; border: 1px solid #30363d; margin: 0 auto 25px auto; text-align: center; max-width: 380px;">
-                <p style="color: #d2ff00; margin:0; font-weight: bold; font-size: 0.9rem;">🚀 FALTAN PARA OBJETIVO EQUIPO (3 PERSONAS)</p>
-                <h1 style="color: white; margin:0; font-size: 3.2rem;">{v_quedan}</h1>
-                <p style="color: #8b949e; margin:0; font-size: 0.75rem;">Meta: 75 Ventas Netas</p>
+            <div style="background: #161b22; padding: 15px; border-radius: 15px; border: 1px solid #30363d; margin: 0 auto 25px auto; text-align: center; max-width: 350px;">
+                <p style="color: #d2ff00; margin:0; font-weight: bold; font-size: 0.8rem;">🚀 FALTAN PARA OBJETIVO EQUIPO</p>
+                <h1 style="color: white; margin:0; font-size: 3rem;">{v_quedan_equipo}</h1>
+                <p style="color: #8b949e; margin:0; font-size: 0.7rem;">Meta: 75 Ventas Netas</p>
             </div>
         """, unsafe_allow_html=True)
 
-        # 8. TABLA DE RANKING CON COLUMNA REF
+        # 8. TABLA DE RANKING
         df_vis = rank.rename(columns={'V_Luz':'Luz','V_Gas':'Gas','V_Fibra':'Fibra','V_Móvil':'Móvil','V_Alarma':'Alarma','Ref_Total':'REF'})
-        columnas_finales = ['Luz','Gas','Fibra','Móvil','Alarma','REF','Bajas','Cancel','Total Neto','Faltan para 25']
+        columnas_tabla = ['Luz','Gas','Fibra','Móvil','Alarma','REF','Bajas','Cancel','Total Neto','Faltan para 25']
         
-        st.table(df_vis[[c for c in columnas_finales if c in df_vis.columns]].astype(int).sort_values('Total Neto', ascending=False).style.apply(
-            lambda x: ['background-color: rgba(210, 255, 0, 0.2); color: #d2ff00; font-weight: bold' if x.name in ['Total Neto', 'Faltan para 25'] else '' for i in x], axis=1))
+        st.table(df_vis[[c for c in columnas_tabla if c in df_vis.columns]].astype(int).sort_values('Total Neto', ascending=False).style.apply(
+            lambda x: ['background-color: rgba(210, 255, 0, 0.3); color: #d2ff00; font-weight: bold' if x.name in ['Total Neto', 'Faltan para 25'] else '' for i in x], axis=1))
 
-        # 9. TOTALES INFERIORES (INTENSOS)
+        # 9. TOTALES INFERIORES (5 CUADROS: ENERGÍA, FIBRA, ALARMA, REF, TOTAL)
         st.markdown("---")
-        c1, c2, c3, c4 = st.columns(4)
-        est = "background: #0d1117; border: 2px solid #d2ff00; padding: 15px; border-radius: 10px; text-align: center;"
+        c1, c2, c3, c4, c5 = st.columns(5)
+        est = "background: #0d1117; border: 2px solid #d2ff00; padding: 12px; border-radius: 10px; text-align: center;"
         
-        c1.markdown(f'<div style="{est}"><p style="color:#d2ff00;font-size:0.8rem;margin:0;">ENERGÍA NETA</p><h2 style="color:white;margin:0;">{int(df_vis["Luz"].sum()+df_vis["Gas"].sum()-df_vis["Bajas"].sum())}</h2></div>', unsafe_allow_html=True)
-        c2.markdown(f'<div style="{est}"><p style="color:#d2ff00;font-size:0.8rem;margin:0;">FIBRA NETA</p><h2 style="color:white;margin:0;">{int(df_vis["Fibra"].sum()-df_vis["Cancel"].sum())}</h2></div>', unsafe_allow_html=True)
-        c3.markdown(f'<div style="{est}"><p style="color:#d2ff00;font-size:0.8rem;margin:0;">REF TOTAL MES</p><h2 style="color:white;margin:0;">{int(df_vis["REF"].sum())}</h2></div>', unsafe_allow_html=True)
-        c4.markdown(f'<div style="{est} background:#d2ff00;"><p style="color:black;font-weight:bold;margin:0;">EQUIPO NETO</p><h2 style="color:black;margin:0;">{v_equipo}</h2></div>', unsafe_allow_html=True)
+        c1.markdown(f'<div style="{est}"><p style="color:#d2ff00;font-size:0.75rem;margin:0;">ENERGÍA NETA</p><h3 style="color:white;margin:0;">{int(df_vis["Luz"].sum()+df_vis["Gas"].sum()-rank.filter(like="Baja").sum().iloc[0])}</h3></div>', unsafe_allow_html=True)
+        c2.markdown(f'<div style="{est}"><p style="color:#d2ff00;font-size:0.75rem;margin:0;">FIBRA NETA</p><h3 style="color:white;margin:0;">{int(df_vis["Fibra"].sum()-rank.filter(like="Cancelado").sum().iloc[0])}</h3></div>', unsafe_allow_html=True)
+        c3.markdown(f'<div style="{est}"><p style="color:#d2ff00;font-size:0.75rem;margin:0;">ALARMA NETA</p><h3 style="color:white;margin:0;">{int(df_vis["Alarma"].sum())}</h3></div>', unsafe_allow_html=True)
+        c4.markdown(f'<div style="{est}"><p style="color:#d2ff00;font-size:0.75rem;margin:0;">REF TOTAL</p><h3 style="color:white;margin:0;">{int(df_vis["REF"].sum())}</h3></div>', unsafe_allow_html=True)
+        c5.markdown(f'<div style="{est} background:#d2ff00;"><p style="color:black;font-weight:bold;font-size:0.75rem;margin:0;">EQUIPO NETO</p><h3 style="color:black;margin:0;">{v_totales_equipo}</h3></div>', unsafe_allow_html=True)
 
     except Exception as e:
         st.error(f"Error en Dashboard: {e}")
