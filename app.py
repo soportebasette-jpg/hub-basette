@@ -435,10 +435,10 @@ elif menu == "⚖️ COMPARADOR LUZ":
 elif menu == "⚖️ COMPARADOR GAS":
     st.header("Estudio de Ahorro de Gas Personalizado")
 
-    # 1. BASE DE DATOS DE TARIFAS DE GAS (Precios corregidos según última instrucción)
+    # 1. BASE DE DATOS DE TARIFAS DE GAS (Precios y Logos Corregidos)
     tarifas_gas = [
-        {"COMPAÑÍA": "NATURGY", "TARIFA": "GAS RL.1 (3.1)", "FIJO": 6.13, "ENERGIA": 0.0768, "logo": "manuales/logo_naturgy.png"},
-        {"COMPAÑÍA": "NATURGY", "TARIFA": "GAS RL.2 (3.2)", "FIJO": 11.45, "ENERGIA": 0.0724, "logo": "manuales/logo_naturgy.png"},
+        {"COMPAÑÍA": "NATURGY", "TARIFA": "GAS RL.1 (3.1)", "FIJO": 6.13, "ENERGIA": 0.0838, "logo": "manuales/logo_naturgy.png"},
+        {"COMPAÑÍA": "NATURGY", "TARIFA": "GAS RL.2 (3.2)", "FIJO": 11.45, "ENERGIA": 0.0792, "logo": "manuales/logo_naturgy.png"},
         {"COMPAÑÍA": "GANA ENERGÍA", "TARIFA": "GAS RL.1 (3.1)", "FIJO": 4.95, "ENERGIA": 0.0700, "logo": "manuales/logo_gana.png"},
         {"COMPAÑÍA": "GANA ENERGÍA", "TARIFA": "GAS RL.2 (3.2)", "FIJO": 9.50, "ENERGIA": 0.0700, "logo": "manuales/logo_gana.png"},
         {"COMPAÑÍA": "TOTALENERGIES", "TARIFA": "GAS RL.1 (TOTAL)", "FIJO": 5.43, "ENERGIA": 0.0500, "logo": "manuales/logo_totalenergy.png"},
@@ -459,7 +459,7 @@ elif menu == "⚖️ COMPARADOR GAS":
         tarifas_f = [t["TARIFA"] for t in tarifas_gas if t["COMPAÑÍA"] == comp_sel]
         tarifa_sel_nombre = st.selectbox("Tarifa Seleccionada", tarifas_f, key="gas_tarifa")
         
-        # Obtener datos de la tarifa seleccionada
+        # Obtener datos de la tarifa
         sel = next((t for t in tarifas_gas if t["COMPAÑÍA"] == comp_sel and t["TARIFA"] == tarifa_sel_nombre), tarifas_gas[0])
 
         if os.path.exists(sel["logo"]): 
@@ -480,7 +480,7 @@ elif menu == "⚖️ COMPARADOR GAS":
     coste_total_iva = subtotal * iva_factor
     ahorro = f_act - coste_total_iva
 
-    st.info(f"**PRECIOS ACTUALIZADOS:** Fijo: **{p_fijo_mensual:.2f}** €/mes | Energía: **{p_energia_kwh:.4f}** €/kWh")
+    st.info(f"**PRECIOS ACTUALIZADOS:** Fijo: **{p_fijo_mensual:.2f}** € | Energía: **{p_energia_kwh:.4f}** €")
     st.markdown(f'<div style="background:#d2ff00; padding:20px; border-radius:10px; text-align:center;"><h2 style="color:black;">AHORRO ESTIMADO: {ahorro:.2f} €</h2></div>', unsafe_allow_html=True)
     
     if st.button("GENERAR ESTUDIO PDF"):
@@ -488,12 +488,12 @@ elif menu == "⚖️ COMPARADOR GAS":
             pdf = FPDF()
             pdf.add_page()
             
-            # LOGO IZQUIERDA (Raíz)
-            LOGO_ROOT = "tecomparotodo_logo.png"
-            if os.path.exists(LOGO_ROOT):
-                pdf.image(LOGO_ROOT, 10, 8, 45)
+            # LOGO IZQUIERDA (Ahora en manuales/)
+            LOGO_PDF_IZQ = "manuales/tecomparotodo_logo.png"
+            if os.path.exists(LOGO_PDF_IZQ):
+                pdf.image(LOGO_PDF_IZQ, 10, 8, 45)
             
-            # LOGO DERECHA (Manuales)
+            # LOGO DERECHA
             if os.path.exists(sel["logo"]): 
                 pdf.image(sel["logo"], 160, 8, 35)
             
@@ -544,12 +544,11 @@ elif menu == "⚖️ COMPARADOR GAS":
             if os.path.exists(QR_PLAN_AMIGO):
                 pdf.image(QR_PLAN_AMIGO, 85, pdf.get_y()+5, 35)
                 
-            # Generar datos del PDF
             pdf_data = pdf.output(dest='S').encode('latin-1', 'replace')
             st.download_button("📥 DESCARGAR ESTUDIO PDF", data=pdf_data, file_name=f"Estudio_Gas_{cliente}.pdf")
             
         except Exception as e:
-            st.error(f"Error al generar PDF: {e}")
+            st.error(f"Error al generar el PDF: {e}")
 # --- ANUNCIOS Y PLAN AMIGO ---
 elif menu == "📢 ANUNCIOS Y PLAN AMIGO":
     st.header("📢 Anuncios y Plan Amigo")
