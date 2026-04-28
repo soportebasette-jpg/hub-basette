@@ -436,9 +436,15 @@ elif menu == "📈 DASHBOARD Y RANKING":
         f_dt = dt[(dt['Año']==f_ano) & (dt['Mes'].isin(f_meses)) & (dt['Comercial'].isin(f_coms))].copy()
         f_da = da[(da['Año']==f_ano) & (da['Mes'].isin(f_meses)) & (da['Comercial'].isin(f_coms))].copy()
 
-        # --- LÓGICA DE CÁLCULO DE RANKING (Necesaria para el Cuadro de Honor) ---
+        # --- LÓGICA DE CÁLCULO, OBJETIVOS Y REFERIDOS ---
         for df_temp in [f_de, f_dt, f_da]:
             if not df_temp.empty:
+                # Contar Referidos (REF) desde la columna Canal
+                if 'Canal' in df_temp.columns:
+                    df_temp['V_REF'] = df_temp['Canal'].apply(lambda x: 1 if str(x).strip().upper() == "REF" else 0)
+                else:
+                    df_temp['V_REF'] = 0
+                
                 if 'V_Movil' in df_temp.columns: df_temp.rename(columns={'V_Movil': 'V_Móvil'}, inplace=True)
                 if 'Estado' in df_temp.columns:
                     df_temp['V_Baja'] = df_temp['Estado'].apply(lambda x: 1 if str(x).strip().upper() == "BAJA" else 0)
@@ -446,31 +452,29 @@ elif menu == "📈 DASHBOARD Y RANKING":
                 else:
                     df_temp['V_Baja'], df_temp['V_Cancelado'] = 0, 0
 
-        r1 = f_de.groupby('Comercial')[['V_Luz', 'V_Gas', 'V_Baja', 'V_Cancelado']].sum() if not f_de.empty else pd.DataFrame()
-        r2 = f_dt.groupby('Comercial')[['V_Fibra', 'V_Móvil', 'V_Baja', 'V_Cancelado']].sum() if not f_dt.empty else pd.DataFrame()
-        r3 = f_da.groupby('Comercial')[['V_Alarma', 'V_Baja', 'V_Cancelado']].sum() if not f_da.empty else pd.DataFrame()
+        r1 = f_de.groupby('Comercial')[['V_Luz', 'V_Gas', 'V_Baja', 'V_Cancelado', 'V_REF']].sum() if not f_de.empty else pd.DataFrame()
+        r2 = f_dt.groupby('Comercial')[['V_Fibra', 'V_Móvil', 'V_Baja', 'V_Cancelado', 'V_REF']].sum() if not f_dt.empty else pd.DataFrame()
+        r3 = f_da.groupby('Comercial')[['V_Alarma', 'V_Baja', 'V_Cancelado', 'V_REF']].sum() if not f_da.empty else pd.DataFrame()
         
         rank_calc = pd.concat([r1, r2, r3], axis=1).fillna(0)
-        rank_calc['TOTAL'] = (rank_calc.get('V_Luz',0) + rank_calc.get('V_Gas',0) + rank_calc.get('V_Fibra',0) + rank_calc.get('V_Alarma',0)) - rank_calc.get('V_Baja',0).sum(axis=1 if isinstance(rank_calc.get('V_Baja'), pd.DataFrame) else None) - rank_calc.get('V_Cancelado',0).sum(axis=1 if isinstance(rank_calc.get('V_Cancelado'), pd.DataFrame) else None)
         
+        # Cálculo TOTAL (Luz+Gas+Fibra+Alarma - Bajas - Cancelados). Móvil NO suma.
+        rank_calc['TOTAL_SIN_MOVIL'] = (rank_calc.get('V_Luz',0) + rank_calc.get('V_Gas',0) + rank_calc.get('V_Fibra',0) + rank_calc.get('V_Alarma',0)) - rank_calc.get('V_Baja',0).sum(axis=1 if isinstance(rank_calc.get('V_Baja'), pd.DataFrame) else None) - rank_calc.get('V_Cancelado',0).sum(axis=1 if isinstance(rank_calc.get('V_Cancelado'), pd.DataFrame) else None)
+        
+        # Sumar REF de todos los drives
+        rank_calc['REF_TOTAL'] = rank_calc.get('V_REF', 0).sum(axis=1) if isinstance(rank_calc.get('V_REF'), pd.DataFrame) else rank_calc.get('V_REF', 0)
+
         # IDENTIFICAR AL GANADOR
-        if not rank_calc.empty and rank_calc['TOTAL'].max() > 0:
-            ganador_nombre = rank_calc['TOTAL'].idxmax()
-            ganador_ventas = int(rank_calc['TOTAL'].max())
+        if not rank_calc.empty and rank_calc['TOTAL_SIN_MOVIL'].max() > 0:
+            ganador_nombre = rank_calc['TOTAL_SIN_MOVIL'].idxmax()
+            ganador_ventas = int(rank_calc['TOTAL_SIN_MOVIL'].max())
+            st.snow() # Efecto de destellos/nieve en lugar de globos
         else:
             ganador_nombre = "ESPERANDO VENTAS..."
             ganador_ventas = 0
 
-        # --- DISEÑO ORIGINAL: CUADRO DE HONOR Y FRASE MOTIVADORA GIGANTE ---
-        frases_dia = [
-            "EL ÉXITO ES LA SUMA DE PEQUEÑOS ESFUERZOS REPETIDOS DÍA TRAS DÍA.",
-            "TU ÚNICA LIMITACIÓN ES TU MENTE. ¡A POR TODAS!",
-            "TRABAJA EN SILENCIO, QUE EL ÉXITO SE ENCARGUE DE HACER EL RUIDO.",
-            "NO CUENTES LOS DÍAS, HAZ QUE LOS DÍAS CUENTEN.",
-            "LA DISCIPLINA ES EL PUENTE ENTRE LAS METAS Y LOS LOGROS.",
-            "SI QUIERES LLEGAR DONDE LA MAYORÍA NO LLEGA, HAZ LO QUE LA MAYORÍA NO HACE.",
-            "LA EXCELENCIA NO ES UN ACTO, SINO UN HÁBITO."
-        ]
+        # --- DISEÑO: FRASE Y NÚMERO 1 ---
+        frases_dia = ["EL ÉXITO ES LA SUMA DE PEQUEÑOS ESFUERZOS REPETIDOS DÍA TRAS DÍA.", "TU ÚNICA LIMITACIÓN ES TU MENTE. ¡A POR TODAS!", "TRABAJA EN SILENCIO, QUE EL ÉXITO SE ENCARGUE DE HACER EL RUIDO.", "NO CUENTES LOS DÍAS, HAZ QUE LOS DÍAS CUENTEN.", "LA DISCIPLINA ES EL PUENTE ENTRE LAS METAS Y LOS LOGROS.", "LA EXCELENCIA NO ES UN ACTO, SINO UN HÁBITO."]
         frase_hoy = frases_dia[datetime.now().day % len(frases_dia)]
 
         st.markdown(f"""
@@ -480,93 +484,86 @@ elif menu == "📈 DASHBOARD Y RANKING":
                         <h1 style="color: #d2ff00; font-size: 50px; font-weight: 900; line-height: 1.1; margin-bottom: 20px;">"{frase_hoy}"</h1>
                     </div>
                     <div style="background: rgba(210, 255, 0, 0.1); padding: 25px; border-radius: 15px; border: 1px dashed #d2ff00; min-width: 300px;">
-                        <p style="color: #8b949e; letter-spacing: 5px; font-size: 1rem; margin-bottom: 10px;">LÍDER DEL MES 🏆</p>
+                        <p style="color: #8b949e; letter-spacing: 5px; font-size: 1rem; margin-bottom: 10px;">TOP VENTAS MES 🎆</p>
                         <h2 style="color: white; font-size: 3rem; margin: 0; text-shadow: 2px 2px #000;">{ganador_nombre}</h2>
                         <h3 style="color: #d2ff00; font-size: 2.5rem; margin: 0;">{ganador_ventas} VENTAS</h3>
-                        <div style="font-size: 30px; margin-top: 10px;">👑 ⭐ 👑</div>
+                        <div style="font-size: 35px; margin-top: 10px;">✨ 🏆 ✨</div>
                     </div>
                 </div>
             </div>
         """, unsafe_allow_html=True)
 
-        # --- CONTINUACIÓN DE TUS TABS ORIGINALES ---
+        # --- OBJETIVOS DEL EQUIPO ---
+        objetivo_persona = 25
+        num_comerciales = len(f_coms) if f_coms else 1
+        objetivo_total_equipo = objetivo_persona * num_comerciales
+        ventas_actuales_equipo = int(rank_calc['TOTAL_SIN_MOVIL'].sum())
+        quedan_equipo = max(0, objetivo_total_equipo - ventas_actuales_equipo)
+
+        st.markdown(f"""
+            <div style="background: #161b22; padding: 20px; border-radius: 15px; border: 1px solid #30363d; margin-bottom: 30px;">
+                <h3 style="color: #d2ff00; text-align: center; margin-bottom: 15px;">📊 ESTADO DEL OBJETIVO GRUPAL</h3>
+                <div style="display: flex; justify-content: space-around; text-align: center;">
+                    <div><p style="color: #8b949e; margin:0;">Meta por Persona</p><h2 style="color: white; margin:0;">{objetivo_persona}</h2></div>
+                    <div><p style="color: #8b949e; margin:0;">Total Equipo</p><h2 style="color: white; margin:0;">{ventas_actuales_equipo}</h2></div>
+                    <div style="background: rgba(210, 255, 0, 0.1); padding: 10px; border-radius: 10px; border: 1px solid #d2ff00;">
+                        <p style="color: #d2ff00; margin:0; font-weight: bold;">FALTAN PARA LA META</p>
+                        <h2 style="color: white; margin:0;">{quedan_equipo}</h2>
+                    </div>
+                </div>
+            </div>
+        """, unsafe_allow_html=True)
+
+        # --- TABS ---
         t_rank, t_ene, t_tel, t_ala = st.tabs(["🏆 RANKING", "⚡ ENERGÍA", "📱 TELCO", "🛡️ ALARMAS"])
 
         with t_rank:
-            st.balloons()
-            st.markdown('<div class="block-header">RANKING DE PRODUCTIVIDAD</div>', unsafe_allow_html=True)
+            st.markdown('<div class="block-header">RANKING DETALLADO Y REFERIDOS</div>', unsafe_allow_html=True)
             
-            # --- NORMALIZACIÓN DE ESTADOS Y MÓVIL (CORRECCIÓN CRÍTICA) ---
-            for df_temp in [f_de, f_dt, f_da]:
-                if not df_temp.empty:
-                    if 'V_Movil' in df_temp.columns: df_temp.rename(columns={'V_Movil': 'V_Móvil'}, inplace=True)
-                    if 'Estado' in df_temp.columns:
-                        df_temp['V_Baja'] = df_temp['Estado'].apply(lambda x: 1 if str(x).strip().upper() == "BAJA" else 0)
-                        df_temp['V_Cancelado'] = df_temp['Estado'].apply(lambda x: 1 if str(x).strip().upper() == "CANCELADO" else 0)
-                        df_temp['V_Activo'] = df_temp['Estado'].apply(lambda x: 1 if str(x).strip().upper() == "ACTIVO" else 0)
-                    else:
-                        df_temp['V_Baja'], df_temp['V_Cancelado'], df_temp['V_Activo'] = 0, 0, 0
-
-            r1 = f_de.groupby('Comercial')[['V_Luz', 'V_Gas', 'V_Baja', 'V_Cancelado', 'V_Activo']].sum() if not f_de.empty else pd.DataFrame()
-            r2 = f_dt.groupby('Comercial')[['V_Fibra', 'V_Móvil', 'V_Baja', 'V_Cancelado', 'V_Activo']].sum() if not f_dt.empty else pd.DataFrame()
-            r3 = f_da.groupby('Comercial')[['V_Alarma', 'V_Baja', 'V_Cancelado', 'V_Activo']].sum() if not f_da.empty else pd.DataFrame()
+            rank_display = rank_calc.copy()
+            rank_display = rank_display.rename(columns={
+                'V_Luz': 'Luz', 'V_Gas': 'Gas', 'V_Fibra': 'Fibra', 
+                'V_Móvil': 'Móvil', 'V_Alarma': 'Alarma', 'REF_TOTAL': 'REFERIDOS'
+            })
             
-            rank = pd.concat([r1, r2, r3], axis=1).fillna(0).astype(int)
-            
-            for st_col in ['Baja', 'Cancelado', 'Activo']:
+            # Consolidar Bajas y Cancelados para la tabla
+            for st_col in ['Baja', 'Cancelado']:
                 v_tag = f'V_{st_col}'
-                if v_tag in rank.columns:
-                    rank[st_col] = rank[v_tag].sum(axis=1) if isinstance(rank[v_tag], pd.DataFrame) else rank[v_tag]
-                else: rank[st_col] = 0
+                if v_tag in rank_display.columns:
+                    rank_display[st_col] = rank_display[v_tag].sum(axis=1) if isinstance(rank_display[v_tag], pd.DataFrame) else rank_display[v_tag]
+                else: rank_display[st_col] = 0
 
-            rank = rank.rename(columns={'V_Luz': 'Luz', 'V_Gas': 'Gas', 'V_Fibra': 'Fibra', 'V_Móvil': 'Móvil', 'V_Alarma': 'Alarma', 'Activo': 'Activos'})
-            rank['TOTAL'] = (rank.get('Luz',0) + rank.get('Gas',0) + rank.get('Fibra',0) + rank.get('Alarma',0)) - rank.get('Baja',0) - rank.get('Cancelado',0)
-            
-            col_finales = ['Luz', 'Gas', 'Fibra', 'Móvil', 'Alarma', 'Baja', 'Cancelado', 'Activos', 'TOTAL']
-            st.table(rank[[c for c in col_finales if c in rank.columns]].sort_values('TOTAL', ascending=False))
+            cols_finales = ['Luz', 'Gas', 'Fibra', 'Móvil', 'Alarma', 'REFERIDOS', 'Baja', 'Cancelado', 'TOTAL_SIN_MOVIL']
+            st.table(rank_display[[c for c in cols_finales if c in rank_display.columns]].sort_values('TOTAL_SIN_MOVIL', ascending=False))
 
-            st.info(random.choice([
-                "¡El éxito es la suma de pequeños esfuerzos repetidos día tras día!",
-                "¡A por todas, equipo! Cada venta cuenta.",
-                "¡La constancia es la clave del éxito!",
-                "¡No cuentes los días, haz que los días cuenten!"
-            ]))
+            st.success(f"💡 Recuerda: El objetivo de este mes es llegar a {objetivo_persona} ventas netas por persona.")
 
             st.markdown("---")
             m1, m2, m3, m4 = st.columns(4)
-            with m1:
-                v_e = rank['Luz'].sum() + rank['Gas'].sum() if 'Luz' in rank else 0
-                st.markdown(f'<div class="status-box" style="background:#161b22; padding:15px; border-radius:10px; border:1px solid #30363d; text-align:center;"><div style="color:#8b949e; font-size:0.8rem;">Energía</div><div style="color:white; font-size:1.8rem; font-weight:900;">{v_e}</div></div>', unsafe_allow_html=True)
-            with m2:
-                v_f = rank['Fibra'].sum() if 'Fibra' in rank else 0
-                st.markdown(f'<div class="status-box" style="background:#161b22; padding:15px; border-radius:10px; border:1px solid #30363d; text-align:center;"><div style="color:#8b949e; font-size:0.8rem;">Fibra</div><div style="color:white; font-size:1.8rem; font-weight:900;">{v_f}</div></div>', unsafe_allow_html=True)
-            with m3:
-                v_m = rank['Móvil'].sum() if 'Móvil' in rank else 0
-                st.markdown(f'<div class="status-box" style="background:#161b22; padding:15px; border-radius:10px; border:1px solid #30363d; text-align:center;"><div style="color:#8b949e; font-size:0.8rem;">Móvil</div><div style="color:white; font-size:1.8rem; font-weight:900;">{v_m}</div></div>', unsafe_allow_html=True)
-            with m4:
-                v_a = rank['Alarma'].sum() if 'Alarma' in rank else 0
-                st.markdown(f'<div class="status-box" style="background:#161b22; padding:15px; border-radius:10px; border:1px solid #30363d; text-align:center;"><div style="color:#8b949e; font-size:0.8rem;">Alarmas</div><div style="color:white; font-size:1.8rem; font-weight:900;">{v_a}</div></div>', unsafe_allow_html=True)
+            with m1: st.metric("Ventas Energía", int(rank_display['Luz'].sum() + rank_display['Gas'].sum()))
+            with m2: st.metric("Ventas Fibra", int(rank_display['Fibra'].sum()))
+            with m3: st.metric("Total Referidos", int(rank_display['REFERIDOS'].sum()))
+            with m4: st.metric("Ventas Netas Equipo", ventas_actuales_equipo)
 
+        # Gráficas (sin cambios)
         with t_ene:
             if not f_de.empty:
                 col_e1, col_e2 = st.columns(2)
-                with col_e1: st.plotly_chart(px.pie(f_de, names='Comercial', values='V_Luz', title="Luz"), use_container_width=True)
-                with col_e2: st.plotly_chart(px.bar(f_de.groupby('Comercial')[['V_Luz', 'V_Gas']].sum().reset_index(), x='Comercial', y=['V_Luz', 'V_Gas'], title="Energía"), use_container_width=True)
+                with col_e1: st.plotly_chart(px.pie(f_de, names='Comercial', values='V_Luz', title="Luz por Comercial"), use_container_width=True)
+                with col_e2: st.plotly_chart(px.bar(f_de.groupby('Comercial')[['V_Luz', 'V_Gas']].sum().reset_index(), x='Comercial', y=['V_Luz', 'V_Gas'], title="Energía Total"), use_container_width=True)
         with t_tel:
             if not f_dt.empty:
                 col_t1, col_t2 = st.columns(2)
-                with col_t1: st.plotly_chart(px.pie(f_dt, names='Comercial', values='V_Fibra', title="Fibra"), use_container_width=True)
-                with col_t2: st.plotly_chart(px.bar(f_dt.groupby('Comercial')[['V_Fibra', 'V_Móvil']].sum().reset_index(), x='Comercial', y=['V_Fibra', 'V_Móvil'], title="Telco"), use_container_width=True)
+                with col_t1: st.plotly_chart(px.pie(f_dt, names='Comercial', values='V_Fibra', title="Fibra por Comercial"), use_container_width=True)
+                with col_t2: st.plotly_chart(px.bar(f_dt.groupby('Comercial')[['V_Fibra', 'V_Móvil']].sum().reset_index(), x='Comercial', y=['V_Fibra', 'V_Móvil'], title="Telco Total"), use_container_width=True)
         with t_ala:
             if not f_da.empty:
                 col_a1, col_a2 = st.columns(2)
-                with col_a1: st.plotly_chart(px.pie(f_da, names='Comercial', values='V_Alarma', title="Alarmas"), use_container_width=True)
-                with col_a2: st.plotly_chart(px.bar(f_da.groupby('Comercial')['V_Alarma'].sum().reset_index(), x='V_Alarma', y='Comercial', orientation='h', title="Alarmas"), use_container_width=True)
+                with col_a1: st.plotly_chart(px.pie(f_da, names='Comercial', values='V_Alarma', title="Alarmas por Comercial"), use_container_width=True)
+                with col_a2: st.plotly_chart(px.bar(f_da.groupby('Comercial')['V_Alarma'].sum().reset_index(), x='V_Alarma', y='Comercial', orientation='h', title="Ranking Alarmas"), use_container_width=True)
 
     except Exception as e:
-        st.error(f"Error cargando el Dashboard: {e}")
-
-# --- REPOSITORIO ---
+        st.error(f"Error cargando el Dashboard: {e}")# --- REPOSITORIO ---
 elif menu == "📂 REPOSITORIO":
     import os  # Crucial para que funcionen las carpetas
     st.markdown('<div class="block-header">📂 REPOSITORIO DE DOCUMENTACIÓN</div>', unsafe_allow_html=True)
