@@ -769,12 +769,13 @@ elif menu == "📢 ANUNCIOS Y PLAN AMIGO":
                 st.error(f"Falta: {item['file']}")
 
 # --- DASHBOARD Y RANKING ---
-# --- LÓGICA DE DASHBOARD Y RANKING (CORREGIDA) ---
 elif menu == "📈 DASHBOARD Y RANKING":
-    st.balloons() # Globos al entrar
+    # --- PARCHE PARA EVITAR EL ERROR HF ---
+    hf, mf, pend, p_col = 0, 0, 0, "#d2ff00" 
+    
+    st.balloons() 
     st.markdown("<h1 style='color: #d2ff00;'>📈 Dashboard de Rendimiento - Abril</h1>", unsafe_allow_html=True)
     
-    # Nota de incentivo x2
     st.warning("🚀 **INCENTIVO ESPECIAL ABRIL:** Las ventas de **FIBRA** realizadas entre el **4 y el 14 de abril** computan doble (x2) para el ranking y objetivos.")
 
     try:
@@ -791,13 +792,12 @@ elif menu == "📈 DASHBOARD Y RANKING":
 
         df_abril['V_Fibra_Puntos'] = df_abril.apply(calcular_puntos_fibra, axis=1)
 
-        # Forzar aparición de DEBORAH con 0 si no tiene ventas
+        # Forzar aparición de DEBORAH
         comerciales_en_lista = [str(c).upper() for c in df_abril['Comercial'].unique()]
         if 'DEBORAH' not in comerciales_en_lista:
             nueva_fila = pd.DataFrame({'Comercial': ['DEBORAH'], 'V_Fibra': [0], 'V_Fibra_Puntos': [0], 'V_Luz_Gas': [0], 'V_Alarma': [0], 'Fecha': [pd.Timestamp(2024,4,1)]})
             df_abril = pd.concat([df_abril, nueva_fila], ignore_index=True)
 
-        # Agrupación para el Ranking
         ranking = df_abril.groupby('Comercial').agg({
             'V_Fibra_Puntos': 'sum',
             'V_Luz_Gas': 'sum',
@@ -807,10 +807,9 @@ elif menu == "📈 DASHBOARD Y RANKING":
         ranking['Total'] = ranking['V_Fibra_Puntos'] + ranking['V_Luz_Gas'] + ranking['V_Alarma']
         ranking = ranking.sort_values('Total', ascending=False)
 
-        # Métricas principales (Objetivo 20)
+        # Métricas Objetivo 20
         total_puntos_abril = ranking['Total'].sum()
-        objetivo_pax = 20
-        objetivo_total_servicio = objetivo_pax * len(ranking)
+        objetivo_total_servicio = 20 * len(ranking)
         faltan_total = max(0, objetivo_total_servicio - total_puntos_abril)
 
         m1, m2, m3 = st.columns(3)
@@ -820,12 +819,10 @@ elif menu == "📈 DASHBOARD Y RANKING":
 
         st.markdown("---")
 
-        # Visualización Ranking y Objetivos Individuales
         col_rank, col_det = st.columns([2, 1])
         with col_rank:
             st.subheader("🏆 Ranking de Puntos")
             fig_rank = px.bar(ranking, x='Total', y='Comercial', orientation='h', text_auto=True, color='Total', color_continuous_scale='Viridis')
-            fig_rank.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font_color="white")
             st.plotly_chart(fig_rank, use_container_width=True)
 
         with col_det:
@@ -835,43 +832,33 @@ elif menu == "📈 DASHBOARD Y RANKING":
                 color_txt = "#d2ff00" if faltan_ind == 0 else "#ff4b4b"
                 st.markdown(f"**{row['Comercial']}**: {int(row['Total'])} pts (Faltan: <span style='color:{color_txt}'>{int(faltan_ind)}</span>)", unsafe_allow_html=True)
 
-        # Las 3 pestañas solicitadas
+        # Las 3 pestañas
         st.markdown("---")
         t1, t2, t3 = st.tabs(["🌐 FIBRA", "⚡ LUZ Y GAS", "🚨 ALARMAS"])
 
         with t1:
-            st.markdown("### Ventas de Fibra (con x2 aplicado)")
             df_f = df_abril[df_abril['V_Fibra_Puntos'] > 0]
             if not df_f.empty:
                 c1, c2 = st.columns(2)
-                with c1:
-                    st.plotly_chart(px.bar(df_f, x="Comercial", y="V_Fibra_Puntos", color="Compañia", title="Puntos Fibra por Comercial"), use_container_width=True)
-                with c2:
-                    st.plotly_chart(px.pie(df_f, values="V_Fibra_Puntos", names="Compañia", title="Reparto por Compañía"), use_container_width=True)
+                with c1: st.plotly_chart(px.bar(df_f, x="Comercial", y="V_Fibra_Puntos", color="Compañia", title="Puntos Fibra"), use_container_width=True)
+                with c2: st.plotly_chart(px.pie(df_f, values="V_Fibra_Puntos", names="Compañia", title="Reparto Fibra"), use_container_width=True)
 
         with t2:
-            st.markdown("### Ventas de Luz y Gas")
             df_l = df_abril[df_abril['V_Luz_Gas'] > 0]
             if not df_l.empty:
                 c1, c2 = st.columns(2)
-                with c1:
-                    st.plotly_chart(px.bar(df_l, x="Comercial", y="V_Luz_Gas", color="Compañia", title="Ventas Luz/Gas por Comercial"), use_container_width=True)
-                with c2:
-                    st.plotly_chart(px.pie(df_l, values="V_Luz_Gas", names="Compañia", title="Reparto por Compañía"), use_container_width=True)
+                with c1: st.plotly_chart(px.bar(df_l, x="Comercial", y="V_Luz_Gas", color="Compañia", title="Ventas Luz/Gas"), use_container_width=True)
+                with c2: st.plotly_chart(px.pie(df_l, values="V_Luz_Gas", names="Compañia", title="Reparto Luz/Gas"), use_container_width=True)
 
         with t3:
-            st.markdown("### Ventas de Alarmas")
             df_a = df_abril[df_abril['V_Alarma'] > 0]
             if not df_a.empty:
                 c1, c2 = st.columns(2)
-                with c1:
-                    st.plotly_chart(px.bar(df_a, x="Comercial", y="V_Alarma", color="Compañia", title="Ventas Alarmas por Comercial"), use_container_width=True)
-                with c2:
-                    st.plotly_chart(px.pie(df_a, values="V_Alarma", names="Compañia", title="Reparto por Compañía"), use_container_width=True)
+                with c1: st.plotly_chart(px.bar(df_a, x="Comercial", y="V_Alarma", color="Compañia", title="Ventas Alarmas"), use_container_width=True)
+                with c2: st.plotly_chart(px.pie(df_a, values="V_Alarma", names="Compañia", title="Reparto Alarmas"), use_container_width=True)
 
     except Exception as e:
-        st.error(f"Error cargando el Dashboard: {e}")
-#-----REPOSITORIO----
+        st.error(f"Error: {e}")#-----REPOSITORIO----
 elif menu == "📂 REPOSITORIO":
     import os  # Crucial para que funcionen las carpetas
     st.markdown('<div class="block-header">📂 REPOSITORIO DE DOCUMENTACIÓN</div>', unsafe_allow_html=True)
