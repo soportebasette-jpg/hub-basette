@@ -770,10 +770,9 @@ elif menu == "📢 ANUNCIOS Y PLAN AMIGO":
 
 # --- DASHBOARD Y RANKING ---
 if menu == "📈 DASHBOARD Y RANKING":
-    st.balloons() # CAMBIO: Globos al entrar
+    st.balloons() 
     st.markdown("<h1 style='color: #d2ff00;'>📈 Dashboard de Rendimiento - Abril</h1>", unsafe_allow_html=True)
     
-    # NOTA DE INCENTIVO ABRIL
     st.warning("🚀 **INCENTIVO ESPECIAL ABRIL:** Las ventas de **FIBRA** realizadas entre el **4 y el 14 de abril** computan doble (x2) para el ranking y objetivos.")
 
     try:
@@ -829,39 +828,44 @@ if menu == "📈 DASHBOARD Y RANKING":
                 color_txt = "#d2ff00" if faltan_ind == 0 else "#ff4b4b"
                 st.markdown(f"**{row['Comercial']}**: {int(row['Total'])} pts (Faltan: <span style='color:{color_txt}'>{int(faltan_ind)}</span>)", unsafe_allow_html=True)
 
-        # 3 Pestañas de gráficos solicitadas
         st.markdown("---")
         tab1, tab2, tab3 = st.tabs(["🌐 FIBRA", "⚡ LUZ Y GAS", "🚨 ALARMAS"])
 
         with tab1:
             st.markdown("### Análisis Fibra (Incluye x2)")
-            c1, c2 = st.columns(2)
-            with c1:
-                fig_f1 = px.bar(df_abril[df_abril['V_Fibra_Puntos']>0], x="Comercial", y="V_Fibra_Puntos", color="Compañia", title="Puntos por Comercial")
-                st.plotly_chart(fig_f1, use_container_width=True)
-            with c2:
-                fig_f2 = px.pie(df_abril[df_abril['V_Fibra_Puntos']>0], values="V_Fibra_Puntos", names="Compañia", title="Ventas por Compañía")
-                st.plotly_chart(fig_f2, use_container_width=True)
+            df_f = df_abril[df_abril['V_Fibra_Puntos']>0]
+            if not df_f.empty:
+                c1, c2 = st.columns(2)
+                with c1:
+                    fig_f1 = px.bar(df_f, x="Comercial", y="V_Fibra_Puntos", color="Compañia", title="Puntos por Comercial")
+                    st.plotly_chart(fig_f1, use_container_width=True)
+                with c2:
+                    fig_f2 = px.pie(df_f, values="V_Fibra_Puntos", names="Compañia", title="Ventas por Compañía")
+                    st.plotly_chart(fig_f2, use_container_width=True)
 
         with tab2:
             st.markdown("### Análisis Luz y Gas")
-            c1, c2 = st.columns(2)
-            with c1:
-                fig_l1 = px.bar(df_abril[df_abril['V_Luz_Gas']>0], x="Comercial", y="V_Luz_Gas", color="Compañia", title="Ventas por Comercial")
-                st.plotly_chart(fig_l1, use_container_width=True)
-            with c2:
-                fig_l2 = px.pie(df_abril[df_abril['V_Luz_Gas']>0], values="V_Luz_Gas", names="Compañia", title="Ventas por Compañía")
-                st.plotly_chart(fig_l2, use_container_width=True)
+            df_l = df_abril[df_abril['V_Luz_Gas']>0]
+            if not df_l.empty:
+                c1, c2 = st.columns(2)
+                with c1:
+                    fig_l1 = px.bar(df_l, x="Comercial", y="V_Luz_Gas", color="Compañia", title="Ventas por Comercial")
+                    st.plotly_chart(fig_l1, use_container_width=True)
+                with c2:
+                    fig_l2 = px.pie(df_l, values="V_Luz_Gas", names="Compañia", title="Ventas por Compañía")
+                    st.plotly_chart(fig_l2, use_container_width=True)
 
         with tab3:
             st.markdown("### Análisis Alarmas")
-            c1, c2 = st.columns(2)
-            with c1:
-                fig_a1 = px.bar(df_abril[df_abril['V_Alarma']>0], x="Comercial", y="V_Alarma", color="Compañia", title="Ventas por Comercial")
-                st.plotly_chart(fig_a1, use_container_width=True)
-            with c2:
-                fig_a2 = px.pie(df_abril[df_abril['V_Alarma']>0], values="V_Alarma", names="Compañia", title="Ventas por Compañía")
-                st.plotly_chart(fig_a2, use_container_width=True)
+            df_a = df_abril[df_abril['V_Alarma']>0]
+            if not df_a.empty:
+                c1, c2 = st.columns(2)
+                with c1:
+                    fig_a1 = px.bar(df_a, x="Comercial", y="V_Alarma", color="Compañia", title="Ventas por Comercial")
+                    st.plotly_chart(fig_a1, use_container_width=True)
+                with c2:
+                    fig_a2 = px.pie(df_a, values="V_Alarma", names="Compañia", title="Ventas por Compañía")
+                    st.plotly_chart(fig_a2, use_container_width=True)
 
     except Exception as e:
         st.error(f"Error: {e}")
