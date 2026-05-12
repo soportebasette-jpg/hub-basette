@@ -769,10 +769,12 @@ elif menu == "📢 ANUNCIOS Y PLAN AMIGO":
                 st.error(f"Falta: {item['file']}")
 
 # --- DASHBOARD Y RANKING ---
-if menu == "📈 DASHBOARD Y RANKING":
-    st.balloons() 
+# --- LÓGICA DE DASHBOARD Y RANKING (CORREGIDA) ---
+elif menu == "📈 DASHBOARD Y RANKING":
+    st.balloons() # Globos al entrar
     st.markdown("<h1 style='color: #d2ff00;'>📈 Dashboard de Rendimiento - Abril</h1>", unsafe_allow_html=True)
     
+    # Nota de incentivo x2
     st.warning("🚀 **INCENTIVO ESPECIAL ABRIL:** Las ventas de **FIBRA** realizadas entre el **4 y el 14 de abril** computan doble (x2) para el ranking y objetivos.")
 
     try:
@@ -781,19 +783,21 @@ if menu == "📈 DASHBOARD Y RANKING":
         dfv['Fecha'] = pd.to_datetime(dfv['Fecha'], dayfirst=True, errors='coerce')
         df_abril = dfv[dfv['Fecha'].dt.month == 4].copy()
 
-        # Regla x2 Fibra
+        # Cálculo de puntos x2 para Fibra
         def calcular_puntos_fibra(row):
-            if row['Fecha'].day >= 4 and row['Fecha'].day <= 14:
+            if pd.notnull(row['Fecha']) and row['Fecha'].day >= 4 and row['Fecha'].day <= 14:
                 return row['V_Fibra'] * 2
             return row['V_Fibra']
 
         df_abril['V_Fibra_Puntos'] = df_abril.apply(calcular_puntos_fibra, axis=1)
 
-        # Forzar aparición de DEBORAH
-        if 'DEBORAH' not in [str(c).upper() for c in df_abril['Comercial'].unique()]:
+        # Forzar aparición de DEBORAH con 0 si no tiene ventas
+        comerciales_en_lista = [str(c).upper() for c in df_abril['Comercial'].unique()]
+        if 'DEBORAH' not in comerciales_en_lista:
             nueva_fila = pd.DataFrame({'Comercial': ['DEBORAH'], 'V_Fibra': [0], 'V_Fibra_Puntos': [0], 'V_Luz_Gas': [0], 'V_Alarma': [0], 'Fecha': [pd.Timestamp(2024,4,1)]})
             df_abril = pd.concat([df_abril, nueva_fila], ignore_index=True)
 
+        # Agrupación para el Ranking
         ranking = df_abril.groupby('Comercial').agg({
             'V_Fibra_Puntos': 'sum',
             'V_Luz_Gas': 'sum',
@@ -803,22 +807,25 @@ if menu == "📈 DASHBOARD Y RANKING":
         ranking['Total'] = ranking['V_Fibra_Puntos'] + ranking['V_Luz_Gas'] + ranking['V_Alarma']
         ranking = ranking.sort_values('Total', ascending=False)
 
-        # Métricas Objetivo 20
-        total_puntos = ranking['Total'].sum()
-        objetivo_servicio = 20 * len(ranking)
-        faltan_servicio = max(0, objetivo_servicio - total_puntos)
+        # Métricas principales (Objetivo 20)
+        total_puntos_abril = ranking['Total'].sum()
+        objetivo_pax = 20
+        objetivo_total_servicio = objetivo_pax * len(ranking)
+        faltan_total = max(0, objetivo_total_servicio - total_puntos_abril)
 
         m1, m2, m3 = st.columns(3)
-        m1.metric("Puntos Totales Abril", int(total_puntos))
-        m2.metric("Objetivo Servicio (20/com)", objetivo_servicio)
-        m3.metric("Faltan para Objetivo", int(faltan_servicio))
+        m1.metric("Puntos Totales Abril", int(total_puntos_abril))
+        m2.metric("Objetivo Servicio (20/com)", objetivo_total_servicio)
+        m3.metric("Faltan para Objetivo", int(faltan_total))
 
         st.markdown("---")
 
+        # Visualización Ranking y Objetivos Individuales
         col_rank, col_det = st.columns([2, 1])
         with col_rank:
             st.subheader("🏆 Ranking de Puntos")
             fig_rank = px.bar(ranking, x='Total', y='Comercial', orientation='h', text_auto=True, color='Total', color_continuous_scale='Viridis')
+            fig_rank.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font_color="white")
             st.plotly_chart(fig_rank, use_container_width=True)
 
         with col_det:
@@ -828,48 +835,42 @@ if menu == "📈 DASHBOARD Y RANKING":
                 color_txt = "#d2ff00" if faltan_ind == 0 else "#ff4b4b"
                 st.markdown(f"**{row['Comercial']}**: {int(row['Total'])} pts (Faltan: <span style='color:{color_txt}'>{int(faltan_ind)}</span>)", unsafe_allow_html=True)
 
+        # Las 3 pestañas solicitadas
         st.markdown("---")
-        tab1, tab2, tab3 = st.tabs(["🌐 FIBRA", "⚡ LUZ Y GAS", "🚨 ALARMAS"])
+        t1, t2, t3 = st.tabs(["🌐 FIBRA", "⚡ LUZ Y GAS", "🚨 ALARMAS"])
 
-        with tab1:
-            st.markdown("### Análisis Fibra (Incluye x2)")
-            df_f = df_abril[df_abril['V_Fibra_Puntos']>0]
+        with t1:
+            st.markdown("### Ventas de Fibra (con x2 aplicado)")
+            df_f = df_abril[df_abril['V_Fibra_Puntos'] > 0]
             if not df_f.empty:
                 c1, c2 = st.columns(2)
                 with c1:
-                    fig_f1 = px.bar(df_f, x="Comercial", y="V_Fibra_Puntos", color="Compañia", title="Puntos por Comercial")
-                    st.plotly_chart(fig_f1, use_container_width=True)
+                    st.plotly_chart(px.bar(df_f, x="Comercial", y="V_Fibra_Puntos", color="Compañia", title="Puntos Fibra por Comercial"), use_container_width=True)
                 with c2:
-                    fig_f2 = px.pie(df_f, values="V_Fibra_Puntos", names="Compañia", title="Ventas por Compañía")
-                    st.plotly_chart(fig_f2, use_container_width=True)
+                    st.plotly_chart(px.pie(df_f, values="V_Fibra_Puntos", names="Compañia", title="Reparto por Compañía"), use_container_width=True)
 
-        with tab2:
-            st.markdown("### Análisis Luz y Gas")
-            df_l = df_abril[df_abril['V_Luz_Gas']>0]
+        with t2:
+            st.markdown("### Ventas de Luz y Gas")
+            df_l = df_abril[df_abril['V_Luz_Gas'] > 0]
             if not df_l.empty:
                 c1, c2 = st.columns(2)
                 with c1:
-                    fig_l1 = px.bar(df_l, x="Comercial", y="V_Luz_Gas", color="Compañia", title="Ventas por Comercial")
-                    st.plotly_chart(fig_l1, use_container_width=True)
+                    st.plotly_chart(px.bar(df_l, x="Comercial", y="V_Luz_Gas", color="Compañia", title="Ventas Luz/Gas por Comercial"), use_container_width=True)
                 with c2:
-                    fig_l2 = px.pie(df_l, values="V_Luz_Gas", names="Compañia", title="Ventas por Compañía")
-                    st.plotly_chart(fig_l2, use_container_width=True)
+                    st.plotly_chart(px.pie(df_l, values="V_Luz_Gas", names="Compañia", title="Reparto por Compañía"), use_container_width=True)
 
-        with tab3:
-            st.markdown("### Análisis Alarmas")
-            df_a = df_abril[df_abril['V_Alarma']>0]
+        with t3:
+            st.markdown("### Ventas de Alarmas")
+            df_a = df_abril[df_abril['V_Alarma'] > 0]
             if not df_a.empty:
                 c1, c2 = st.columns(2)
                 with c1:
-                    fig_a1 = px.bar(df_a, x="Comercial", y="V_Alarma", color="Compañia", title="Ventas por Comercial")
-                    st.plotly_chart(fig_a1, use_container_width=True)
+                    st.plotly_chart(px.bar(df_a, x="Comercial", y="V_Alarma", color="Compañia", title="Ventas Alarmas por Comercial"), use_container_width=True)
                 with c2:
-                    fig_a2 = px.pie(df_a, values="V_Alarma", names="Compañia", title="Ventas por Compañía")
-                    st.plotly_chart(fig_a2, use_container_width=True)
+                    st.plotly_chart(px.pie(df_a, values="V_Alarma", names="Compañia", title="Reparto por Compañía"), use_container_width=True)
 
     except Exception as e:
-        st.error(f"Error: {e}")
-
+        st.error(f"Error cargando el Dashboard: {e}")
 #-----REPOSITORIO----
 elif menu == "📂 REPOSITORIO":
     import os  # Crucial para que funcionen las carpetas
