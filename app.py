@@ -215,7 +215,7 @@ if menu == "🚀 CRM":
     with col_t_der:
         st.markdown(f"""
             <div class="social-container">
-                <a href="https://www.facebook.com/share/1CqrZ4hGYp/?mibextid=wwXIfr" target="_blank">
+                <a href="https://www.facebook.com/profile.php?id=61589358886498" target="_blank">
                     <img src="https://cdn-icons-png.flaticon.com/512/733/733547.png" width="35" class="social-icon">
                 </a>
                 <a href="https://x.com/tecomparotodo" target="_blank">
