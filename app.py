@@ -218,7 +218,7 @@ if menu == "🚀 CRM":
                 <a href="https://www.facebook.com/share/1CqrZ4hGYp/?mibextid=wwXIfr" target="_blank">
                     <img src="https://cdn-icons-png.flaticon.com/512/733/733547.png" width="35" class="social-icon">
                 </a>
-                <a href="https://x.com/tecomparotodoes?s=21" target="_blank">
+                <a href="https://x.com/tecomparotodo" target="_blank">
                     <img src="https://cdn-icons-png.flaticon.com/512/733/733579.png" width="35" class="social-icon">
                 </a>
                 <a href="https://www.instagram.com/tecomparotodoes?igsh=MXRkcTV2anJ6NmJkcA%3D%3D&utm_source=qr" target="_blank">
