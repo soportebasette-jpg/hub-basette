@@ -921,7 +921,7 @@ elif menu == "📂 REPOSITORIO":
     import os  # Crucial para que funcionen las carpetas
     st.markdown('<div class="block-header">📂 REPOSITORIO DE DOCUMENTACIÓN</div>', unsafe_allow_html=True)
 
-    # Función Maestra: Escanea la carpeta y genera botones para CADA archivo
+    # Función Maestra: Escanea la carpeta y genera botones para CADA archivo válido
     def mostrar_contenido_carpeta(nombre_carpeta, titulo_visible, icono="📁"):
         # Construimos la ruta buscando exactamente como se llaman tus carpetas
         ruta_especifica = os.path.join("manuales", nombre_carpeta)
@@ -938,8 +938,16 @@ elif menu == "📂 REPOSITORIO":
                             with open(ruta_archivo, "rb") as f:
                                 contenido = f.read()
                                 ext = filename.split('.')[-1].lower()
-                                # MIME type para que el navegador sepa qué es
-                                m_type = "application/pdf" if ext == "pdf" else f"image/{ext}"
+                                
+                                # Filtrar y asignar el MIME type adecuado para los formatos solicitados
+                                if ext == "pdf":
+                                    m_type = "application/pdf"
+                                elif ext == "docx":
+                                    m_type = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                                elif ext in ["jpg", "jpeg", "png"]:
+                                    m_type = f"image/{ext}"
+                                else:
+                                    m_type = "application/octet-stream"  # Tipo genérico por si hay algún otro archivo
                                 
                                 st.download_button(
                                     label=f"📄 Ver/Descargar: {filename}",
@@ -972,9 +980,10 @@ elif menu == "📂 REPOSITORIO":
         mostrar_contenido_carpeta("TARIFAS NATURGY", "TARIFAS NATURGY", "⚡")
         mostrar_contenido_carpeta("TARIFAS TOTAL", "TARIFAS TOTAL ENERGIES", "⚡")
         mostrar_contenido_carpeta("TARIFAS GANA", "TARIFAS GANA ENERGÍA", "⚡")
+        # Nueva carpeta añadida manteniendo el formato y los iconos correspondientes
+        mostrar_contenido_carpeta("TARIFAS 3D", "TARIFAS 3D", "⚡")
 
     st.markdown("---")
-
 # --- CONTROL LABORAL ---
 elif menu == "🕒 CONTROL LABORAL":
     import pandas as pd
