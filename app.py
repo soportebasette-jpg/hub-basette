@@ -242,7 +242,16 @@ if menu == "🚀 CRM":
     st.link_button(f"ENTRAR AL MARCADOR", "https://grupobasette.vozipcenter.com/", use_container_width=True)
     
     st.markdown('<div class="block-header">💡 🔥 ENERGÍA</div>', unsafe_allow_html=True)
-    energia = [{"n": "CRM BASETTE", "u": "https://crm.grupobasette.eu/login"}, {"n": "GANA ENERGÍA", "u": "https://colaboradores.ganaenergia.com/"}, {"n": "NATURGY", "u": "https://checkout.naturgy.es/backoffice"}, {"n": "GAS TOTAL", "u": "https://totalenergiesespana.my.site.com/portalcolaboradores/s/login/?ec=302&startURL=%2Fportalcolaboradores%2Fs%2F"}, {"n": "LUZ TOTAL", "u": "https://agentes.totalenergies.es/#/resumen"}, {"n": "IBERDROLA", "u": "https://crm.gesventas.eu/login.php"}, {"n": "NIBA", "u": "https://clientes.niba.es/"}, {"n": "ENDESA", "u": "https://inergia.app"}]
+    # Lista modificada: Se unificaron los portales de total en uno solo llamado "TOTAL ENERGY"
+    energia = [
+        {"n": "CRM BASETTE", "u": "https://crm.grupobasette.eu/login"}, 
+        {"n": "GANA ENERGÍA", "u": "https://colaboradores.ganaenergia.com/"}, 
+        {"n": "NATURGY", "u": "https://checkout.naturgy.es/backoffice"}, 
+        {"n": "TOTAL ENERGY", "u": "https://totalenergiesespana.my.site.com/portalcolaboradores/s/login/?ec=302&startURL=%2Fportalcolaboradores%2Fs%2F"}, 
+        {"n": "IBERDROLA", "u": "https://crm.gesventas.eu/login.php"}, 
+        {"n": "NIBA", "u": "https://clientes.niba.es/"}, 
+        {"n": "ENDESA", "u": "https://inergia.app"}
+    ]
     cols_en = st.columns(3)
     for i, p in enumerate(energia):
         with cols_en[i % 3]:
@@ -253,8 +262,15 @@ if menu == "🚀 CRM":
     col_izq, col_der = st.columns(2)
     with col_izq:
         st.markdown('<div class="block-header">🛡️ 🚨 ALARMAS</div>', unsafe_allow_html=True)
-        st.markdown('<div style="background:#161b22; padding:15px; border-radius:10px; border:1px solid #30363d; text-align:center; margin-bottom:10px;"><h4 style="color:white; margin:0;">SEGURMA</h4></div>', unsafe_allow_html=True)
-        st.link_button("ENTRAR", "https://crm.segurma.com/web#action=619&cids=1&menu_id=200&model=sale.order&view_type=list", use_container_width=True)
+        # Distribución en 2 columnas dentro de Alarmas para añadir el nuevo portal 3D
+        c_al1, c_al2 = st.columns(2)
+        with c_al1:
+            st.markdown('<div style="background:#161b22; padding:15px; border-radius:10px; border:1px solid #30363d; text-align:center; margin-bottom:10px;"><h4 style="color:white; margin:0;">SEGURMA</h4></div>', unsafe_allow_html=True)
+            st.link_button("ENTRAR", "https://crm.segurma.com/web#action=619&cids=1&menu_id=200&model=sale.order&view_type=list", use_container_width=True)
+        with c_al2:
+            st.markdown('<div style="background:#161b22; padding:15px; border-radius:10px; border:1px solid #30363d; text-align:center; margin-bottom:10px;"><h4 style="color:white; margin:0;">3D</h4></div>', unsafe_allow_html=True)
+            st.link_button("ENTRAR", "https://www.3dseguridad.es/reportes/menu.php", use_container_width=True)
+            
     with col_der:
         st.markdown('<div class="block-header">📶 📱 TELECOMUNICACIONES</div>', unsafe_allow_html=True)
         c_t1, c_t2 = st.columns(2)
@@ -263,7 +279,9 @@ if menu == "🚀 CRM":
             st.link_button("ENTRAR O2", "https://o2online.es/auth/login/?next=%2Fventas%2F&type=retail", use_container_width=True)
         with c_t2:
             st.markdown('<div style="background:#161b22; padding:15px; border-radius:10px; border:1px solid #30363d; text-align:center; margin-bottom:10px;"><h4 style="color:white; margin:0;">LOWI</h4></div>', unsafe_allow_html=True)
-            st.link_button("ENTRAR LOWI", "https://vodafone.topgestion.es/login", use_container_width=True)# --- PRECIOS ---
+            st.link_button("ENTRAR LOWI", "https://vodafone.topgestion.es/login", use_container_width=True)
+
+# --- PRECIOS ---
 elif menu == "📊 PRECIOS":
     st.header("Tarifario Oficial")
     t1, t2, t3 = st.tabs(["⚡ LUZ", "🔥 GAS", "📶 O2 / FIBRA"])
@@ -317,9 +335,7 @@ elif menu == "📊 PRECIOS":
         lineas_ad_tv = [("40 GB", "5€"), ("150 GB", "10€"), ("300 GB", "15€")]
         for i, (gb, pre) in enumerate(lineas_ad_tv):
             with ad_tv_cols[i]:
-                st.markdown(f'<div class="price-card"><div class="price-title">ADICIONAL {gb}</div><div class="price-val">{pre}</div><div class="price-sub">Precio / Mes</div></div>', unsafe_allow_html=True)
-
-# --- COMPARADOR LUZ ---
+                st.markdown(f'<div class="price-card"><div class="price-title">ADICIONAL {gb}</div><div class="price-val">{pre}</div><div class="price-sub">Precio / Mes</div></div>', unsafe_allow_html=True)# --- COMPARADOR LUZ ---
 elif menu == "⚖️ COMPARADOR LUZ":
     st.header("Estudio de Ahorro Personalizado")
     
