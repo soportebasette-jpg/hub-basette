@@ -649,110 +649,77 @@ elif menu == "📂 REPOSITORIO":
         mostrar_contenido_carpeta("TARIFAS 3D", "TARIFAS 3D", "⚡")
 
     st.markdown("---")
-# --- CONTROL LABORAL ---
-elif menu == "🕒 CONTROL LABORAL":
-    import pandas as pd
-    import calendar
-    from datetime import datetime, time, date
-    st.markdown('<div class="block-header">🕒 CONTROL LABORAL Y ASISTENCIA</div>', unsafe_allow_html=True)
-    
+# --- DASHBOARD Y RANKING ---
+elif menu == "📈 DASHBOARD Y RANKING":
     try:
-        # 1. CARGA Y LIMPIEZA
-        sheet_id = "175LGa4j6dAhsjQ7Wiy-8tZnKWuDC9_C9uy6SYC-i-LY"
-        url_csv = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv"
-        df_laboral = pd.read_csv(url_csv)
-        df_laboral.columns = [str(c).strip().upper() for c in df_laboral.columns]
-        
-        col_comercial = "COMERCIAL"
-        col_temporal = next((c for c in df_laboral.columns if "TEMPORAL" in c), None)
-        col_accion = next((c for c in df_laboral.columns if "HACER" in c), None)
-        df_laboral[col_temporal] = pd.to_datetime(df_laboral[col_temporal], dayfirst=True, errors='coerce')
-        df_laboral = df_laboral.dropna(subset=[col_temporal])
-        
-        # 2. CONFIGURACIÓN DE DÍAS ESPECIALES
-        festivos = ['2026-04-02', '2026-04-03', '2026-04-22', '2026-05-01']
-        vacaciones_raquel = [d.strftime('%Y-%m-%d') for d in pd.date_range('2026-06-22', '2026-06-28')]
-        libre_lorena_obj = ['2026-04-17']
-        # NUEVA JUSTIFICACIÓN: Hospitalización familiar
-        hosp_lorena = [d.strftime('%Y-%m-%d') for d in pd.date_range('2026-05-27', '2026-06-03')]
+        # 1. LANZAR GLOBOS AL ABRIR
+        st.balloons()
 
-        # --- CALENDARIO ANUAL ---
-        with st.expander("📅 PLANIFICACIÓN ANUAL"):
-            col_cal1, col_cal2 = st.columns(2)
-            for i, m in enumerate([4, 6]):
-                with [col_cal1, col_cal2][i]:
-                    st.write(f"**{calendar.month_name[m]} 2026**")
-                    for week in calendar.monthcalendar(2026, m):
-                        cols = st.columns(7)
-                        for idx, day in enumerate(week):
-                            if day != 0:
-                                f_str = f"2026-{m:02d}-{day:02d}"
-                                bg, txt_c, etiq = "transparent", "white", ""
-                                if f_str in festivos: bg, etiq = "#ff4b4b", "FESTIVO"
-                                elif f_str in vacaciones_raquel: bg, txt_c, etiq = "#d2ff00", "black", "VACAS RAQUEL"
-                                elif f_str in libre_lorena_obj: bg, txt_c, etiq = "#00f0ff", "black", "OBJ. LORENA"
-                                elif f_str in hosp_lorena: bg, txt_c, etiq = "#ffcc00", "black", "HOSP. FAM."
-                                cols[idx].markdown(f'<div style="background:{bg}; color:{txt_c}; text-align:center; border-radius:5px; padding:2px; min-height:45px; border:1px solid #30363d;"><div style="font-size:0.9rem;">{day}</div><div style="font-size:0.5rem; font-weight:bold;">{etiq}</div></div>', unsafe_allow_html=True)
+        # 2. CARGA DE DATOS DESDE GOOGLE SHEETS (ROBUSTA)
+        def load_and_clean_ranking():
+            urls = {
+                "de": "https://docs.google.com/spreadsheets/d/1W-Eq63SnBBlOykJlP9XgASXDPpWQhQnVW-oFHUlSMcQ/export?format=csv",
+                "dt": "https://docs.google.com/spreadsheets/d/1HkI37_hUTZbsm_DwLjbi2kMTKcC23QsV/export?format=csv",
+                "da": "https://docs.google.com/spreadsheets/d/17o4HSJ4DZBwMgp9AAiGhkd8NQCZEaaQ_/export?format=csv"
+            }
+            dfs = []
+            for url in urls.values():
+                try:
+                    df = pd.read_csv(url)
+                    df.columns = [c.strip() for c in df.columns] # Limpiar espacios
+                    # Normalizar nombres básicos
+                    mapeo = {c: 'Mes' for c in df.columns if 'mes' in c.lower()}
+                    mapeo.update({c: 'Comercial' for c in df.columns if 'comercial' in c.lower()})
+                    df = df.rename(columns=mapeo)
+                    dfs.append(df)
+                except:
+                    dfs.append(pd.DataFrame())
+            return dfs[0], dfs[1], dfs[2]
 
-        st.markdown("---")
-        com_sel = st.selectbox("👤 Selecciona Comercial", sorted(df_laboral[col_comercial].unique()))
+        de, dt, da = load_and_clean_ranking()
 
-        # 3. LÓGICA DE CÁLCULO
-        def calcular_auditoria_v12(df, nombre):
-            datos = df[df[col_comercial] == nombre].copy()
-            min_ret, dias_deuda, dias_rojos, min_medicos, min_objetivos, lista_justificantes = 0, [], [], 0, 0, []
-            hoy = datetime.now().date()
-            inicio = datos[col_temporal].min().date()
-            
-            for dia in pd.date_range(inicio, hoy):
-                d_str = dia.strftime('%Y-%m-%d')
-                if dia.weekday() >= 5 or d_str in festivos: continue 
-                if "RAQUEL" in nombre.upper() and d_str in vacaciones_raquel: continue
-                
-                # Gestión Lorena
-                if "LORENA" in nombre.upper():
-                    if d_str in libre_lorena_obj:
-                        min_objetivos += 300
-                        continue
-                    if d_str in hosp_lorena:
-                        lista_justificantes.append({"fecha": d_str, "motivo": "HOSPITALIZACIÓN FAMILIAR", "horas": "Jornada completa"})
-                        continue
+        # 3. FILTROS Y VIDEO
+        c1, c2 = st.columns([2, 1])
+        with c1:
+            meses_disp = sorted(list(set(de.get('Mes', [])) | set(dt.get('Mes', [])) | set(da.get('Mes', []))))
+            f_mes = st.multiselect("Mes:", meses_disp, default=[meses_disp[-1]] if meses_disp else [])
+            coms_disp = sorted(list(set(de.get('Comercial', [])) | set(dt.get('Comercial', [])) | set(da.get('Comercial', []))))
+            f_coms = st.multiselect("Comerciales:", coms_disp, default=coms_disp)
+        with c2:
+            if os.path.exists("WhatsApp Video 2026-04-28 at 00.31.03.mp4"):
+                st.video("WhatsApp Video 2026-04-28 at 00.31.03.mp4")
 
-                h_lim_e = time(9, 30)
-                dia_data = datos[datos[col_temporal].dt.date == dia.date()]
-                
-                if dia_data.empty:
-                    dias_deuda.append(dia.strftime('%d/%m/%Y'))
-                else:
-                    entradas = dia_data[dia_data[col_accion].astype(str).str.contains("ENTRADA", case=False, na=False)]
-                    if entradas.empty:
-                        dias_deuda.append(dia.strftime('%d/%m/%Y'))
-                    else:
-                        h_real = entradas[col_temporal].min().time()
-                        if h_real > h_lim_e:
-                            min_ret += (datetime.combine(dia, h_real) - datetime.combine(dia, h_lim_e)).total_seconds() / 60
-                            dias_rojos.append(dia.date())
-            return int(min_ret), dias_deuda, dias_rojos, min_medicos, min_objetivos, lista_justificantes
+        # 4. CÁLCULO SEGURO DEL RANKING
+        def get_group(df):
+            if 'Mes' not in df.columns or 'Comercial' not in df.columns: return pd.DataFrame()
+            f = df[(df['Mes'].isin(f_mes)) & (df['Comercial'].isin(f_coms))]
+            return f.groupby('Comercial').sum(numeric_only=True)
 
-        m_ret, l_deuda, d_rojos, m_med, m_obj, justificantes = calcular_auditoria_v12(df_laboral, com_sel)
-        
-        # 4. RESUMEN VISUAL
-        bruto = m_ret + (len(l_deuda) * 300)
-        recup_base = bruto if "LORENA" in com_sel.upper() or any(x in com_sel.upper() for x in ["BELEN", "DEBORAH"]) else 0
-        pend = max(0, bruto - recup_base)
+        r1, r2, r3 = get_group(de), get_group(dt), get_group(da)
+        rank = pd.concat([r1, r2, r3], axis=1).fillna(0)
+        rank['Total Neto'] = rank.sum(axis=1)
 
-        st.markdown(f"### 📊 Resumen Auditoría: {com_sel}")
-        c1, c2, c3, c6 = st.columns([1,1,1,1])
-        c1.metric("Retrasos (min)", m_ret)
-        c2.metric("Deuda (días)", len(l_deuda))
-        c3.metric("Recuperado", f"{recup_base} min")
-        c6.metric("PENDIENTE", f"{pend} min", delta_color="inverse")
+        # 5. RESULTADO VISUAL
+        if not rank.empty:
+            top = rank.sort_values('Total Neto', ascending=False).iloc[0]
+            st.markdown(f"""
+                <div style="border: 3px solid #d2ff00; padding: 20px; border-radius: 15px; text-align: center; margin: 20px 0;">
+                    <h3 style="color: #d2ff00; margin: 0;">🏆 Nº1 VENTAS NETAS</h3>
+                    <h2 style="color: white; margin: 0;">{str(top.name).upper()} ({int(top['Total Neto'])})</h2>
+                </div>
+            """, unsafe_allow_html=True)
+            st.dataframe(rank.style.background_gradient(subset=['Total Neto'], cmap='Greens'), use_container_width=True)
+        else:
+            st.info("Selecciona filtros para ver el ranking.")
 
-        # 5. DETALLE JUSTIFICANTES
-        if justificantes:
-            st.markdown("#### 📑 DETALLE DE AUSENCIAS JUSTIFICADAS")
-            for j in justificantes:
-                st.warning(f"**Fecha:** {j['fecha']} | **Motivo:** {j['motivo']} | **Estado:** {j['horas']}")
+        # 6. CUADROS DE DESGLOSE (CANCELACIONES/BAJAS)
+        st.markdown("### 📊 DESGLOSE DE CANCELACIONES Y BAJAS")
+        cx1, cx2, cx3, cx4 = st.columns(4)
+        box = "background:#161b22; border:1px solid #ff4b4b; padding:10px; border-radius:10px; text-align:center;"
+        cx1.markdown(f'<div style="{box}"><p style="font-size:0.7rem;">CANCEL. ENERGÍA</p><h3>{int(rank.filter(like="Cancel_E").sum().sum())}</h3></div>', unsafe_allow_html=True)
+        cx2.markdown(f'<div style="{box}"><p style="font-size:0.7rem;">CANCEL. FIBRA</p><h3>{int(rank.filter(like="Cancel_F").sum().sum())}</h3></div>', unsafe_allow_html=True)
+        cx3.markdown(f'<div style="{box}"><p style="font-size:0.7rem;">BAJAS ENERGÍA</p><h3>{int(rank.filter(like="Baja_E").sum().sum())}</h3></div>', unsafe_allow_html=True)
+        cx4.markdown(f'<div style="{box}"><p style="font-size:0.7rem;">BAJAS FIBRA</p><h3>{int(rank.filter(like="Baja_F").sum().sum())}</h3></div>', unsafe_allow_html=True)
 
     except Exception as e:
-        st.error(f"Error procesando control laboral: {e}")
+        st.error(f"Error procesando datos: {e}")
