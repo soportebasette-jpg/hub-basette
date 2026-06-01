@@ -507,79 +507,89 @@ elif menu == "📢 ANUNCIOS Y PLAN AMIGO":
 # --- DASHBOARD Y RANKING ---
 elif menu == "📈 DASHBOARD Y RANKING":
     try:
-        # 1. LANZAR GLOBOS AL CARGAR
+        # 1. FUNCIÓN DE CARGA DE DATOS (PROTEGIDA)
+        def load_and_clean_ranking():
+            # Intentamos leer los archivos, si no existen creamos un DataFrame vacío
+            archivos = {"de": "data_energia.csv", "dt": "data_telecom.csv", "da": "data_alarma.csv"}
+            dfs = []
+            for nombre in archivos.values():
+                if os.path.exists(nombre):
+                    df = pd.read_csv(nombre)
+                    df.columns = df.columns.str.strip() # Limpiar espacios en nombres de columnas
+                    dfs.append(df)
+                else:
+                    dfs.append(pd.DataFrame())
+            return dfs[0], dfs[1], dfs[2]
+
+        # 2. LANZAR GLOBOS AL CARGAR
         st.balloons()
 
-        # 2. FRASES MOTIVADORAS DIARIAS
-        frases = {1: "¡Hoy es un gran día para romper récords!", 2: "Tu esfuerzo de hoy es el éxito de mañana.", 3: "No te detengas hasta sentirte orgulloso.", 4: "La disciplina es el puente entre metas y logros.", 5: "Cada venta cuenta, ¡vamos a por ello!", 6: "El éxito no es el final, es el camino.", 7: "¡Vamos a por todas en este nuevo día!", 8: "La clave del éxito es la constancia.", 9: "Hoy vas a superar tus propios límites.", 10: "Tu actitud determina tu altitud."}
-        frase_dia = frases.get(datetime.now().day % 10 + 1, "¡A por el objetivo de hoy!")
+        # 3. FRASES MOTIVADORAS DIARIAS
+        frases = {
+            1: "¡Hoy es un gran día para romper récords!", 2: "Tu esfuerzo de hoy es el éxito de mañana.", 
+            3: "No te detengas hasta sentirte orgulloso.", 4: "La disciplina es el puente entre metas y logros.", 
+            5: "Cada venta cuenta, ¡vamos a por ello!", 6: "El éxito no es el final, es el camino.", 
+            7: "¡Vamos a por todas en este nuevo día!", 8: "La clave del éxito es la constancia.", 
+            9: "Hoy vas a superar tus propios límites.", 10: "Tu actitud determina tu altitud."
+        }
+        st.markdown(f'<h1 style="text-align:center; color:#d2ff00;">{frases.get(datetime.now().day % 10 + 1, "¡A por el objetivo de hoy!")}</h1>', unsafe_allow_html=True)
 
-        # 3. CARGA DE DATOS
+        # 4. CARGA Y FILTROS
         de, dt, da = load_and_clean_ranking()
 
-        # 4. FILTROS Y VIDEO
-        c_filtros, c_video = st.columns([2, 1])
-        with c_filtros:
-            st.markdown('<p style="color:#d2ff00; font-weight:bold; margin-bottom:0;">📅 FILTROS</p>', unsafe_allow_html=True)
-            meses_disp = sorted(list(set(de['Mes']) | set(dt['Mes']) | set(da['Mes']))) if 'Mes' in de.columns else []
-            f_mes = st.multiselect("Mes:", meses_disp, default=[meses_disp[-1]] if meses_disp else [])
-            coms_disp = sorted(list(set(de['Comercial']) | set(dt['Comercial']) | set(da['Comercial']))) if 'Comercial' in de.columns else []
-            f_coms = st.multiselect("Comerciales:", coms_disp, default=coms_disp)
-
-        with c_video:
-            video_file = "WhatsApp Video 2026-04-28 at 00.31.03.mp4"
-            if os.path.exists(video_file):
-                st.video(video_file, format="video/mp4")
-
-        # 5. PROCESAMIENTO Y CÁLCULO DE RANKING
-        f_de = de[(de['Mes'].isin(f_mes)) & (de['Comercial'].isin(f_coms))] if 'Mes' in de.columns else de
-        f_dt = dt[(dt['Mes'].isin(f_mes)) & (dt['Comercial'].isin(f_coms))] if 'Mes' in dt.columns else dt
-        f_da = da[(da['Mes'].isin(f_mes)) & (da['Comercial'].isin(f_coms))] if 'Mes' in da.columns else da
-
-        r1 = f_de.groupby('Comercial')[['V_Luz', 'V_Gas']].sum() if not f_de.empty else pd.DataFrame()
-        r2 = f_dt.groupby('Comercial')[['V_Fibra', 'V_Móvil']].sum() if not f_dt.empty else pd.DataFrame()
-        r3 = f_da.groupby('Comercial')[['V_Alarma']].sum() if not f_da.empty else pd.DataFrame()
-        
-        rank = pd.concat([r1, r2, r3], axis=1).fillna(0)
-        rank['Total Neto'] = rank.sum(axis=1)
-
-        # 6. CABECERA TÍTULO Y Nº1
-        if not rank.empty:
-            top = rank.sort_values('Total Neto', ascending=False).iloc[0]
-            nombre_n1, ventas_n1 = top.name, int(top['Total Neto'])
+        if de.empty and dt.empty and da.empty:
+            st.warning("No se encontraron archivos de datos. Por favor, verifica que los archivos CSV estén en la carpeta raíz.")
         else:
-            nombre_n1, ventas_n1 = "---", 0
+            c_filtros, c_video = st.columns([2, 1])
+            with c_filtros:
+                meses_disp = sorted(list(set(de['Mes']) | set(dt['Mes']) | set(da['Mes']))) if 'Mes' in de.columns else []
+                f_mes = st.multiselect("Mes:", meses_disp, default=[meses_disp[-1]] if meses_disp else [])
+                coms_disp = sorted(list(set(de['Comercial']) | set(dt['Comercial']) | set(da['Comercial']))) if 'Comercial' in de.columns else []
+                f_coms = st.multiselect("Comerciales:", coms_disp, default=coms_disp)
 
-        st.markdown(f"""
-            <div style="text-align: center; margin: 20px 0;">
-                <h1 style="color: #d2ff00; font-size: 1.8rem;">{frase_dia}</h1>
-                <div style="background: rgba(210, 255, 0, 0.1); border: 2px solid #d2ff00; display: inline-block; padding: 10px 30px; border-radius: 50px;">
-                    <span style="color: white;">🏆 Nº1 EN VENTAS: </span>
-                    <span style="color: #d2ff00; font-weight: bold;">{str(nombre_n1).upper()} ({ventas_n1})</span>
-                </div>
-            </div>
-        """, unsafe_allow_html=True)
+            # 5. CÁLCULO DE RANKING
+            f_de = de[(de['Mes'].isin(f_mes)) & (de['Comercial'].isin(f_coms))] if not de.empty else de
+            f_dt = dt[(dt['Mes'].isin(f_mes)) & (dt['Comercial'].isin(f_coms))] if not dt.empty else dt
+            f_da = da[(da['Mes'].isin(f_mes)) & (da['Comercial'].isin(f_coms))] if not da.empty else da
 
-        # 7. TABLA PROFESIONAL
-        if not rank.empty:
-            st.dataframe(
-                rank.sort_values('Total Neto', ascending=False).style.format("{:.0f}")
-                .background_gradient(subset=['Total Neto'], cmap='Greens')
-                .set_properties(**{'text-align': 'center'}), 
-                use_container_width=True
-            )
-        else:
-            st.info("No hay datos disponibles con los filtros seleccionados.")
+            r1 = f_de.groupby('Comercial')[['V_Luz', 'V_Gas']].sum() if not f_de.empty else pd.DataFrame()
+            r2 = f_dt.groupby('Comercial')[['V_Fibra', 'V_Móvil']].sum() if not f_dt.empty else pd.DataFrame()
+            r3 = f_da.groupby('Comercial')[['V_Alarma']].sum() if not f_da.empty else pd.DataFrame()
+            
+            rank = pd.concat([r1, r2, r3], axis=1).fillna(0)
+            rank['Total Neto'] = rank.sum(axis=1)
 
-        # 8. OBJETIVO EQUIPO
-        v_equipo = int(rank['Total Neto'].sum()) if not rank.empty else 0
-        v_falta = max(0, 75 - v_equipo)
-        st.markdown(f'<div style="background:#161b22;padding:15px;border-radius:15px;border:1px solid #d2ff00;text-align:center;max-width:300px;margin:auto;"><p style="color:#d2ff00;">🚀 FALTAN PARA EL OBJETIVO</p><h1>{v_falta}</h1></div>', unsafe_allow_html=True)
+            # 6. Nº1 VENTAS
+            if not rank.empty:
+                top = rank.sort_values('Total Neto', ascending=False).iloc[0]
+                nombre_n1, ventas_n1 = top.name, int(top['Total Neto'])
+                
+                st.markdown(f"""
+                    <div style="text-align: center; margin: 20px 0;">
+                        <div style="background: rgba(210, 255, 0, 0.1); border: 2px solid #d2ff00; display: inline-block; padding: 10px 30px; border-radius: 50px;">
+                            <span style="color: white;">🏆 Nº1 EN VENTAS: </span>
+                            <span style="color: #d2ff00; font-weight: bold;">{str(nombre_n1).upper()} ({ventas_n1})</span>
+                        </div>
+                    </div>
+                """, unsafe_allow_html=True)
+
+                # 7. TABLA PROFESIONAL
+                st.dataframe(
+                    rank.sort_values('Total Neto', ascending=False).style.format("{:.0f}")
+                    .background_gradient(subset=['Total Neto'], cmap='Greens')
+                    .set_properties(**{'text-align': 'center'}), 
+                    use_container_width=True
+                )
+            else:
+                st.info("No hay datos para mostrar con estos filtros.")
+
+            # 8. OBJETIVO EQUIPO
+            v_equipo = int(rank['Total Neto'].sum()) if not rank.empty else 0
+            v_falta = max(0, 75 - v_equipo)
+            st.markdown(f'<div style="background:#161b22;padding:15px;border-radius:15px;border:1px solid #d2ff00;text-align:center;max-width:300px;margin:auto;"><p style="color:#d2ff00;">🚀 FALTAN PARA EL OBJETIVO</p><h1>{v_falta}</h1></div>', unsafe_allow_html=True)
 
     except Exception as e:
-        st.error(f"Error en Dashboard: {e}")
-
-#-----REPOSITORIO----
+        st.error(f"Error en Dashboard: {e}")#-----REPOSITORIO----
 elif menu == "📂 REPOSITORIO":
     import os  # Crucial para que funcionen las carpetas
     st.markdown('<div class="block-header">📂 REPOSITORIO DE DOCUMENTACIÓN</div>', unsafe_allow_html=True)
