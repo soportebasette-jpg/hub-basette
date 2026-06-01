@@ -507,7 +507,7 @@ elif menu == "📢 ANUNCIOS Y PLAN AMIGO":
 # --- DASHBOARD Y RANKING ---
 elif menu == "📈 DASHBOARD Y RANKING":
     try:
-        # Función mejorada para detectar columnas automáticamente
+        # 1. FUNCIÓN DE CARGA DESDE GOOGLE SHEETS (ROBUSTA)
         def load_and_clean_ranking():
             urls = {
                 "de": "https://docs.google.com/spreadsheets/d/1W-Eq63SnBBlOykJlP9XgASXDPpWQhQnVW-oFHUlSMcQ/export?format=csv",
@@ -518,23 +518,68 @@ elif menu == "📈 DASHBOARD Y RANKING":
             for url in urls.values():
                 try:
                     df = pd.read_csv(url)
-                    df.columns = df.columns.str.strip() # Limpia espacios en nombres
+                    df.columns = df.columns.str.strip() # Limpieza de espacios
+                    # Mapeo inteligente para evitar KeyError
+                    mapeo = {c: 'Mes' for c in df.columns if 'mes' in c.lower()}
+                    mapeo.update({c: 'Comercial' for c in df.columns if 'comercial' in c.lower()})
+                    df = df.rename(columns=mapeo)
                     dfs.append(df)
                 except:
                     dfs.append(pd.DataFrame())
             return dfs[0], dfs[1], dfs[2]
 
+        # 2. ACCIÓN VISUAL AL ABRIR
         st.balloons()
+
+        # 3. FRASES MOTIVADORAS DIARIAS
+        frases = {1: "¡Hoy es un gran día para romper récords!", 2: "Tu esfuerzo de hoy es el éxito de mañana.", 3: "La disciplina es el puente hacia tus metas."}
+        st.markdown(f'<h1 style="text-align:center; color:#d2ff00;">{frases.get(datetime.now().day % 3 + 1, "¡A por el objetivo!")}</h1>', unsafe_allow_html=True)
+
         de, dt, da = load_and_clean_ranking()
 
-        # VERIFICACIÓN: Si no hay columna 'Mes', mostrar qué columnas encontró
-        for nombre, df in [("Energía", de), ("Telecom", dt), ("Alarma", da)]:
-            if 'Mes' not in df.columns and not df.empty:
-                st.error(f"Error en archivo {nombre}: No se encuentra la columna 'Mes'. Columnas detectadas: {df.columns.tolist()}")
-                st.stop()
+        # 4. FILTROS
+        c_filtros, c_video = st.columns([2, 1])
+        with c_filtros:
+            meses_disp = sorted(list(set(de.get('Mes', [])) | set(dt.get('Mes', [])) | set(da.get('Mes', []))))
+            f_mes = st.multiselect("Mes:", meses_disp, default=[meses_disp[-1]] if meses_disp else [])
+            coms_disp = sorted(list(set(de.get('Comercial', [])) | set(dt.get('Comercial', [])) | set(da.get('Comercial', []))))
+            f_coms = st.multiselect("Comerciales:", coms_disp, default=coms_disp)
 
-        # ... (Resto de tu código de filtros y ranking) ...
-        # [Mantén el resto del código del dashboard que ya teníamos aquí]
+        # 5. CÁLCULO DE RANKING (ROBUSTO)
+        def agrupar(df):
+            if df.empty or 'Mes' not in df.columns: return pd.DataFrame()
+            f = df[(df['Mes'].isin(f_mes)) & (df['Comercial'].isin(f_coms))]
+            return f.groupby('Comercial').sum(numeric_only=True)
+
+        r1 = agrupar(de)
+        r2 = agrupar(dt)
+        r3 = agrupar(da)
+        
+        rank = pd.concat([r1, r2, r3], axis=1).fillna(0)
+        rank['Total Neto'] = rank.sum(axis=1)
+
+        # 6. ENMARCADO Nº1
+        if not rank.empty:
+            top = rank.sort_values('Total Neto', ascending=False).iloc[0]
+            st.markdown(f"""
+                <div style="border: 3px solid #d2ff00; padding: 20px; border-radius: 15px; text-align: center; margin: 20px 0;">
+                    <h3 style="color: #d2ff00; margin: 0;">🏆 Nº1 VENTAS NETAS</h3>
+                    <h2 style="color: white; margin: 0;">{str(top.name).upper()} ({int(top['Total Neto'])})</h2>
+                </div>
+            """, unsafe_allow_html=True)
+
+            st.dataframe(rank.style.background_gradient(subset=['Total Neto'], cmap='Greens'), use_container_width=True)
+        else:
+            st.info("Selecciona filtros para ver el ranking.")
+
+        # 7. TOTALES CANCELACIONES
+        st.markdown("### 📊 DESGLOSE DE CANCELACIONES")
+        cx1, cx2 = st.columns(2)
+        cx1.metric("Total Cancelaciones", int(rank.filter(like="Cancel").sum().sum()))
+        cx2.metric("Total Bajas", int(rank.filter(like="Baja").sum().sum()))
+
+    except Exception as e:
+        st.error(f"Error en Dashboard: {e}")
 #-----REPOSITORIO----
 elif menu == "📂 REPOSITORIO":
     import os  # Crucial para que funcionen las carpetas
@@ -582,6 +627,7 @@ elif menu == "📂 REPOSITORIO":
         else:
             # Si sale este mensaje es que el nombre de la carpeta no coincide con el disco duro
             st.caption(f"🚫 No detectada: manuales/{nombre_carpeta}")
+
 
     # --- DISTRIBUCIÓN SEGÚN TUS CARPETAS EN MAYÚSCULAS ---
     col_a, col_b = st.columns(2)
