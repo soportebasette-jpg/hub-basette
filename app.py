@@ -507,83 +507,95 @@ elif menu == "📢 ANUNCIOS Y PLAN AMIGO":
 # --- DASHBOARD Y RANKING ---
 elif menu == "📈 DASHBOARD Y RANKING":
     try:
-        # Función para cargar datos desde Google Sheets en tiempo real
-        def load_and_clean_ranking():
-            # Estos son tus enlaces convertidos a formato CSV de descarga directa
-            urls = {
-                "de": "https://docs.google.com/spreadsheets/d/1W-Eq63SnBBlOykJlP9XgASXDPpWQhQnVW-oFHUlSMcQ/export?format=csv",
-                "dt": "https://docs.google.com/spreadsheets/d/1HkI37_hUTZbsm_DwLjbi2kMTKcC23QsV/export?format=csv",
-                "da": "https://docs.google.com/spreadsheets/d/17o4HSJ4DZBwMgp9AAiGhkd8NQCZEaaQ_/export?format=csv"
-            }
-            dfs = []
-            for url in urls.values():
-                try:
-                    df = pd.read_csv(url)
-                    df.columns = df.columns.str.strip() # Limpiar espacios en nombres
-                    dfs.append(df)
-                except Exception:
-                    dfs.append(pd.DataFrame()) # Si falla, devuelve vacío para no romper
-            return dfs[0], dfs[1], dfs[2]
+        # 1. FUNCIÓN PARA IMÁGENES
+        def get_img_64(file_path):
+            import base64
+            import os
+            if os.path.exists(file_path):
+                with open(file_path, "rb") as f:
+                    return base64.b64encode(f.read()).decode()
+            return None
 
-        st.balloons()
+        # 2. ANIMACIÓN DE PERRITOS (ROSCO) - NO INFINITA
+        rosco_b64 = get_img_64("rosco.jpg")
+        if rosco_b64:
+            falling_items = ""
+            for i in range(15):  # Número de perritos
+                left = random.randint(0, 95)
+                delay = random.uniform(0, 3)
+                dur = random.uniform(3, 6)
+                size = random.randint(60, 100)
+                falling_items += f'<img src="data:image/jpeg;base64,{rosco_b64}" class="rosco-fall" style="left:{left}%; animation-delay:{delay}s; animation-duration:{dur}s; width:{size}px;">'
+            
+            st.markdown(f"""
+                <div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 9999; pointer-events: none;">
+                    {falling_items}
+                </div>
+                <style>
+                    .rosco-fall {{ 
+                        position: absolute; 
+                        top: -150px; 
+                        opacity: 0.8; 
+                        animation: fall linear forwards; 
+                    }}
+                    @keyframes fall {{ 
+                        0% {{ top: -150px; transform: rotate(0deg); opacity: 1; }} 
+                        100% {{ top: 110vh; transform: rotate(360deg); opacity: 0; }} 
+                    }}
+                </style>
+            """, unsafe_allow_html=True)
 
-        # Frases diarias
-        frases = {1: "¡Hoy es un gran día!", 2: "Tu esfuerzo es el éxito.", 3: "Vamos a por todas."}
-        st.markdown(f'<h1 style="text-align:center; color:#d2ff00;">{frases.get(datetime.now().day % 3 + 1, "¡A por el objetivo!")}</h1>', unsafe_allow_html=True)
-
+        # 3. CARGA DE DATOS
         de, dt, da = load_and_clean_ranking()
 
-        # Filtros
+        # 4. FILTROS (IZQUIERDA) Y VIDEO (DERECHA)
         c_filtros, c_video = st.columns([2, 1])
+        
         with c_filtros:
-            meses_disp = sorted(list(set(de['Mes']) | set(dt['Mes']) | set(da['Mes']))) if 'Mes' in de.columns else []
+            st.markdown('<p style="color:#d2ff00; font-weight:bold; margin-bottom:0;">📅 FILTROS</p>', unsafe_allow_html=True)
+            meses_disp = sorted(list(set(de['Mes']) | set(dt['Mes']) | set(da['Mes'])))
             f_mes = st.multiselect("Mes:", meses_disp, default=[meses_disp[-1]] if meses_disp else [])
-            coms_disp = sorted(list(set(de['Comercial']) | set(dt['Comercial']) | set(da['Comercial']))) if 'Comercial' in de.columns else []
+            
+            coms_disp = sorted(list(set(de['Comercial']) | set(dt['Comercial']) | set(da['Comercial'])))
             f_coms = st.multiselect("Comerciales:", coms_disp, default=coms_disp)
 
         with c_video:
-            if os.path.exists("WhatsApp Video 2026-04-28 at 00.31.03.mp4"):
-                st.video("WhatsApp Video 2026-04-28 at 00.31.03.mp4")
+            video_file = "WhatsApp Video 2026-04-28 at 00.31.03.mp4"
+            st.markdown('<p style="color:#d2ff00; font-size:0.7rem; text-align:right; margin-bottom:0;">🔊 Música Rosco</p>', unsafe_allow_html=True)
+            if os.path.exists(video_file):
+                st.video(video_file, format="video/mp4")
 
-        # Procesamiento
-        f_de = de[(de['Mes'].isin(f_mes)) & (de['Comercial'].isin(f_coms))] if 'Mes' in de.columns else de
-        f_dt = dt[(dt['Mes'].isin(f_mes)) & (dt['Comercial'].isin(f_coms))] if 'Mes' in dt.columns else dt
-        f_da = da[(da['Mes'].isin(f_mes)) & (da['Comercial'].isin(f_coms))] if 'Mes' in da.columns else da
+        # 5. PROCESAMIENTO DETALLADO
+        f_de = de[(de['Mes'].isin(f_mes)) & (de['Comercial'].isin(f_coms))].copy()
+        f_dt = dt[(dt['Mes'].isin(f_mes)) & (dt['Comercial'].isin(f_coms))].copy()
+        f_da = da[(da['Mes'].isin(f_mes)) & (da['Comercial'].isin(f_coms))].copy()
 
-        r1 = f_de.groupby('Comercial')[['V_Luz', 'V_Gas']].sum() if not f_de.empty else pd.DataFrame()
-        r2 = f_dt.groupby('Comercial')[['V_Fibra', 'V_Móvil']].sum() if not f_dt.empty else pd.DataFrame()
-        r3 = f_da.groupby('Comercial')[['V_Alarma']].sum() if not f_da.empty else pd.DataFrame()
+        # Crear columnas de cálculo de forma segura
+        for df in [f_de, f_dt, f_da]:
+            df['V_REF'] = df['Canal'].apply(lambda x: 1 if str(x).strip().upper() == "REF" else 0) if 'Canal' in df.columns else 0
+            
+        r1 = f_de.groupby('Comercial')[['V_Luz', 'V_Gas', 'V_REF']].sum() if not f_de.empty else pd.DataFrame()
+        r2 = f_dt.groupby('Comercial')[['V_Fibra', 'V_Móvil', 'V_REF']].sum() if not f_dt.empty else pd.DataFrame()
+        r3 = f_da.groupby('Comercial')[['V_Alarma', 'V_REF']].sum() if not f_da.empty else pd.DataFrame()
         
         rank = pd.concat([r1, r2, r3], axis=1).fillna(0)
-        rank['Total Neto'] = rank.sum(axis=1)
+        rank['REF'] = rank.filter(like='V_REF').sum(axis=1)
+        rank['Ventas_Sin_Movil'] = (rank.get('V_Luz',0) + rank.get('V_Gas',0) + rank.get('V_Fibra',0) + rank.get('V_Alarma',0))
+        rank['Total Neto'] = rank['Ventas_Sin_Movil']
 
-        # Nº1 en Ventas
-        if not rank.empty:
-            top = rank.sort_values('Total Neto', ascending=False).iloc[0]
-            st.markdown(f"""
-                <div style="text-align: center; margin: 20px 0;">
-                    <div style="background: rgba(210, 255, 0, 0.1); border: 2px solid #d2ff00; display: inline-block; padding: 10px 30px; border-radius: 50px;">
-                        <span style="color: white;">🏆 Nº1 EN VENTAS: </span>
-                        <span style="color: #d2ff00; font-weight: bold;">{str(top.name).upper()} ({int(top['Total Neto'])})</span>
-                    </div>
-                </div>
-            """, unsafe_allow_html=True)
+        # 6. CABECERA
+        st.markdown("""
+            <div style="text-align: center; margin: 20px 0;">
+                <h1 style="color: #d2ff00; font-size: 2.1rem;">"EL ÉXITO ES EL RESULTADO DE LA DISCIPLINA DIARIA"</h1>
+            </div>
+        """, unsafe_allow_html=True)
 
-            # Tabla Pro
-            st.dataframe(
-                rank.sort_values('Total Neto', ascending=False).style.format("{:.0f}")
-                .background_gradient(subset=['Total Neto'], cmap='Greens')
-                .set_properties(**{'text-align': 'center'}), 
-                use_container_width=True
-            )
-        
-        # Objetivo
-        v_equipo = int(rank['Total Neto'].sum()) if not rank.empty else 0
-        v_falta = max(0, 75 - v_equipo)
-        st.markdown(f'<div style="background:#161b22;padding:15px;border-radius:15px;border:1px solid #d2ff00;text-align:center;max-width:300px;margin:auto;"><p style="color:#d2ff00;">🚀 FALTAN PARA EL OBJETIVO</p><h1>{v_falta}</h1></div>', unsafe_allow_html=True)
+        # 7. TABLA DE RANKING
+        df_vis = rank.rename(columns={'V_Luz':'Luz','V_Gas':'Gas','V_Fibra':'Fibra','V_Móvil':'Móvil','V_Alarma':'Alarma'})
+        st.table(df_vis.astype(int).sort_values('Total Neto', ascending=False))
 
     except Exception as e:
-        st.error(f"Error cargando los datos: {e}")
+        st.error(f"Error en Dashboard: {e}")
 
 #-----REPOSITORIO----
 elif menu == "📂 REPOSITORIO":
