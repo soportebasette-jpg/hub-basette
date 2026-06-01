@@ -507,15 +507,6 @@ elif menu == "📢 ANUNCIOS Y PLAN AMIGO":
 # --- DASHBOARD Y RANKING ---
 elif menu == "📈 DASHBOARD Y RANKING":
     try:
-        # Función auxiliar si no está definida en otra parte
-        if 'load_and_clean_ranking' not in globals():
-            def load_and_clean_ranking():
-                # AJUSTA AQUÍ LOS NOMBRES DE TUS ARCHIVOS CSV
-                de = pd.read_csv("data_energia.csv") if os.path.exists("data_energia.csv") else pd.DataFrame(columns=['Mes','Comercial','V_Luz','V_Gas'])
-                dt = pd.read_csv("data_telecom.csv") if os.path.exists("data_telecom.csv") else pd.DataFrame(columns=['Mes','Comercial','V_Fibra','V_Móvil'])
-                da = pd.read_csv("data_alarma.csv") if os.path.exists("data_alarma.csv") else pd.DataFrame(columns=['Mes','Comercial','V_Alarma'])
-                return de, dt, da
-
         # 1. LANZAR GLOBOS AL CARGAR
         st.balloons()
 
@@ -540,41 +531,48 @@ elif menu == "📈 DASHBOARD Y RANKING":
             if os.path.exists(video_file):
                 st.video(video_file, format="video/mp4")
 
-        # 5. CÁLCULO DE RANKING
-        r1 = de.groupby('Comercial')[['V_Luz', 'V_Gas']].sum() if not de.empty else pd.DataFrame()
-        r2 = dt.groupby('Comercial')[['V_Fibra', 'V_Móvil']].sum() if not dt.empty else pd.DataFrame()
-        r3 = da.groupby('Comercial')[['V_Alarma']].sum() if not da.empty else pd.DataFrame()
+        # 5. PROCESAMIENTO Y CÁLCULO DE RANKING
+        f_de = de[(de['Mes'].isin(f_mes)) & (de['Comercial'].isin(f_coms))] if 'Mes' in de.columns else de
+        f_dt = dt[(dt['Mes'].isin(f_mes)) & (dt['Comercial'].isin(f_coms))] if 'Mes' in dt.columns else dt
+        f_da = da[(da['Mes'].isin(f_mes)) & (da['Comercial'].isin(f_coms))] if 'Mes' in da.columns else da
+
+        r1 = f_de.groupby('Comercial')[['V_Luz', 'V_Gas']].sum() if not f_de.empty else pd.DataFrame()
+        r2 = f_dt.groupby('Comercial')[['V_Fibra', 'V_Móvil']].sum() if not f_dt.empty else pd.DataFrame()
+        r3 = f_da.groupby('Comercial')[['V_Alarma']].sum() if not f_da.empty else pd.DataFrame()
         
         rank = pd.concat([r1, r2, r3], axis=1).fillna(0)
         rank['Total Neto'] = rank.sum(axis=1)
 
-        # 6. DETERMINAR EL Nº1
-        nombre_n1, ventas_n1 = ("---", 0)
+        # 6. CABECERA TÍTULO Y Nº1
         if not rank.empty:
             top = rank.sort_values('Total Neto', ascending=False).iloc[0]
             nombre_n1, ventas_n1 = top.name, int(top['Total Neto'])
+        else:
+            nombre_n1, ventas_n1 = "---", 0
 
-        # 7. CABECERA TÍTULO
         st.markdown(f"""
             <div style="text-align: center; margin: 20px 0;">
                 <h1 style="color: #d2ff00; font-size: 1.8rem;">{frase_dia}</h1>
                 <div style="background: rgba(210, 255, 0, 0.1); border: 2px solid #d2ff00; display: inline-block; padding: 10px 30px; border-radius: 50px;">
                     <span style="color: white;">🏆 Nº1 EN VENTAS: </span>
-                    <span style="color: #d2ff00; font-weight: bold;">{nombre_n1.upper()} ({ventas_n1})</span>
+                    <span style="color: #d2ff00; font-weight: bold;">{str(nombre_n1).upper()} ({ventas_n1})</span>
                 </div>
             </div>
         """, unsafe_allow_html=True)
 
-        # 8. TABLA PROFESIONAL
-        st.dataframe(
-            rank.sort_values('Total Neto', ascending=False).style.format("{:.0f}")
-            .background_gradient(subset=['Total Neto'], cmap='Greens')
-            .set_properties(**{'text-align': 'center'}), 
-            use_container_width=True
-        )
+        # 7. TABLA PROFESIONAL
+        if not rank.empty:
+            st.dataframe(
+                rank.sort_values('Total Neto', ascending=False).style.format("{:.0f}")
+                .background_gradient(subset=['Total Neto'], cmap='Greens')
+                .set_properties(**{'text-align': 'center'}), 
+                use_container_width=True
+            )
+        else:
+            st.info("No hay datos disponibles con los filtros seleccionados.")
 
-        # 9. OBJETIVO EQUIPO
-        v_equipo = int(rank['Total Neto'].sum())
+        # 8. OBJETIVO EQUIPO
+        v_equipo = int(rank['Total Neto'].sum()) if not rank.empty else 0
         v_falta = max(0, 75 - v_equipo)
         st.markdown(f'<div style="background:#161b22;padding:15px;border-radius:15px;border:1px solid #d2ff00;text-align:center;max-width:300px;margin:auto;"><p style="color:#d2ff00;">🚀 FALTAN PARA EL OBJETIVO</p><h1>{v_falta}</h1></div>', unsafe_allow_html=True)
 
