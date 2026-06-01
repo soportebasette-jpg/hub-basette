@@ -320,137 +320,6 @@ elif menu == "📊 PRECIOS":
         st.image("tarifas_visuales/3d.jpg", use_container_width=True)
         st.markdown('<div style="background-color: #d2ff00; color: black; padding: 10px; border-radius: 5px; font-weight: bold; text-align: center; font-size: 1.5rem;">PRIMEROS 12 MESES POR 24.20€</div>', unsafe_allow_html=True)
 
-# --- COMPARADOR LUZ ---
-elif menu == "⚖️ COMPARADOR LUZ":
-    st.header("Estudio de Ahorro Personalizado")
-    
-    c1, c2 = st.columns(2)
-    with c1:
-        cliente = st.text_input("Nombre del cliente", "Nombre Apellidos")
-        f_act = st.number_input("Factura actual con IVA (EUR)", value=0.0)
-        potencia = st.number_input("Potencia contratada (kW)", value=4.6)
-        dias_factura = st.number_input("Días del periodo de factura", value=30)
-        # Selector de IVA restringido
-        iva_sel = st.selectbox("IVA a aplicar (%)", [21, 10], index=0)
-        iva_factor = 1 + (iva_sel / 100)
-    
-    with c2:
-        comp_sel = st.selectbox("Compañía Propuesta", sorted(list(set(t["COMPAÑÍA"] for t in tarifas_luz))))
-        tarifas_f = [t["TARIFA"] for t in tarifas_luz if t["COMPAÑÍA"] == comp_sel]
-        tarifa_sel_nombre = st.selectbox("Tarifa Seleccionada", tarifas_f)
-        sel = next(t for t in tarifas_luz if t["COMPAÑÍA"] == comp_sel and t["TARIFA"] == tarifa_sel_nombre)
-        
-        if os.path.exists(sel.get("logo", "")): 
-            st.image(sel["logo"], width=120)
-
-    st.subheader("Desglose de Consumo por Tramos")
-    cc1, cc2, cc3 = st.columns(3)
-    with cc1:
-        con_punta = st.number_input("Consumo Punta (kWh)", value=0.0)
-    with cc2:
-        con_llano = st.number_input("Consumo Llano (kWh)", value=0.0)
-    with cc3:
-        con_valle = st.number_input("Consumo Valle (kWh)", value=0.0)
-
-    # Lógica de Precios
-    try:
-        if comp_sel.upper() == "NATURGY" and "3T" in tarifa_sel_nombre.upper():
-            p_punta, p_llano, p_valle = 0.180, 0.107, 0.0718
-        elif comp_sel.upper() == "GANA ENERGÍA" and "3T" in tarifa_sel_nombre.upper():
-            p_punta, p_llano, p_valle = 0.171, 0.104, 0.08
-        elif "3T" in tarifa_sel_nombre.upper():
-            p_punta = float(str(sel.get('E1', 0.180)).replace(',', '.'))
-            p_llano = float(str(sel.get('E2', 0.107)).replace(',', '.'))
-            p_valle = float(str(sel.get('E3', 0.0718)).replace(',', '.'))
-        else:
-            val_e = sel.get('ENERGIA', 0.180)
-            p_punta = p_llano = p_valle = float(str(val_e).split('/')[0].replace(',', '.')) if isinstance(val_e, str) else val_e
-    except:
-        p_punta, p_llano, p_valle = 0.180, 0.107, 0.0718
-
-    # CÁLCULOS
-    p1_val = float(str(sel.get("P1", 0)).replace(',', '.'))
-    p2_val = float(str(sel.get("P2", 0)).replace(',', '.'))
-    
-    coste_p = (potencia * p1_val * dias_factura) + (potencia * p2_val * dias_factura)
-    coste_e = (con_punta * p_punta) + (con_llano * p_llano) + (con_valle * p_valle)
-    
-    coste_total_iva = (coste_p + coste_e) * iva_factor
-    ahorro = f_act - coste_total_iva
-    consumo_total = con_punta + con_llano + con_valle
-
-    st.markdown(f'<div style="background:#d2ff00; padding:20px; border-radius:10px; text-align:center;"><h2 style="color:black;">AHORRO ESTIMADO: {ahorro:.2f} €</h2></div>', unsafe_allow_html=True)
-    
-    if st.button("GENERAR ESTUDIO PDF PROFESIONAL"):
-        try:
-            pdf = FPDF()
-            pdf.add_page()
-            
-            # --- LÓGICA LOGO IZQUIERDA (tecomparotodo_logo.jpg) ---
-            # Buscamos el archivo JPG en manuales o raíz
-            logo_izq = "manuales/tecomparotodo_logo.jpg" if os.path.exists("manuales/tecomparotodo_logo.jpg") else "tecomparotodo_logo.jpg"
-            
-            if os.path.exists(logo_izq):
-                pdf.image(logo_izq, 10, 8, 45) # Tamaño ajustado para visibilidad
-            
-            # Logo de la compañía (Derecha)
-            if os.path.exists(sel.get("logo", "")): 
-                pdf.image(sel["logo"], 165, 8, 30)
-            
-            pdf.ln(30)
-            pdf.set_font("Arial", "B", 18)
-            pdf.cell(190, 10, "ESTUDIO COMPARATIVO DE AHORRO", ln=True, align="C")
-            
-            pdf.ln(5)
-            pdf.set_font("Arial", "B", 11)
-            pdf.set_fill_color(240, 240, 240)
-            pdf.cell(190, 8, f" DATOS DEL CLIENTE: {cliente.upper()}", ln=True, fill=True)
-            
-            pdf.set_font("Arial", "", 10)
-            pdf.cell(95, 8, f"Fecha: {datetime.now().strftime('%d/%m/%Y')}", border=1)
-            pdf.cell(95, 8, f"Periodo: {dias_factura} dias", border=1, ln=True)
-            
-            pdf.ln(5)
-            pdf.set_font("Arial", "B", 11)
-            pdf.cell(190, 8, " DETALLE DE LA PROPUESTA (3 TRAMOS)", ln=True, fill=True)
-            
-            pdf.set_font("Arial", "", 10)
-            propuesta_data = [
-                ("Compania", comp_sel),
-                ("Tarifa", tarifa_sel_nombre),
-                ("Potencia", f"{potencia} kW"),
-                ("Precio Punta", f"{p_punta:.4f} EUR/kWh"),
-                ("Precio Llano", f"{p_llano:.4f} EUR/kWh"),
-                ("Precio Valle", f"{p_valle:.4f} EUR/kWh"),
-                ("IVA Aplicado", f"{iva_sel}%"),
-                ("Consumo Total", f"{consumo_total:.2f} kWh")
-            ]
-            for d, v in propuesta_data:
-                pdf.cell(95, 8, d, border=1)
-                pdf.cell(95, 8, str(v), border=1, ln=True)
-            
-            pdf.ln(5)
-            pdf.set_font("Arial", "B", 12)
-            pdf.cell(95, 10, "Factura Actual", border=1)
-            pdf.cell(95, 10, f"{f_act:.2f} EUR", border=1, ln=True)
-            pdf.cell(95, 10, f"Nueva Factura ({iva_sel}% IVA)", border=1)
-            pdf.cell(95, 10, f"{coste_total_iva:.2f} EUR", border=1, ln=True)
-            
-            pdf.ln(5)
-            pdf.set_fill_color(210, 255, 0)
-            pdf.set_font("Arial", "B", 14)
-            pdf.cell(190, 15, f"AHORRO TOTAL: {ahorro:.2f} EUR", ln=True, align="C", fill=True)
-            
-            # QR opcional
-            if 'QR_PLAN_AMIGO' in globals() and os.path.exists(QR_PLAN_AMIGO):
-                pdf.ln(5)
-                pdf.image(QR_PLAN_AMIGO, 85, pdf.get_y(), 40)
-            
-            pdf_out = pdf.output(dest='S').encode('latin-1', 'replace')
-            st.download_button(label="📥 DESCARGAR ESTUDIO PDF", data=pdf_out, file_name=f"Estudio_{cliente}.pdf")
-        except Exception as e:
-            st.error(f"Error al generar el PDF: {e}")
-
 # --- COMPARADOR GAS ---
 elif menu == "⚖️ COMPARADOR GAS":
     st.header("Estudio de Ahorro de Gas Personalizado")
@@ -635,74 +504,82 @@ elif menu == "📢 ANUNCIOS Y PLAN AMIGO":
             else:
                 st.warning(f"Falta: {item['file']}")
 
-import streamlit as st
-import os
-import pandas as pd
-import random
-import base64
-from datetime import datetime
-from fpdf import FPDF
-
-# --- CONFIGURACIÓN ---
-st.set_page_config(page_title="Basette Group | Hub", layout="wide")
-
-# --- FUNCIONES AUXILIARES ---
-def get_base64_of_bin_file(bin_file):
-    if os.path.exists(bin_file):
-        with open(bin_file, 'rb') as f:
-            return base64.b64encode(f.read()).decode()
-    return ""
-
-img_base64 = get_base64_of_bin_file("rosco.jpg")
-
-# --- MENÚ DE NAVEGACIÓN ---
-menu = st.sidebar.radio("MENÚ", ["🚀 CRM", "📈 DASHBOARD Y RANKING", "⚖️ COMPARADOR LUZ", "⚖️ COMPARADOR GAS", "📊 PRECIOS", "📂 REPOSITORIO", "📢 ANUNCIOS Y PLAN AMIGO", "🕒 CONTROL LABORAL"])
-
-# --- LÓGICA DE MENÚS ---
-if menu == "🚀 CRM":
-    # (Código del CRM que ya tenías con las modificaciones de 3D y Total Energy)
-    # ... [Insertar aquí tu lógica de CRM con los cambios que hicimos] ...
-
+# --- DASHBOARD Y RANKING ---
 elif menu == "📈 DASHBOARD Y RANKING":
-    st.balloons()
-    frases = {1: "¡Hoy es un gran día!", 2: "Tu esfuerzo es el éxito.", 3: "Vamos a por todas."}
-    st.markdown(f'<h1 style="text-align:center; color:#d2ff00;">{frases.get(datetime.now().day % 3 + 1, "¡A por el objetivo!")}</h1>', unsafe_allow_html=True)
-    # ... [Resto de tu lógica de Dashboard] ...
+    try:
+        # Función auxiliar si no está definida en otra parte
+        if 'load_and_clean_ranking' not in globals():
+            def load_and_clean_ranking():
+                # AJUSTA AQUÍ LOS NOMBRES DE TUS ARCHIVOS CSV
+                de = pd.read_csv("data_energia.csv") if os.path.exists("data_energia.csv") else pd.DataFrame(columns=['Mes','Comercial','V_Luz','V_Gas'])
+                dt = pd.read_csv("data_telecom.csv") if os.path.exists("data_telecom.csv") else pd.DataFrame(columns=['Mes','Comercial','V_Fibra','V_Móvil'])
+                da = pd.read_csv("data_alarma.csv") if os.path.exists("data_alarma.csv") else pd.DataFrame(columns=['Mes','Comercial','V_Alarma'])
+                return de, dt, da
 
-elif menu == "⚖️ COMPARADOR LUZ":
-    # ... [Aquí va el código del Comparador Luz corregido] ...
+        # 1. LANZAR GLOBOS AL CARGAR
+        st.balloons()
 
-elif menu == "⚖️ COMPARADOR GAS":
-    # --- CÓDIGO FINAL COMPARADOR GAS ---
-    tarifas_gas = [
-        {"COMPAÑÍA": "NATURGY", "TARIFA": "GAS RL.1 (3.1)", "FIJO": 5.34, "ENERGIA": 0.0840, "logo": "manuales/logo_naturgy.png"},
-        {"COMPAÑÍA": "NATURGY", "TARIFA": "GAS RL.2 (3.2)", "FIJO": 10.03, "ENERGIA": 0.0810, "logo": "manuales/logo_naturgy.png"},
-        {"COMPAÑÍA": "GANA ENERGÍA", "TARIFA": "GAS RL.1 (3.1)", "FIJO": 4.95, "ENERGIA": 0.0700, "logo": "manuales/logo_gana.png"},
-        {"COMPAÑÍA": "GANA ENERGÍA", "TARIFA": "GAS RL.2 (3.2)", "FIJO": 9.50, "ENERGIA": 0.0700, "logo": "manuales/logo_gana.png"},
-        {"COMPAÑÍA": "TOTALENERGIES", "TARIFA": "GAS RL.1 (TOTAL)", "FIJO": 5.43, "ENERGIA": 0.0500, "logo": "manuales/logo_totalenergy.png"},
-        {"COMPAÑÍA": "TOTALENERGIES", "TARIFA": "GAS RL.2 (TOTAL)", "FIJO": 14.50, "ENERGIA": 0.0580, "logo": "manuales/logo_totalenergy.png"},
-    ]
-    # ... [Lógica de cálculo y PDF usando tecomparotodo_logo.jpg en manuales/ o raíz] ...
+        # 2. FRASES MOTIVADORAS DIARIAS
+        frases = {1: "¡Hoy es un gran día para romper récords!", 2: "Tu esfuerzo de hoy es el éxito de mañana.", 3: "No te detengas hasta sentirte orgulloso.", 4: "La disciplina es el puente entre metas y logros.", 5: "Cada venta cuenta, ¡vamos a por ello!", 6: "El éxito no es el final, es el camino.", 7: "¡Vamos a por todas en este nuevo día!", 8: "La clave del éxito es la constancia.", 9: "Hoy vas a superar tus propios límites.", 10: "Tu actitud determina tu altitud."}
+        frase_dia = frases.get(datetime.now().day % 10 + 1, "¡A por el objetivo de hoy!")
 
-elif menu == "📊 PRECIOS":
-    t1, t2, t3 = st.tabs(["⚡ LUZ Y GAS", "📶 TELECOMUNICACIONES", "🛡️ ALARMAS"])
-    with t1:
-        st.image("tarifas_visuales/luz_gas.jpg", use_container_width=True)
-    with t2:
-        st.image("tarifas_visuales/lowi.jpg", use_container_width=True)
-        st.image("tarifas_visuales/o2.jpg", use_container_width=True)
-    with t3:
-        st.image("tarifas_visuales/segurma.jpg", use_container_width=True)
-        st.image("tarifas_visuales/3d.jpg", use_container_width=True)
+        # 3. CARGA DE DATOS
+        de, dt, da = load_and_clean_ranking()
 
-elif menu == "📂 REPOSITORIO":
-    # ... [Tu lógica de carpetas con TARIFAS 3D incluida] ...
+        # 4. FILTROS Y VIDEO
+        c_filtros, c_video = st.columns([2, 1])
+        with c_filtros:
+            st.markdown('<p style="color:#d2ff00; font-weight:bold; margin-bottom:0;">📅 FILTROS</p>', unsafe_allow_html=True)
+            meses_disp = sorted(list(set(de['Mes']) | set(dt['Mes']) | set(da['Mes']))) if 'Mes' in de.columns else []
+            f_mes = st.multiselect("Mes:", meses_disp, default=[meses_disp[-1]] if meses_disp else [])
+            coms_disp = sorted(list(set(de['Comercial']) | set(dt['Comercial']) | set(da['Comercial']))) if 'Comercial' in de.columns else []
+            f_coms = st.multiselect("Comerciales:", coms_disp, default=coms_disp)
 
-elif menu == "📢 ANUNCIOS Y PLAN AMIGO":
-    # ... [Tu lógica de anuncios y QR] ...
+        with c_video:
+            video_file = "WhatsApp Video 2026-04-28 at 00.31.03.mp4"
+            if os.path.exists(video_file):
+                st.video(video_file, format="video/mp4")
 
-elif menu == "🕒 CONTROL LABORAL":
-    # ... [Tu lógica de control laboral con las correcciones de Lorena Pozo] ...
+        # 5. CÁLCULO DE RANKING
+        r1 = de.groupby('Comercial')[['V_Luz', 'V_Gas']].sum() if not de.empty else pd.DataFrame()
+        r2 = dt.groupby('Comercial')[['V_Fibra', 'V_Móvil']].sum() if not dt.empty else pd.DataFrame()
+        r3 = da.groupby('Comercial')[['V_Alarma']].sum() if not da.empty else pd.DataFrame()
+        
+        rank = pd.concat([r1, r2, r3], axis=1).fillna(0)
+        rank['Total Neto'] = rank.sum(axis=1)
+
+        # 6. DETERMINAR EL Nº1
+        nombre_n1, ventas_n1 = ("---", 0)
+        if not rank.empty:
+            top = rank.sort_values('Total Neto', ascending=False).iloc[0]
+            nombre_n1, ventas_n1 = top.name, int(top['Total Neto'])
+
+        # 7. CABECERA TÍTULO
+        st.markdown(f"""
+            <div style="text-align: center; margin: 20px 0;">
+                <h1 style="color: #d2ff00; font-size: 1.8rem;">{frase_dia}</h1>
+                <div style="background: rgba(210, 255, 0, 0.1); border: 2px solid #d2ff00; display: inline-block; padding: 10px 30px; border-radius: 50px;">
+                    <span style="color: white;">🏆 Nº1 EN VENTAS: </span>
+                    <span style="color: #d2ff00; font-weight: bold;">{nombre_n1.upper()} ({ventas_n1})</span>
+                </div>
+            </div>
+        """, unsafe_allow_html=True)
+
+        # 8. TABLA PROFESIONAL
+        st.dataframe(
+            rank.sort_values('Total Neto', ascending=False).style.format("{:.0f}")
+            .background_gradient(subset=['Total Neto'], cmap='Greens')
+            .set_properties(**{'text-align': 'center'}), 
+            use_container_width=True
+        )
+
+        # 9. OBJETIVO EQUIPO
+        v_equipo = int(rank['Total Neto'].sum())
+        v_falta = max(0, 75 - v_equipo)
+        st.markdown(f'<div style="background:#161b22;padding:15px;border-radius:15px;border:1px solid #d2ff00;text-align:center;max-width:300px;margin:auto;"><p style="color:#d2ff00;">🚀 FALTAN PARA EL OBJETIVO</p><h1>{v_falta}</h1></div>', unsafe_allow_html=True)
+
+    except Exception as e:
+        st.error(f"Error en Dashboard: {e}")
 
 #-----REPOSITORIO----
 elif menu == "📂 REPOSITORIO":
