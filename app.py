@@ -579,75 +579,41 @@ elif menu == "⚖️ COMPARADOR GAS":
 # --- ANUNCIOS Y PLAN AMIGO ---
 elif menu == "📢 ANUNCIOS Y PLAN AMIGO":
     st.header("📢 Anuncios y Plan Amigo")
-    st.markdown('<div class="block-header">🎁 PLAN AMIGO</div>', unsafe_allow_html=True)
-    col1, col2 = st.columns(2)
-    with col1:
-        st.subheader("Enlace Plan Amigo")
-        st.code("https://forms.gle/mU6XzRvywDoBQ5Q47")
-        st.link_button("Ir al Formulario", "https://forms.gle/mU6XzRvywDoBQ5Q47")
-    with col2:
-        st.subheader("QR Plan Amigo")
-        if os.path.exists(QR_PLAN_AMIGO):
-            st.image(QR_PLAN_AMIGO, width=250)
-            with open(QR_PLAN_AMIGO, "rb") as file:
-                st.download_button("Descargar QR", file, "qr-plan-amigo.png")
-        else:
-            st.error("Archivo QR no encontrado.")
-
-    st.markdown('<div class="block-header">🖼️ MATERIAL PUBLICITARIO</div>', unsafe_allow_html=True)
-    st.write("Visualiza y descarga los últimos anuncios:")
-    
-    path_anuncios = "anunciosbasette/"
-    lista_anuncios = [
-        {"file": "Anuncio1_qr.png", "name": "Anuncio 1 QR"},
-        {"file": "Anuncio2_qr.png", "name": "Anuncio 2 QR"},
-        {"file": "PUBLI3.jpg", "name": "Publicidad 3"},
-        {"file": "anuncio alarma1.png", "name": "Anuncio Alarma 1"},
-        {"file": "anuncio1.png", "name": "Anuncio 1"},
-        {"file": "anuncio2.png", "name": "Anuncio 2"}
-    ]
-    
-    cols_anuncios = st.columns(3)
-    for idx, item in enumerate(lista_anuncios):
-        with cols_anuncios[idx % 3]:
-            full_path = f"{path_anuncios}{item['file']}"
-            if os.path.exists(full_path):
-                st.image(full_path, use_container_width=True)
-                with open(full_path, "rb") as f_anuncio:
-                    data_anuncio = f_anuncio.read()
-                    st.download_button(
-                        label=f"Descargar {item['name']}",
-                        data=data_anuncio,
-                        file_name=item['file'],
-                        mime="image/png" if item['file'].lower().endswith('.png') else "image/jpeg",
-                        key=f"btn_anuncio_{idx}"
-                    )
-            else:
-                st.error(f"Falta: {item['file']}")
-# --- ANUNCIOS Y PLAN AMIGO ---
-elif menu == "📢 ANUNCIOS Y PLAN AMIGO":
-    st.header("📢 Anuncios y Plan Amigo")
     st.markdown('<div class="block-header">🎁 PLAN AMIGO Y FORMULARIOS</div>', unsafe_allow_html=True)
     
     col1, col2 = st.columns(2)
     with col1:
         st.subheader("QR Plan Amigo")
-        if os.path.exists("anunciosbasette/qr-plan amigo.png"):
-            st.image("anunciosbasette/qr-plan amigo.png", width=200)
+        # Ajustado al nombre exacto de tu imagen
+        qr_plan = "anunciosbasette/qr-plan amigo.png"
+        if os.path.exists(qr_plan):
+            st.image(qr_plan, width=200)
+            with open(qr_plan, "rb") as file:
+                st.download_button("Descargar QR Plan Amigo", file, "qr-plan-amigo.png")
+        else:
+            st.error(f"No encontrado: {qr_plan}")
+
     with col2:
         st.subheader("QR Formulario Web")
-        if os.path.exists("anunciosbasette/QR FORMULARIO.jpeg"):
-            st.image("anunciosbasette/QR FORMULARIO.jpeg", width=200)
+        # Ajustado al nombre exacto de tu imagen (revisa la extensión .jpeg)
+        qr_form = "anunciosbasette/QR FORMULARIO.jpeg"
+        if os.path.exists(qr_form):
+            st.image(qr_form, width=200)
+            with open(qr_form, "rb") as file:
+                st.download_button("Descargar QR Formulario", file, "qr-formulario.jpeg")
+        else:
+            st.error(f"No encontrado: {qr_form}")
 
     st.markdown('<div class="block-header">🖼️ MATERIAL PUBLICITARIO</div>', unsafe_allow_html=True)
+    st.write("Visualiza y descarga los últimos anuncios:")
     
-    # Lista de archivos según tu carpeta anunciosbasette/
     path_anuncios = "anunciosbasette/"
+    # Lista actualizada con los nombres exactos de tu imagen
     lista_anuncios = [
         {"file": "ahorro facil dazon total.png", "name": "Ahorro Fácil Dazon"},
         {"file": "tarifa solar actualizada 250526.png", "name": "Tarifa Solar"},
         {"file": "tarifas actualizadas 250526 energia.png", "name": "Tarifas Energía"},
-        {"file": "tecomparotodolowi_1 (1).png", "name": "Tarifas Lowi"},
+        {"file": "tecomparotodolowi_1(1).png", "name": "Tarifas Lowi"},
         {"file": "tecomparotodoo2.png", "name": "Tarifas O2"},
         {"file": "verano plan amigo.jpeg", "name": "Verano Plan Amigo"}
     ]
@@ -667,7 +633,7 @@ elif menu == "📢 ANUNCIOS Y PLAN AMIGO":
                         key=f"btn_anuncio_{idx}"
                     )
             else:
-                st.warning(f"No encontrado: {item['file']}")
+                st.warning(f"Falta: {item['file']}")
 
 # --- DASHBOARD Y RANKING ---
 elif menu == "📈 DASHBOARD Y RANKING":
