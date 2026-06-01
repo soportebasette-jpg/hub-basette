@@ -507,58 +507,34 @@ elif menu == "📢 ANUNCIOS Y PLAN AMIGO":
 # --- DASHBOARD Y RANKING ---
 elif menu == "📈 DASHBOARD Y RANKING":
     try:
-        # 1. LANZAR GLOBOS AL ABRIR
-        st.balloons()
+        # Función mejorada para detectar columnas automáticamente
+        def load_and_clean_ranking():
+            urls = {
+                "de": "https://docs.google.com/spreadsheets/d/1W-Eq63SnBBlOykJlP9XgASXDPpWQhQnVW-oFHUlSMcQ/export?format=csv",
+                "dt": "https://docs.google.com/spreadsheets/d/1HkI37_hUTZbsm_DwLjbi2kMTKcC23QsV/export?format=csv",
+                "da": "https://docs.google.com/spreadsheets/d/17o4HSJ4DZBwMgp9AAiGhkd8NQCZEaaQ_/export?format=csv"
+            }
+            dfs = []
+            for url in urls.values():
+                try:
+                    df = pd.read_csv(url)
+                    df.columns = df.columns.str.strip() # Limpia espacios en nombres
+                    dfs.append(df)
+                except:
+                    dfs.append(pd.DataFrame())
+            return dfs[0], dfs[1], dfs[2]
 
-        # 2. CARGA DE DATOS DESDE GOOGLE SHEETS
+        st.balloons()
         de, dt, da = load_and_clean_ranking()
 
-        # 3. FILTROS
-        c_filtros, c_video = st.columns([2, 1])
-        with c_filtros:
-            meses_disp = sorted(list(set(de['Mes']) | set(dt['Mes']) | set(da['Mes']))) if 'Mes' in de.columns else []
-            f_mes = st.multiselect("Mes:", meses_disp, default=[meses_disp[-1]] if meses_disp else [])
-            coms_disp = sorted(list(set(de['Comercial']) | set(dt['Comercial']) | set(da['Comercial']))) if 'Comercial' in de.columns else []
-            f_coms = st.multiselect("Comerciales:", coms_disp, default=coms_disp)
+        # VERIFICACIÓN: Si no hay columna 'Mes', mostrar qué columnas encontró
+        for nombre, df in [("Energía", de), ("Telecom", dt), ("Alarma", da)]:
+            if 'Mes' not in df.columns and not df.empty:
+                st.error(f"Error en archivo {nombre}: No se encuentra la columna 'Mes'. Columnas detectadas: {df.columns.tolist()}")
+                st.stop()
 
-        # 4. PROCESAMIENTO SEGURO (EVITA KEYERROR)
-        def filtrar_y_agrupar(df, cols):
-            if df.empty or 'Mes' not in df.columns: return pd.DataFrame()
-            f = df[(df['Mes'].isin(f_mes)) & (df['Comercial'].isin(f_coms))]
-            return f.groupby('Comercial')[cols].sum()
-
-        r1 = filtrar_y_agrupar(de, ['V_Luz', 'V_Gas', 'Baja_E', 'Cancel_E'])
-        r2 = filtrar_y_agrupar(dt, ['V_Fibra', 'V_Móvil', 'Baja_F', 'Cancel_F'])
-        r3 = filtrar_y_agrupar(da, ['V_Alarma', 'Baja_A', 'Cancel_A'])
-        
-        rank = pd.concat([r1, r2, r3], axis=1).fillna(0)
-        rank['Total Neto'] = rank.filter(like='V_').sum(axis=1) - rank.filter(like='Baja_').sum(axis=1) - rank.filter(like='Cancel_').sum(axis=1)
-
-        # 5. ENMARCADO DEL Nº1
-        if not rank.empty:
-            top = rank.sort_values('Total Neto', ascending=False).iloc[0]
-            st.markdown(f"""
-                <div style="border: 3px solid #d2ff00; padding: 20px; border-radius: 15px; text-align: center; margin-bottom: 20px;">
-                    <h3 style="color: #d2ff00; margin: 0;">🏆 Nº1 VENTAS NETAS</h3>
-                    <h2 style="color: white; margin: 0;">{top.name.upper()} ({int(top['Total Neto'])})</h2>
-                </div>
-            """, unsafe_allow_html=True)
-
-            # Tabla con colores
-            st.dataframe(rank.style.background_gradient(subset=['Total Neto'], cmap='Greens'), use_container_width=True)
-
-        # 6. CUADROS DE CANCELACIONES TOTALES
-        st.markdown("### 📊 DESGLOSE DE CANCELACIONES Y BAJAS")
-        cx1, cx2, cx3, cx4 = st.columns(4)
-        box_alt = "background:#161b22; border:1px solid #ff4b4b; padding:15px; border-radius:10px; text-align:center;"
-        
-        cx1.markdown(f'<div style="{box_alt}"><p style="color:#ff4b4b;font-size:0.75rem;">CANCEL. ENERGÍA</p><h3>{int(rank.filter(like="Cancel_E").sum().sum())}</h3></div>', unsafe_allow_html=True)
-        cx2.markdown(f'<div style="{box_alt}"><p style="color:#ff4b4b;font-size:0.75rem;">CANCEL. FIBRA</p><h3>{int(rank.filter(like="Cancel_F").sum().sum())}</h3></div>', unsafe_allow_html=True)
-        cx3.markdown(f'<div style="{box_alt}"><p style="color:#ff4b4b;font-size:0.75rem;">BAJAS ENERGÍA</p><h3>{int(rank.filter(like="Baja_E").sum().sum())}</h3></div>', unsafe_allow_html=True)
-        cx4.markdown(f'<div style="{box_alt}"><p style="color:#ff4b4b;font-size:0.75rem;">BAJAS FIBRA</p><h3>{int(rank.filter(like="Baja_F").sum().sum())}</h3></div>', unsafe_allow_html=True)
-
-    except Exception as e:
-        st.error(f"Error en Dashboard: {e}")
+        # ... (Resto de tu código de filtros y ranking) ...
+        # [Mantén el resto del código del dashboard que ya teníamos aquí]
 #-----REPOSITORIO----
 elif menu == "📂 REPOSITORIO":
     import os  # Crucial para que funcionen las carpetas
