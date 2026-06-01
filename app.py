@@ -723,3 +723,73 @@ elif menu == "📈 DASHBOARD Y RANKING":
 
     except Exception as e:
         st.error(f"Error procesando datos: {e}")
+# --- DASHBOARD Y RANKING ---
+elif menu == "📈 DASHBOARD Y RANKING":
+    try:
+        # 1. FUNCIÓN DE CARGA ROBUSTA
+        def load_and_clean_ranking():
+            urls = {
+                "de": "https://docs.google.com/spreadsheets/d/1W-Eq63SnBBlOykJlP9XgASXDPpWQhQnVW-oFHUlSMcQ/export?format=csv",
+                "dt": "https://docs.google.com/spreadsheets/d/1HkI37_hUTZbsm_DwLjbi2kMTKcC23QsV/export?format=csv",
+                "da": "https://docs.google.com/spreadsheets/d/17o4HSJ4DZBwMgp9AAiGhkd8NQCZEaaQ_/export?format=csv"
+            }
+            dfs = []
+            for url in urls.values():
+                try:
+                    df = pd.read_csv(url)
+                    df.columns = [c.strip() for c in df.columns]
+                    # Convertir Marca temporal a Mes
+                    if "Marca temporal" in df.columns:
+                        df['Mes'] = pd.to_datetime(df["Marca temporal"], dayfirst=True, errors='coerce').dt.strftime('%Y-%m')
+                    # Renombrar Comercial
+                    if "¿Quién eres?" in df.columns:
+                        df = df.rename(columns={"¿Quién eres?": "Comercial"})
+                    dfs.append(df)
+                except:
+                    dfs.append(pd.DataFrame())
+            return dfs[0], dfs[1], dfs[2]
+
+        st.balloons() # Animación al abrir
+        de, dt, da = load_and_clean_ranking()
+
+        # 2. FILTROS
+        c1, c2 = st.columns([2, 1])
+        with c1:
+            meses_disp = sorted(list(set(de.get('Mes', [])) | set(dt.get('Mes', [])) | set(da.get('Mes', []))))
+            f_mes = st.multiselect("Mes:", meses_disp, default=[meses_disp[-1]] if meses_disp else [])
+            coms_disp = sorted(list(set(de.get('Comercial', [])) | set(dt.get('Comercial', [])) | set(da.get('Comercial', []))))
+            f_coms = st.multiselect("Comerciales:", coms_disp, default=coms_disp)
+
+        # 3. PROCESAMIENTO
+        def filtrar_rank(df):
+            if 'Mes' in df.columns and 'Comercial' in df.columns:
+                return df[(df['Mes'].isin(f_mes)) & (df['Comercial'].isin(f_coms))].groupby('Comercial').sum(numeric_only=True)
+            return pd.DataFrame()
+
+        rank = pd.concat([filtrar_rank(de), filtrar_rank(dt), filtrar_rank(da)], axis=1).fillna(0)
+        rank['Total Neto'] = rank.sum(axis=1)
+
+        # 4. RANKING DESTACADO
+        if not rank.empty:
+            top = rank.sort_values('Total Neto', ascending=False).iloc[0]
+            st.markdown(f"""
+                <div style="border: 3px solid #d2ff00; padding: 20px; border-radius: 15px; text-align: center; margin: 20px 0;">
+                    <h3 style="color: #d2ff00; margin: 0;">🏆 Nº1 VENTAS NETAS</h3>
+                    <h2 style="color: white; margin: 0;">{str(top.name).upper()} ({int(top['Total Neto'])})</h2>
+                </div>
+            """, unsafe_allow_html=True)
+            st.dataframe(rank.style.background_gradient(subset=['Total Neto'], cmap='Greens'), use_container_width=True)
+        else:
+            st.info("Selecciona filtros para visualizar.")
+
+        # 5. CUADROS DE DESGLOSE
+        st.markdown("### 📊 DESGLOSE DE CANCELACIONES Y BAJAS")
+        cx1, cx2, cx3, cx4 = st.columns(4)
+        box = "background:#161b22; border:1px solid #ff4b4b; padding:10px; border-radius:10px; text-align:center;"
+        cx1.markdown(f'<div style="{box}"><p style="font-size:0.7rem;">CANCEL. ENERGÍA</p><h3>{int(rank.filter(like="Cancel").sum().sum())}</h3></div>', unsafe_allow_html=True)
+        cx2.markdown(f'<div style="{box}"><p style="font-size:0.7rem;">CANCEL. FIBRA</p><h3>{int(rank.filter(like="Cancel").sum().sum())}</h3></div>', unsafe_allow_html=True)
+        cx3.markdown(f'<div style="{box}"><p style="font-size:0.7rem;">BAJAS ENERGÍA</p><h3>{int(rank.filter(like="Baja").sum().sum())}</h3></div>', unsafe_allow_html=True)
+        cx4.markdown(f'<div style="{box}"><p style="font-size:0.7rem;">BAJAS FIBRA</p><h3>{int(rank.filter(like="Baja").sum().sum())}</h3></div>', unsafe_allow_html=True)
+
+    except Exception as e:
+        st.error(f"Error procesando dashboard: {e}")
