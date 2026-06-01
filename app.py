@@ -284,58 +284,43 @@ if menu == "🚀 CRM":
 # --- PRECIOS ---
 elif menu == "📊 PRECIOS":
     st.header("Tarifario Oficial")
-    t1, t2, t3 = st.tabs(["⚡ LUZ", "🔥 GAS", "📶 O2 / FIBRA"])
+    # Nueva estructura de pestañas: LUZ Y GAS, TELECOMUNICACIONES, ALARMAS
+    t1, t2, t3 = st.tabs(["⚡ LUZ Y GAS", "📶 TELECOMUNICACIONES", "🛡️ ALARMAS"])
+    
     with t1:
-        df_precios = pd.DataFrame(tarifas_luz).drop(columns=['logo'])
-        st.dataframe(df_precios, use_container_width=True, hide_index=True)
+        st.markdown('<div class="block-header">⚡ LUZ Y GAS</div>', unsafe_allow_html=True)
+        # Asegúrate de guardar la imagen como 'tarifas_visuales/luz_gas.jpg'
+        st.image("tarifas_visuales/luz_gas.jpg", use_container_width=True)
+
     with t2:
-        df_gas = pd.DataFrame([
-            {"PRIORIDAD": 1, "COMPAÑÍA": "TOTAL GAS", "FIJO RL1": "9,50 €", "ENERGIA RL1": "0,059 €/kWh", "FIJO RL2": "14,50 €", "ENERGIA RL2": "0,057 €/kWh"},
-            {"PRIORIDAD": 2, "COMPAÑÍA": "NATURGY", "FIJO RL1": "5,34 €", "ENERGIA RL1": "0,084 €/kWh", "FIJO RL2": "10,03 €", "ENERGIA RL2": "0,081 €/kWh"},
-            {"PRIORIDAD": 3, "COMPAÑÍA": "GANA ENERGÍA", "FIJO RL1": "3,93 €", "ENERGIA RL1": "VARIABLE (BENEF. 0,11€)", "FIJO RL2": "8,11 €", "ENERGIA RL2": "VARIABLE (BENEF. 0,006€)"}
-        ])
-        st.dataframe(df_gas, use_container_width=True, hide_index=True)
+        st.markdown('<div class="block-header">📶 TELECOMUNICACIONES</div>', unsafe_allow_html=True)
+        
+        st.subheader("LOWI")
+        # Asegúrate de guardar la imagen como 'tarifas_visuales/lowi.jpg'
+        st.image("tarifas_visuales/lowi.jpg", use_container_width=True)
+        
+        st.divider()
+        
+        st.subheader("O2")
+        # Asegúrate de guardar la imagen como 'tarifas_visuales/o2.jpg'
+        st.image("tarifas_visuales/o2.jpg", use_container_width=True)
+
     with t3:
-        st.markdown('<div class="block-header">📡 SOLO FIBRA</div>', unsafe_allow_html=True)
-        f_cols = st.columns(3)
-        solo_fibra = [("300 Mb", "23€"), ("600 Mb", "27€"), ("1 Gb", "31€")]
-        for i, (vel, pre) in enumerate(solo_fibra):
-            with f_cols[i]:
-                st.markdown(f'<div class="price-card"><div class="price-title">FIBRA {vel}</div><div class="price-val">{pre}</div><div class="price-sub">Precio Final / Mes</div></div>', unsafe_allow_html=True)
-        st.markdown('<div class="block-header">➕ LÍNEAS ADICIONALES</div>', unsafe_allow_html=True)
-        ad_cols = st.columns(3)
-        lineas_ad = [("300 Mb", "15€"), ("600 Mb", "20€"), ("1 Gb", "27€")]
-        for i, (vel, pre) in enumerate(lineas_ad):
-            with ad_cols[i]:
-                st.markdown(f'<div class="price-card"><div class="price-title">ADICIONAL {vel}</div><div class="price-val">{pre}</div><div class="price-sub">Precio / Mes</div></div>', unsafe_allow_html=True)
-        st.markdown('<div class="block-header">🌐 FIBRA Y MÓVIL</div>', unsafe_allow_html=True)
-        fm_cols = st.columns(3)
-        fibra_movil = [
-            ("600 Mb", "35€", "1 LÍNEA MÓVIL (60GB)"),
-            ("600 Mb", "35€", "2 LÍNEAS (10GB + 40GB)"),
-            ("1 Gb", "38€", "1 LÍNEA MÓVIL (120GB)")
-        ]
-        for i, (vel, pre, lin) in enumerate(fibra_movil):
-            with fm_cols[i % 3]:
-                st.markdown(f'<div class="price-card"><div class="price-title">{vel} + {lin}</div><div class="price-val">{pre}</div><div class="price-sub">Conexión de Alta Velocidad</div></div>', unsafe_allow_html=True)
-        st.markdown('<div class="block-header">📺 FIBRA, MÓVIL Y TV</div>', unsafe_allow_html=True)
-        tv_cols = st.columns(3)
-        planes_tv = [
-            ("SOLO TV", "9.99€", "Streaming", "O2 TV"),
-            ("600 Mb + TV M+", "38€", "35 GB", "1 LÍNEA MÓVIL"),
-            ("600 Mb + TV M+ + NETFLIX", "45€", "60 GB", "1 LÍNEA MÓVIL"),
-            ("1 Gb + TV M+", "50€", "350 GB", "1 LÍNEA MÓVIL"),
-            ("1 Gb + TV M+ + NETFLIX", "56€", "375 GB", "1 LÍNEA MÓVIL")
-        ]
-        for i, (vel, pre, gb, lin) in enumerate(planes_tv):
-            with tv_cols[i % 3]:
-                st.markdown(f'<div class="price-card"><div class="price-title">{vel}</div><div class="price-val">{pre}</div><div class="price-sub">{gb} | {lin}</div></div>', unsafe_allow_html=True)
-        st.markdown('<div class="block-header">➕ LÍNEAS ADICIONALES (TV)</div>', unsafe_allow_html=True)
-        ad_tv_cols = st.columns(3)
-        lineas_ad_tv = [("40 GB", "5€"), ("150 GB", "10€"), ("300 GB", "15€")]
-        for i, (gb, pre) in enumerate(lineas_ad_tv):
-            with ad_tv_cols[i]:
-                st.markdown(f'<div class="price-card"><div class="price-title">ADICIONAL {gb}</div><div class="price-val">{pre}</div><div class="price-sub">Precio / Mes</div></div>', unsafe_allow_html=True)# --- COMPARADOR LUZ ---
+        st.markdown('<div class="block-header">🛡️ ALARMAS</div>', unsafe_allow_html=True)
+        
+        st.subheader("SEGURMA")
+        # Asegúrate de guardar la imagen como 'tarifas_visuales/segurma.jpg'
+        st.image("tarifas_visuales/segurma.jpg", use_container_width=True)
+        st.markdown('<div style="background-color: #d2ff00; color: black; padding: 10px; border-radius: 5px; font-weight: bold; text-align: center; font-size: 1.5rem;">PRIMEROS 12 MESES POR 19.90€</div>', unsafe_allow_html=True)
+        
+        st.divider()
+        
+        st.subheader("3D ALARMAS")
+        # Asegúrate de guardar la imagen como 'tarifas_visuales/3d.jpg'
+        st.image("tarifas_visuales/3d.jpg", use_container_width=True)
+        st.markdown('<div style="background-color: #d2ff00; color: black; padding: 10px; border-radius: 5px; font-weight: bold; text-align: center; font-size: 1.5rem;">PRIMEROS 12 MESES POR 24.20€</div>', unsafe_allow_html=True)
+
+# --- COMPARADOR LUZ ---
 elif menu == "⚖️ COMPARADOR LUZ":
     st.header("Estudio de Ahorro Personalizado")
     
