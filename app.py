@@ -635,93 +635,74 @@ elif menu == "📢 ANUNCIOS Y PLAN AMIGO":
             else:
                 st.warning(f"Falta: {item['file']}")
 
-# --- DASHBOARD Y RANKING ---
+import streamlit as st
+import os
+import pandas as pd
+import random
+import base64
+from datetime import datetime
+from fpdf import FPDF
+
+# --- CONFIGURACIÓN ---
+st.set_page_config(page_title="Basette Group | Hub", layout="wide")
+
+# --- FUNCIONES AUXILIARES ---
+def get_base64_of_bin_file(bin_file):
+    if os.path.exists(bin_file):
+        with open(bin_file, 'rb') as f:
+            return base64.b64encode(f.read()).decode()
+    return ""
+
+img_base64 = get_base64_of_bin_file("rosco.jpg")
+
+# --- MENÚ DE NAVEGACIÓN ---
+menu = st.sidebar.radio("MENÚ", ["🚀 CRM", "📈 DASHBOARD Y RANKING", "⚖️ COMPARADOR LUZ", "⚖️ COMPARADOR GAS", "📊 PRECIOS", "📂 REPOSITORIO", "📢 ANUNCIOS Y PLAN AMIGO", "🕒 CONTROL LABORAL"])
+
+# --- LÓGICA DE MENÚS ---
+if menu == "🚀 CRM":
+    # (Código del CRM que ya tenías con las modificaciones de 3D y Total Energy)
+    # ... [Insertar aquí tu lógica de CRM con los cambios que hicimos] ...
+
 elif menu == "📈 DASHBOARD Y RANKING":
-    try:
-        # 1. LANZAR GLOBOS AL CARGAR LA PÁGINA
-        st.balloons()
+    st.balloons()
+    frases = {1: "¡Hoy es un gran día!", 2: "Tu esfuerzo es el éxito.", 3: "Vamos a por todas."}
+    st.markdown(f'<h1 style="text-align:center; color:#d2ff00;">{frases.get(datetime.now().day % 3 + 1, "¡A por el objetivo!")}</h1>', unsafe_allow_html=True)
+    # ... [Resto de tu lógica de Dashboard] ...
 
-        # 2. FRASES MOTIVADORAS DIARIAS
-        frases = {
-            1: "¡Hoy es un gran día para romper récords!",
-            2: "Tu esfuerzo de hoy es el éxito de mañana.",
-            3: "No te detengas hasta sentirte orgulloso.",
-            4: "La disciplina es el puente entre metas y logros.",
-            5: "Cada llamada es una oportunidad, aprovéchala.",
-            6: "El éxito no es el final, es el camino.",
-            7: "¡Vamos a por todas en este nuevo día!",
-            8: "La clave del éxito es la constancia.",
-            9: "Hoy vas a superar tus propios límites.",
-            10: "Tu actitud determina tu altitud."
-        }
-        frase_dia = frases.get(datetime.now().day % 10 + 1, "¡A por el objetivo de hoy!")
+elif menu == "⚖️ COMPARADOR LUZ":
+    # ... [Aquí va el código del Comparador Luz corregido] ...
 
-        # 3. CARGA DE DATOS
-        de, dt, da = load_and_clean_ranking()
+elif menu == "⚖️ COMPARADOR GAS":
+    # --- CÓDIGO FINAL COMPARADOR GAS ---
+    tarifas_gas = [
+        {"COMPAÑÍA": "NATURGY", "TARIFA": "GAS RL.1 (3.1)", "FIJO": 5.34, "ENERGIA": 0.0840, "logo": "manuales/logo_naturgy.png"},
+        {"COMPAÑÍA": "NATURGY", "TARIFA": "GAS RL.2 (3.2)", "FIJO": 10.03, "ENERGIA": 0.0810, "logo": "manuales/logo_naturgy.png"},
+        {"COMPAÑÍA": "GANA ENERGÍA", "TARIFA": "GAS RL.1 (3.1)", "FIJO": 4.95, "ENERGIA": 0.0700, "logo": "manuales/logo_gana.png"},
+        {"COMPAÑÍA": "GANA ENERGÍA", "TARIFA": "GAS RL.2 (3.2)", "FIJO": 9.50, "ENERGIA": 0.0700, "logo": "manuales/logo_gana.png"},
+        {"COMPAÑÍA": "TOTALENERGIES", "TARIFA": "GAS RL.1 (TOTAL)", "FIJO": 5.43, "ENERGIA": 0.0500, "logo": "manuales/logo_totalenergy.png"},
+        {"COMPAÑÍA": "TOTALENERGIES", "TARIFA": "GAS RL.2 (TOTAL)", "FIJO": 14.50, "ENERGIA": 0.0580, "logo": "manuales/logo_totalenergy.png"},
+    ]
+    # ... [Lógica de cálculo y PDF usando tecomparotodo_logo.jpg en manuales/ o raíz] ...
 
-        # 4. FILTROS (IZQUIERDA) Y VIDEO (DERECHA)
-        c_filtros, c_video = st.columns([2, 1])
-        
-        with c_filtros:
-            st.markdown('<p style="color:#d2ff00; font-weight:bold; margin-bottom:0;">📅 FILTROS</p>', unsafe_allow_html=True)
-            meses_disp = sorted(list(set(de['Mes']) | set(dt['Mes']) | set(da['Mes'])))
-            f_mes = st.multiselect("Mes:", meses_disp, default=[meses_disp[-1]] if meses_disp else [])
-            
-            coms_disp = sorted(list(set(de['Comercial']) | set(dt['Comercial']) | set(da['Comercial'])))
-            f_coms = st.multiselect("Comerciales:", coms_disp, default=coms_disp)
+elif menu == "📊 PRECIOS":
+    t1, t2, t3 = st.tabs(["⚡ LUZ Y GAS", "📶 TELECOMUNICACIONES", "🛡️ ALARMAS"])
+    with t1:
+        st.image("tarifas_visuales/luz_gas.jpg", use_container_width=True)
+    with t2:
+        st.image("tarifas_visuales/lowi.jpg", use_container_width=True)
+        st.image("tarifas_visuales/o2.jpg", use_container_width=True)
+    with t3:
+        st.image("tarifas_visuales/segurma.jpg", use_container_width=True)
+        st.image("tarifas_visuales/3d.jpg", use_container_width=True)
 
-        with c_video:
-            video_file = "WhatsApp Video 2026-04-28 at 00.31.03.mp4"
-            st.markdown('<p style="color:#d2ff00; font-size:0.7rem; text-align:right; margin-bottom:0;">🔊 Música Rosco</p>', unsafe_allow_html=True)
-            st.video(video_file, format="video/mp4")
+elif menu == "📂 REPOSITORIO":
+    # ... [Tu lógica de carpetas con TARIFAS 3D incluida] ...
 
-        # 5. APLICAR FILTROS
-        f_de = de[(de['Mes'].isin(f_mes)) & (de['Comercial'].isin(f_coms))].copy()
-        f_dt = dt[(dt['Mes'].isin(f_mes)) & (dt['Comercial'].isin(f_coms))].copy()
-        f_da = da[(da['Mes'].isin(f_mes)) & (da['Comercial'].isin(f_coms))].copy()
+elif menu == "📢 ANUNCIOS Y PLAN AMIGO":
+    # ... [Tu lógica de anuncios y QR] ...
 
-        # 6. PROCESAMIENTO
-        r1 = f_de.groupby('Comercial')[['V_Luz', 'V_Gas']].sum() if not f_de.empty else pd.DataFrame()
-        r2 = f_dt.groupby('Comercial')[['V_Fibra', 'V_Móvil']].sum() if not f_dt.empty else pd.DataFrame()
-        r3 = f_da.groupby('Comercial')[['V_Alarma']].sum() if not f_da.empty else pd.DataFrame()
-        
-        rank = pd.concat([r1, r2, r3], axis=1).fillna(0)
-        rank['Total Neto'] = rank.sum(axis=1)
-
-        # DETERMINAR EL Nº1
-        nombre_n1, ventas_n1 = ("---", 0)
-        if not rank.empty:
-            top = rank.sort_values('Total Neto', ascending=False).iloc[0]
-            nombre_n1, ventas_n1 = top.name, int(top['Total Neto'])
-
-        # 7. CABECERA TÍTULO
-        st.markdown(f"""
-            <div style="text-align: center; margin: 20px 0;">
-                <h1 style="color: #d2ff00; font-size: 1.8rem; margin-bottom:5px;">{frase_dia}</h1>
-                <div style="background: rgba(210, 255, 0, 0.1); border: 2px solid #d2ff00; display: inline-block; padding: 10px 30px; border-radius: 50px;">
-                    <span style="color: white; font-size: 1.2rem;">🏆 Nº1 EN VENTAS: </span>
-                    <span style="color: #d2ff00; font-size: 1.5rem; font-weight: bold;">{nombre_n1.upper()} ({ventas_n1})</span>
-                </div>
-            </div>
-        """, unsafe_allow_html=True)
-
-        # 8. TABLA DE RANKING CON COLORES CONDICIONALES
-        def color_gradiente(val):
-            # Colores dinámicos basados en el valor (más ventas = más intenso)
-            if val >= 20: return 'background-color: #d2ff00; color: black; font-weight: bold'
-            if val >= 10: return 'background-color: #a3cc00; color: white'
-            if val > 0: return 'background-color: #556600; color: white'
-            return ''
-
-        st.dataframe(rank.style.applymap(color_gradiente, subset=['Total Neto']), use_container_width=True)
-
-        # 9. OBJETIVO EQUIPO
-        v_equipo = int(rank['Total Neto'].sum())
-        v_falta = max(0, 75 - v_equipo)
-        st.markdown(f'<div style="background:#161b22;padding:15px;border-radius:15px;border:1px solid #30363d;text-align:center;max-width:300px;margin:auto;"><p style="color:#d2ff00;">🚀 FALTAN PARA EL OBJETIVO</p><h1>{v_falta}</h1></div>', unsafe_allow_html=True)
-
-    except Exception as e:
-        st.error(f"Error en Dashboard: {e}")
+elif menu == "🕒 CONTROL LABORAL":
+    # ... [Tu lógica de control laboral con las correcciones de Lorena Pozo] ...
 
 #-----REPOSITORIO----
 elif menu == "📂 REPOSITORIO":
