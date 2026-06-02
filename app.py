@@ -324,10 +324,18 @@ elif menu == "📊 PRECIOS":
 elif menu == "⚖️ COMPARADOR LUZ":
     st.header("⚖️ Comparador de Luz")
     
-    # Carga de datos
-    df = pd.read_csv("TARIFAS LUZ Y GAS JUNIO 2026.xlsx - Hoja1.csv", skiprows=1)
-    df.columns = [c.strip() for c in df.columns]
-    
+    # 1. CARGA SEGURA DEL CSV
+    # Saltamos las filas iniciales que no tienen datos de columna
+    try:
+        df = pd.read_csv("TARIFAS LUZ Y GAS JUNIO 2026.xlsx - Hoja1.csv", skiprows=2)
+        df.columns = [str(c).strip() for c in df.columns]
+        # Limpiar filas donde no hay comercial (quitar las filas vacías)
+        df = df[df['COMERCIALIZADORA'].notna()]
+    except Exception as e:
+        st.error(f"Error al leer el archivo: {e}")
+        st.stop()
+
+    # 2. INTERFAZ
     c1, c2 = st.columns(2)
     with c1:
         f_act = st.number_input("Factura actual (€)", value=0.0)
@@ -336,36 +344,31 @@ elif menu == "⚖️ COMPARADOR LUZ":
     
     with c2:
         comp_sel = st.selectbox("Compañía", df['COMERCIALIZADORA'].unique())
-        # Filtramos tarifas según compañía
+        # Filtramos por comercial
         opciones = df[df['COMERCIALIZADORA'] == comp_sel]
-        tarifa_sel = st.selectbox("Tarifa", opciones['TARIFA (€/Kwh)'].unique())
-        datos = opciones[opciones['TARIFA (€/Kwh)'] == tarifa_sel].iloc[0]
+        # Usamos la columna real del CSV para la tarifa
+        tarifa_sel = st.selectbox("Tarifa", opciones['COMERCIALIZADORA'].index)
+        datos = opciones.loc[tarifa_sel]
 
-    # Entradas de consumo
+    # 3. CÁLCULO
     col1, col2, col3 = st.columns(3)
     c_punta = col1.number_input("Consumo Punta (kWh)", value=0.0)
     c_llano = col2.number_input("Consumo Llano (kWh)", value=0.0)
     c_valle = col3.number_input("Consumo Valle (kWh)", value=0.0)
 
-    # Cálculos basados en tu CSV
-    precio_kwh = float(str(datos['SIN SVA']).replace(',', '.'))
-    p1 = float(str(datos['P1']).replace(',', '.'))
-    p2 = float(str(datos['P2']).replace(',', '.'))
+    # Convertimos los valores a números de forma segura
+    def limpiar_num(val):
+        return float(str(val).replace(',', '.').split()[0]) if pd.notnull(val) else 0.0
+
+    precio_kwh = limpiar_num(datos['SIN SVA'])
+    p1 = limpiar_num(datos['P1'])
+    p2 = limpiar_num(datos['P2'])
     
     coste_energia = (c_punta + c_llano + c_valle) * precio_kwh
     coste_potencia = potencia * (p1 + p2) * dias
-    total_propuesta = (coste_energia + coste_potencia) * 1.21 # IVA 21%
+    total_propuesta = (coste_energia + coste_potencia) * 1.21 
     
     st.markdown(f"### AHORRO ESTIMADO: {f_act - total_propuesta:.2f} €")
-
-# --- COMPARADOR GAS ---
-elif menu == "⚖️ COMPARADOR GAS":
-    st.header("⚖️ Comparador de Gas")
-    # Nota: Si el gas está en otro archivo, cambia el nombre aquí
-    st.info("Asegúrate de tener los datos de gas en tu archivo para realizar el cálculo.")
-    
-    # Lógica similar a la luz, adaptada a columnas de gas
-    # ... (estructura idéntica pero sumando término fijo y variable de gas)
 # --- ANUNCIOS Y PLAN AMIGO ---
 elif menu == "📢 ANUNCIOS Y PLAN AMIGO":
     st.header("📢 Anuncios y Plan Amigo")
