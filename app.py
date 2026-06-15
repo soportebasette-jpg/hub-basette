@@ -387,14 +387,21 @@ elif menu == "⚖️ COMPARADOR LUZ":
 elif menu == "⚖️ COMPARADOR GAS":
     st.header("Estudio de Ahorro de Gas Personalizado")
 
-    # 1. CARGA DE DATOS
+    # 1. CARGA DE DATOS (MÁS ROBUSTA)
     try:
         df_precios = pd.read_csv("TARIFAS LUZ Y GAS JUNIO 2026.xlsx - Hoja1.csv")
-        df_precios.columns = [c.strip().upper() for c in df_precios.columns]
-        # Filtramos donde TIPO es GAS
-        df_gas = df_precios[df_precios['TIPO'].str.upper() == 'GAS'].copy()
+        # Limpiamos nombres de columnas
+        df_precios.columns = [str(c).strip().upper() for c in df_precios.columns]
+        
+        # Filtramos solo filas donde el tipo sea GAS (asegurando limpieza de espacios)
+        df_gas = df_precios[df_precios['TIPO'].fillna('').str.upper().str.strip() == 'GAS'].copy()
+        
+        if df_gas.empty:
+            st.error("No se encontraron registros de tipo 'GAS' en el archivo.")
+            st.stop()
+            
     except Exception as e:
-        st.error(f"Error al cargar el archivo de precios: {e}")
+        st.error(f"Error al cargar el archivo: {e}")
         st.stop()
 
     c1, c2 = st.columns(2)
@@ -407,17 +414,13 @@ elif menu == "⚖️ COMPARADOR GAS":
         iva_factor = 1 + (iva_sel / 100)
     
     with c2:
+        # Selección dinámica basada en el archivo
         comp_sel = st.selectbox("Compañía Propuesta", sorted(df_gas['COMPAÑÍA'].unique()), key="gas_comp")
         tarifas_f = df_gas[df_gas['COMPAÑÍA'] == comp_sel]['TARIFA'].unique()
         tarifa_sel_nombre = st.selectbox("Tarifa Seleccionada", tarifas_f, key="gas_tarifa")
         
         sel = df_gas[(df_gas['COMPAÑÍA'] == comp_sel) & (df_gas['TARIFA'] == tarifa_sel_nombre)].iloc[0]
         consumo_kwh = st.number_input("Consumo total del periodo (kWh)", value=0.0, key="gas_kwh")
-
-        # Visualización de logo de compañía si existe
-        logo_path = f"manuales/{comp_sel.upper()}.png"
-        if os.path.exists(logo_path):
-            st.image(logo_path, width=150)
 
     # --- CÁLCULOS ---
     p_fijo_mensual = float(sel['FIJO'])
@@ -437,13 +440,15 @@ elif menu == "⚖️ COMPARADOR GAS":
     if st.button("GENERAR ESTUDIO PDF"):
         try:
             from fpdf import FPDF
+            import os
             pdf = FPDF()
             pdf.add_page()
             
-            # Logo Empresa (tecomparotodo)
-            logo_path = "manuales/tecomparotodo_logo.jpg"
-            if os.path.exists(logo_path):
-                pdf.image(logo_path, 10, 8, 45)
+            # --- LOGOS ---
+            for ruta in ["manuales/tecomparotodo_logo.jpg", "tecomparotodo_logo.jpg"]:
+                if os.path.exists(ruta):
+                    pdf.image(ruta, 10, 8, 45)
+                    break
             
             pdf.ln(30)
             pdf.set_font("Arial", "B", 18)
@@ -454,14 +459,16 @@ elif menu == "⚖️ COMPARADOR GAS":
             pdf.cell(190, 8, f"CLIENTE: {cliente.upper()}", ln=True, fill=True)
             
             pdf.set_font("Arial", "", 10)
-            items = [("Compañía", comp_sel), ("Tarifa", tarifa_sel_nombre), 
-                     ("Término Fijo", f"{p_fijo_mensual:.2f} EUR/mes"),
-                     ("Término Energía", f"{p_energia_kwh:.4f} EUR/kWh"),
-                     ("Consumo", f"{consumo_kwh} kWh"),
-                     ("Factura Actual", f"{f_act:.2f} EUR"),
-                     ("Nueva Factura", f"{coste_total_iva:.2f} EUR")]
+            items_pdf = [
+                ("Compañía", comp_sel), ("Tarifa", tarifa_sel_nombre),
+                ("Término Fijo", f"{p_fijo_mensual:.2f} EUR/mes"),
+                ("Término Energía", f"{p_energia_kwh:.4f} EUR/kWh"),
+                ("Consumo", f"{consumo_kwh} kWh"),
+                ("Factura Actual", f"{f_act:.2f} EUR"),
+                ("Nueva Factura", f"{coste_total_iva:.2f} EUR")
+            ]
             
-            for d, v in items:
+            for d, v in items_pdf:
                 pdf.cell(95, 8, d, border=1)
                 pdf.cell(95, 8, str(v), border=1, ln=True)
             
@@ -473,9 +480,7 @@ elif menu == "⚖️ COMPARADOR GAS":
             st.download_button("📥 DESCARGAR ESTUDIO PDF", data=pdf_data, file_name=f"Estudio_Gas_{cliente}.pdf")
             
         except Exception as e:
-            st.error(f"Error al generar el PDF: {e}")
-
-# --- ANUNCIOS Y PLAN AMIGO ---
+            st.error(f"Error al generar el PDF: {e}")# --- ANUNCIOS Y PLAN AMIGO ---
 elif menu == "📢 ANUNCIOS Y PLAN AMIGO":
     st.header("📢 Anuncios y Plan Amigo")
     st.markdown('<div class="block-header">🖼️ MATERIAL PUBLICITARIO</div>', unsafe_allow_html=True)
