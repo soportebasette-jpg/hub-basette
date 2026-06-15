@@ -218,6 +218,9 @@ if menu == "🚀 CRM":
                 <a href="https://www.facebook.com/profile.php?id=61589358886498" target="_blank">
                     <img src="https://cdn-icons-png.flaticon.com/512/733/733547.png" width="35" class="social-icon">
                 </a>
+                <a href="https://www.youtube.com/@tecomparotodo" target="_blank">
+                    <img src="https://cdn-icons-png.flaticon.com/512/1384/1384060.png" width="35" class="social-icon">
+                </a>
                 <a href="https://x.com/tecomparotodo" target="_blank">
                     <img src="https://cdn-icons-png.flaticon.com/512/733/733579.png" width="35" class="social-icon">
                 </a>
@@ -242,7 +245,6 @@ if menu == "🚀 CRM":
     st.link_button(f"ENTRAR AL MARCADOR", "https://grupobasette.vozipcenter.com/", use_container_width=True)
     
     st.markdown('<div class="block-header">💡 🔥 ENERGÍA</div>', unsafe_allow_html=True)
-    # Lista modificada: Se unificaron los portales de total en uno solo llamado "TOTAL ENERGY"
     energia = [
         {"n": "CRM BASETTE", "u": "https://crm.grupobasette.eu/login"}, 
         {"n": "GANA ENERGÍA", "u": "https://colaboradores.ganaenergia.com/"}, 
@@ -250,7 +252,8 @@ if menu == "🚀 CRM":
         {"n": "TOTAL ENERGY", "u": "https://totalenergiesespana.my.site.com/portalcolaboradores/s/login/?ec=302&startURL=%2Fportalcolaboradores%2Fs%2F"}, 
         {"n": "IBERDROLA", "u": "https://crm.gesventas.eu/login.php"}, 
         {"n": "NIBA", "u": "https://clientes.niba.es/"}, 
-        {"n": "ENDESA", "u": "https://inergia.app"}
+        {"n": "ENDESA", "u": "https://inergia.app"},
+        {"n": "REPSOL", "u": "https://inergia.app/login.php"}
     ]
     cols_en = st.columns(3)
     for i, p in enumerate(energia):
@@ -262,7 +265,6 @@ if menu == "🚀 CRM":
     col_izq, col_der = st.columns(2)
     with col_izq:
         st.markdown('<div class="block-header">🛡️ 🚨 ALARMAS</div>', unsafe_allow_html=True)
-        # Distribución en 2 columnas dentro de Alarmas para añadir el nuevo portal 3D
         c_al1, c_al2 = st.columns(2)
         with c_al1:
             st.markdown('<div style="background:#161b22; padding:15px; border-radius:10px; border:1px solid #30363d; text-align:center; margin-bottom:10px;"><h4 style="color:white; margin:0;">SEGURMA</h4></div>', unsafe_allow_html=True)
@@ -284,40 +286,46 @@ if menu == "🚀 CRM":
 # --- PRECIOS ---
 elif menu == "📊 PRECIOS":
     st.header("Tarifario Oficial")
-    # Nueva estructura de pestañas: LUZ Y GAS, TELECOMUNICACIONES, ALARMAS
+    
+    # Estructura de pestañas
     t1, t2, t3 = st.tabs(["⚡ LUZ Y GAS", "📶 TELECOMUNICACIONES", "🛡️ ALARMAS"])
     
     with t1:
         st.markdown('<div class="block-header">⚡ LUZ Y GAS</div>', unsafe_allow_html=True)
-        # Asegúrate de guardar la imagen como 'tarifas_visuales/luz_gas.jpg'
-        st.image("tarifas_visuales/luz_gas.jpg", use_container_width=True)
+        if os.path.exists("tarifas_visuales/luz_gas.jpg"):
+            st.image("tarifas_visuales/luz_gas.jpg", use_container_width=True)
+        else:
+            st.warning("Imagen 'tarifas_visuales/luz_gas.jpg' no encontrada.")
 
     with t2:
         st.markdown('<div class="block-header">📶 TELECOMUNICACIONES</div>', unsafe_allow_html=True)
         
         st.subheader("LOWI")
-        # Asegúrate de guardar la imagen como 'tarifas_visuales/lowi.jpg'
-        st.image("tarifas_visuales/lowi.jpg", use_container_width=True)
+        if os.path.exists("tarifas_visuales/lowi.jpg"):
+            st.image("tarifas_visuales/lowi.jpg", use_container_width=True)
         
         st.divider()
         
         st.subheader("O2")
-        # Asegúrate de guardar la imagen como 'tarifas_visuales/o2.jpg'
-        st.image("tarifas_visuales/o2.jpg", use_container_width=True)
+        # MODIFICACIÓN: Ruta actualizada a manuales/PRECIOS JUNIO O2.png
+        if os.path.exists("manuales/PRECIOS JUNIO O2.png"):
+            st.image("manuales/PRECIOS JUNIO O2.png", use_container_width=True)
+        else:
+            st.error("No se encuentra la imagen: manuales/PRECIOS JUNIO O2.png. Verifica que el nombre sea exacto.")
 
     with t3:
         st.markdown('<div class="block-header">🛡️ ALARMAS</div>', unsafe_allow_html=True)
         
         st.subheader("SEGURMA")
-        # Asegúrate de guardar la imagen como 'tarifas_visuales/segurma.jpg'
-        st.image("tarifas_visuales/segurma.jpg", use_container_width=True)
+        if os.path.exists("tarifas_visuales/segurma.jpg"):
+            st.image("tarifas_visuales/segurma.jpg", use_container_width=True)
         st.markdown('<div style="background-color: #d2ff00; color: black; padding: 10px; border-radius: 5px; font-weight: bold; text-align: center; font-size: 1.5rem;">PRIMEROS 12 MESES POR 19.90€</div>', unsafe_allow_html=True)
         
         st.divider()
         
         st.subheader("3D ALARMAS")
-        # Asegúrate de guardar la imagen como 'tarifas_visuales/3d.jpg'
-        st.image("tarifas_visuales/3d.jpg", use_container_width=True)
+        if os.path.exists("tarifas_visuales/3d.jpg"):
+            st.image("tarifas_visuales/3d.jpg", use_container_width=True)
         st.markdown('<div style="background-color: #d2ff00; color: black; padding: 10px; border-radius: 5px; font-weight: bold; text-align: center; font-size: 1.5rem;">PRIMEROS 12 MESES POR 24.20€</div>', unsafe_allow_html=True)
 
 # --- COMPARADOR LUZ ---
