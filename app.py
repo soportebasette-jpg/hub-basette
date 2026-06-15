@@ -674,14 +674,16 @@ elif menu == "🕒 CONTROL LABORAL":
         # 2. CONFIGURACIÓN COMPLETA
         festivos = [date(2026, 4, 2), date(2026, 4, 3), date(2026, 4, 22), date(2026, 5, 1), date(2026, 5, 29), date(2026, 6, 4)]
         
-        # VACANCES ACTUALITZADES
+        # VACACIONES ACTUALIZADAS
         vacaciones = {
             "RAQUEL GUADALUPE": (date(2026, 6, 22), date(2026, 6, 28)),
             "MARIA JOSE ARACIL": (date(2026, 8, 3), date(2026, 8, 9))
         }
+        
         permisos = {
             "LORENA POZO": (date(2026, 5, 27), date(2026, 6, 3))
         }
+        
         contratos = {
             "BELEN TRONCOSO": (date(2026, 3, 18), date(2026, 5, 21)),
             "DEBORAH RODRIGUEZ": (date(2026, 3, 18), date(2026, 5, 14)),
@@ -713,7 +715,7 @@ elif menu == "🕒 CONTROL LABORAL":
             if fecha > hoy: break 
             if fecha.weekday() >= 5 or fecha in festivos: continue 
             
-            # Validaciones de estado
+            # Validación de estado
             es_vac = any(com_sel.upper() in nom.upper() and i <= fecha <= f for nom, (i, f) in vacaciones.items())
             es_permiso = any(com_sel.upper() in nom.upper() and i <= fecha <= f for nom, (i, f) in permisos.items())
             
