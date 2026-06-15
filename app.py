@@ -422,74 +422,48 @@ elif menu == "📢 ANUNCIOS Y PLAN AMIGO":
 # --- DASHBOARD Y RANKING ---
 elif menu == "📈 DASHBOARD Y RANKING":
     try:
-        # 1. FUNCIÓN PARA IMÁGENES
-        def get_img_64(file_path):
-            import base64
-            import os
-            if os.path.exists(file_path):
-                with open(file_path, "rb") as f:
-                    return base64.b64encode(f.read()).decode()
-            return None
-
-        # 2. ANIMACIÓN DE PERRITOS (ROSCO)
-        rosco_b64 = get_img_64("rosco.jpg")
-        if rosco_b64:
-            falling_items = ""
-            for i in range(15): 
-                left = random.randint(0, 95)
-                delay = random.uniform(0, 3)
-                dur = random.uniform(3, 6)
-                size = random.randint(60, 100)
-                falling_items += f'<img src="data:image/jpeg;base64,{rosco_b64}" class="rosco-fall" style="left:{left}%; animation-delay:{delay}s; animation-duration:{dur}s; width:{size}px;">'
-            
-            st.markdown(f"""
-                <div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 9999; pointer-events: none;">
-                    {falling_items}
-                </div>
-                <style>
-                    .rosco-fall {{ position: absolute; top: -150px; opacity: 0.8; animation: fall linear forwards; }}
-                    @keyframes fall {{ 0% {{ top: -150px; transform: rotate(0deg); opacity: 1; }} 100% {{ top: 110vh; transform: rotate(360deg); opacity: 0; }} }}
-                </style>
-            """, unsafe_allow_html=True)
+        # ... (mantén tus funciones get_img_64 y animación de perritos igual) ...
 
         # 3. CARGA DE DATOS
         de, dt, da = load_and_clean_ranking()
 
-        # 4. FILTROS Y VIDEO
-        c_filtros, c_video = st.columns([2, 1])
-        with c_filtros:
-            st.markdown('<p style="color:#d2ff00; font-weight:bold; margin-bottom:0;">📅 FILTROS</p>', unsafe_allow_html=True)
-            meses_disp = sorted(list(set(de['Mes']) | set(dt['Mes']) | set(da['Mes'])))
-            f_mes = st.multiselect("Mes:", meses_disp, default=[meses_disp[-1]] if meses_disp else [])
-            coms_disp = sorted(list(set(de['Comercial']) | set(dt['Comercial']) | set(da['Comercial'])))
-            f_coms = st.multiselect("Comerciales:", coms_disp, default=coms_disp)
-
-        with c_video:
-            video_file = "WhatsApp Video 2026-04-28 at 00.31.03.mp4"
-            st.markdown('<p style="color:#d2ff00; font-size:0.7rem; text-align:right; margin-bottom:0;">🔊 Música Rosco</p>', unsafe_allow_html=True)
-            st.video(video_file, format="video/mp4")
-
-        # 5. APLICAR FILTROS Y LÓGICA DE COLUMNAS (Incluyendo Pte Firma)
-        def procesar_df(df, es_energia=False, es_fibra=False):
+        # 4. APLICAR FILTROS Y LÓGICA (PROTEGIDA)
+        def procesar_df(df):
             if df.empty: return df
             df = df[(df['Mes'].isin(f_mes)) & (df['Comercial'].isin(f_coms))].copy()
+            
+            # Inicializamos columnas en 0 por defecto
+            df['V_REF'] = 0
+            df['Baja'] = 0
+            df['Cancel'] = 0
+            df['Pte_Firma'] = 0 
+            
             if 'Canal' in df.columns:
                 df['V_REF'] = df['Canal'].apply(lambda x: 1 if str(x).strip().upper() == "REF" else 0)
             if 'Estado' in df.columns:
                 df['Baja'] = df['Estado'].apply(lambda x: 1 if str(x).strip().upper() == "BAJA" else 0)
                 df['Cancel'] = df['Estado'].apply(lambda x: 1 if str(x).strip().upper() == "CANCELADO" else 0)
-                df['Pte_Firma'] = df['Estado'].apply(lambda x: 1 if str(x).strip().upper() == "PTE FIRMA" else 0)
+                # Normalizamos el texto para evitar el error
+                df['Pte_Firma'] = df['Estado'].apply(lambda x: 1 if "PTE" in str(x).upper() and "FIRMA" in str(x).upper() else 0)
             return df
 
         f_de = procesar_df(de)
         f_dt = procesar_df(dt)
         f_da = procesar_df(da)
 
-        r1 = f_de.groupby('Comercial')[['V_Luz', 'V_Gas', 'V_REF', 'Baja', 'Cancel', 'Pte_Firma']].sum() if not f_de.empty else pd.DataFrame()
-        r2 = f_dt.groupby('Comercial')[['V_Fibra', 'V_Móvil', 'V_REF', 'Baja', 'Cancel', 'Pte_Firma']].sum() if not f_dt.empty else pd.DataFrame()
-        r3 = f_da.groupby('Comercial')[['V_Alarma', 'V_REF', 'Pte_Firma']].sum() if not f_da.empty else pd.DataFrame()
+        # 5. AGRUPACIÓN (Ahora todas las columnas existen sí o sí)
+        def agrupar(df, cols_base):
+            if df.empty: return pd.DataFrame(columns=cols_base)
+            return df.groupby('Comercial')[cols_base].sum()
+
+        r1 = agrupar(f_de, ['V_Luz', 'V_Gas', 'V_REF', 'Baja', 'Cancel', 'Pte_Firma'])
+        r2 = agrupar(f_dt, ['V_Fibra', 'V_Móvil', 'V_REF', 'Baja', 'Cancel', 'Pte_Firma'])
+        r3 = agrupar(f_da, ['V_Alarma', 'V_REF', 'Pte_Firma'])
         
+        # Unimos los dataframes
         rank = pd.concat([r1, r2, r3], axis=1).fillna(0)
+        
+        # Cálculos de totales
         rank['REF'] = rank.filter(like='V_REF').sum(axis=1)
         rank['Bajas_Total'] = rank.filter(like='Baja').sum(axis=1)
         rank['Cancel_Total'] = rank.filter(like='Cancel').sum(axis=1)
@@ -500,41 +474,10 @@ elif menu == "📈 DASHBOARD Y RANKING":
         rank['Total Neto'] = rank['Ventas_Sin_Movil'] - rank['Bajas_Total'] - rank['Cancel_Total'] - rank['Pte_Firma_Total']
         rank['Faltan para 25'] = rank.index.to_series().apply(lambda x: max(0, 25 - int(rank.loc[x, 'Total Neto'])) if "LUIS" not in str(x).upper() else 0)
 
-        # 6. DETERMINAR EL Nº1
-        nombre_n1, ventas_n1 = ("---", 0)
-        if not rank.empty:
-            top_comercial = rank.sort_values('Total Neto', ascending=False).iloc[0]
-            nombre_n1, ventas_n1 = (top_comercial.name, int(top_comercial['Total Neto']))
-
-        st.markdown(f"""
-            <div style="text-align: center; margin: 20px 0;">
-                <h1 style="color: #d2ff00; font-size: 2.1rem; margin-bottom:5px;">"EL ÉXITO ES EL RESULTADO DE LA DISCIPLINA DIARIA"</h1>
-                <div style="background: rgba(210, 255, 0, 0.1); border: 2px solid #d2ff00; display: inline-block; padding: 10px 30px; border-radius: 50px; margin-top: 10px;">
-                    <span style="color: white; font-size: 1.2rem;">🏆 Nº1 EN VENTAS NETAS: </span>
-                    <span style="color: #d2ff00; font-size: 1.5rem; font-weight: bold;">{nombre_n1.upper()} ({ventas_n1})</span>
-                </div>
-            </div>
-        """, unsafe_allow_html=True)
-
-        # 7. TABLA DE RANKING (Incluyendo Pte Firma)
-        df_vis = rank.rename(columns={'V_Luz':'Luz','V_Gas':'Gas','V_Fibra':'Fibra','V_Móvil':'Móvil','V_Alarma':'Alarma','Bajas_Total':'Bajas','Cancel_Total':'Cancelados','Pte_Firma_Total':'Pte Firma'})
-        cols_tab = ['Luz','Gas','Fibra','Móvil','Alarma','REF','Bajas','Cancelados','Pte Firma','Total Neto','Faltan para 25']
-        st.table(df_vis[[c for c in cols_tab if c in df_vis.columns]].astype(int).sort_values('Total Neto', ascending=False).style.apply(
-            lambda x: ['background-color: rgba(210, 255, 0, 0.2); color: #d2ff00; font-weight: bold' if x.name in ['Total Neto', 'Faltan para 25'] else '' for i in x], axis=1))
-
-        # 8. TOTALES BRUTOS Y GESTIÓN
-        st.markdown("---")
-        cx1, cx2, cx3, cx4 = st.columns(4)
-        box_alt = "background:#161b22; border:1px solid #ff4b4b; padding:15px; border-radius:10px; text-align:center;"
-        cx1.markdown(f'<div style="{box_alt}"><p style="color:#ff4b4b;font-size:0.75rem;margin:0;">CANCELACIONES</p><h3 style="color:white;margin:0;">{int(rank["Cancel_Total"].sum())}</h3></div>', unsafe_allow_html=True)
-        cx2.markdown(f'<div style="{box_alt}"><p style="color:#ff4b4b;font-size:0.75rem;margin:0;">BAJAS</p><h3 style="color:white;margin:0;">{int(rank["Bajas_Total"].sum())}</h3></div>', unsafe_allow_html=True)
-        cx3.markdown(f'<div style="{box_alt}"><p style="color:#ff4b4b;font-size:0.75rem;margin:0;">PTE. FIRMA</p><h3 style="color:white;margin:0;">{int(rank["Pte_Firma_Total"].sum())}</h3></div>', unsafe_allow_html=True)
-        cx4.markdown(f'<div style="{box_alt} border:1px solid #d2ff00;"><p style="color:#d2ff00;font-size:0.75rem;margin:0;">TOTAL NETO</p><h3 style="color:white;margin:0;">{int(rank["Total Neto"].sum())}</h3></div>', unsafe_allow_html=True)
+        # ... (el resto de tu código visual permanece igual) ...
 
     except Exception as e:
-        st.error(f"Error en Dashboard: {e}")
-
-#-----REPOSITORIO----
+        st.error(f"Error en Dashboard: {e}")#-----REPOSITORIO----
 elif menu == "📂 REPOSITORIO":
     import os  # Crucial para que funcionen las carpetas
     st.markdown('<div class="block-header">📂 REPOSITORIO DE DOCUMENTACIÓN</div>', unsafe_allow_html=True)
