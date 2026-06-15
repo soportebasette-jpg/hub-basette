@@ -672,10 +672,11 @@ elif menu == "🕒 CONTROL LABORAL":
         df_laboral = df_laboral.dropna(subset=[col_temporal, col_comercial])
 
         # 2. CONFIGURACIÓN COMPLETA
-        # AÑADIDO: date(2026, 4, 22) al festivo
         festivos = [date(2026, 4, 2), date(2026, 4, 3), date(2026, 4, 22), date(2026, 5, 1), date(2026, 5, 29), date(2026, 6, 4)]
+        
+        # VACANCES ACTUALITZADES
         vacaciones = {
-            "RAQUEL GUADALUPE": (date(2026, 6, 22), date(2026, 6, 26)),
+            "RAQUEL GUADALUPE": (date(2026, 6, 22), date(2026, 6, 28)),
             "MARIA JOSE ARACIL": (date(2026, 8, 3), date(2026, 8, 9))
         }
         permisos = {
@@ -712,7 +713,7 @@ elif menu == "🕒 CONTROL LABORAL":
             if fecha > hoy: break 
             if fecha.weekday() >= 5 or fecha in festivos: continue 
             
-            # Validación de estado
+            # Validaciones de estado
             es_vac = any(com_sel.upper() in nom.upper() and i <= fecha <= f for nom, (i, f) in vacaciones.items())
             es_permiso = any(com_sel.upper() in nom.upper() and i <= fecha <= f for nom, (i, f) in permisos.items())
             
