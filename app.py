@@ -382,19 +382,19 @@ elif menu == "⚖️ COMPARADOR LUZ":
     total_propuesta = (coste_energia + coste_potencia) * 1.21 
     
     st.markdown(f"### AHORRO ESTIMADO: {f_act - total_propuesta:.2f} €")
+
 # --- COMPARADOR GAS ---
 elif menu == "⚖️ COMPARADOR GAS":
     st.header("Estudio de Ahorro de Gas Personalizado")
 
-    # 1. CARGA DE DATOS DESDE ARCHIVO
+    # 1. CARGA DE DATOS
     try:
-        # Si es Excel usa: pd.read_excel("precios energia.xlsx")
-        df_precios = pd.read_csv("precios energia.csv") 
+        df_precios = pd.read_csv("TARIFAS LUZ Y GAS JUNIO 2026.xlsx - Hoja1.csv")
         df_precios.columns = [c.strip().upper() for c in df_precios.columns]
-        # Filtrar solo gas
-        df_gas = df_precios[df_precios['TIPO'].str.upper() == 'GAS']
+        # Filtramos donde TIPO es GAS
+        df_gas = df_precios[df_precios['TIPO'].str.upper() == 'GAS'].copy()
     except Exception as e:
-        st.error(f"Error al cargar 'precios energia.csv': {e}")
+        st.error(f"Error al cargar el archivo de precios: {e}")
         st.stop()
 
     c1, c2 = st.columns(2)
@@ -414,6 +414,11 @@ elif menu == "⚖️ COMPARADOR GAS":
         sel = df_gas[(df_gas['COMPAÑÍA'] == comp_sel) & (df_gas['TARIFA'] == tarifa_sel_nombre)].iloc[0]
         consumo_kwh = st.number_input("Consumo total del periodo (kWh)", value=0.0, key="gas_kwh")
 
+        # Visualización de logo de compañía si existe
+        logo_path = f"manuales/{comp_sel.upper()}.png"
+        if os.path.exists(logo_path):
+            st.image(logo_path, width=150)
+
     # --- CÁLCULOS ---
     p_fijo_mensual = float(sel['FIJO'])
     p_energia_kwh = float(sel['ENERGIA'])
@@ -432,15 +437,13 @@ elif menu == "⚖️ COMPARADOR GAS":
     if st.button("GENERAR ESTUDIO PDF"):
         try:
             from fpdf import FPDF
-            import os
             pdf = FPDF()
             pdf.add_page()
             
-            # --- LOGOS ---
-            for ruta in ["manuales/tecomparotodo_logo.jpg", "tecomparotodo_logo.jpg"]:
-                if os.path.exists(ruta):
-                    pdf.image(ruta, 10, 8, 45)
-                    break
+            # Logo Empresa (tecomparotodo)
+            logo_path = "manuales/tecomparotodo_logo.jpg"
+            if os.path.exists(logo_path):
+                pdf.image(logo_path, 10, 8, 45)
             
             pdf.ln(30)
             pdf.set_font("Arial", "B", 18)
@@ -451,16 +454,14 @@ elif menu == "⚖️ COMPARADOR GAS":
             pdf.cell(190, 8, f"CLIENTE: {cliente.upper()}", ln=True, fill=True)
             
             pdf.set_font("Arial", "", 10)
-            items_pdf = [
-                ("Compañía", comp_sel), ("Tarifa", tarifa_sel_nombre),
-                ("Término Fijo", f"{p_fijo_mensual:.2f} EUR/mes"),
-                ("Término Energía", f"{p_energia_kwh:.4f} EUR/kWh"),
-                ("Consumo", f"{consumo_kwh} kWh"),
-                ("Factura Actual", f"{f_act:.2f} EUR"),
-                ("Nueva Factura", f"{coste_total_iva:.2f} EUR")
-            ]
+            items = [("Compañía", comp_sel), ("Tarifa", tarifa_sel_nombre), 
+                     ("Término Fijo", f"{p_fijo_mensual:.2f} EUR/mes"),
+                     ("Término Energía", f"{p_energia_kwh:.4f} EUR/kWh"),
+                     ("Consumo", f"{consumo_kwh} kWh"),
+                     ("Factura Actual", f"{f_act:.2f} EUR"),
+                     ("Nueva Factura", f"{coste_total_iva:.2f} EUR")]
             
-            for d, v in items_pdf:
+            for d, v in items:
                 pdf.cell(95, 8, d, border=1)
                 pdf.cell(95, 8, str(v), border=1, ln=True)
             
