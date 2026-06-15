@@ -678,50 +678,58 @@ elif menu == "🕒 CONTROL LABORAL":
         }
 
         with st.expander("📅 CALENDARIO DE VACACIONES"):
-            for nombre, (inicio, fin) in vacaciones.items():
-                st.info(f"**{nombre}**: {inicio.strftime('%d/%m')} al {fin.strftime('%d/%m')}")
+            cols_cal = st.columns(len(vacaciones))
+            for i, (nombre, (inicio, fin)) in enumerate(vacaciones.items()):
+                cols_cal[i].markdown(f"**{nombre}**:<br>{inicio.strftime('%d/%m')} al {fin.strftime('%d/%m')}", unsafe_allow_html=True)
 
         # 3. FILTROS
         col_f1, col_f2 = st.columns(2)
-        coms = sorted(df_laboral[col_comercial].unique().astype(str))
-        com_sel = col_f1.selectbox("👤 Selecciona Comercial", coms)
+        com_sel = col_f1.selectbox("👤 Selecciona Comercial", sorted(df_laboral[col_comercial].unique().astype(str)))
         mes_sel = col_f2.selectbox("📅 Selecciona Mes", range(1, 13), index=5)
 
         # 4. LÓGICA DE AUDITORÍA
-        datos = df_laboral[(df_laboral[col_comercial] == com_sel) & 
-                           (df_laboral[col_temporal].dt.month == mes_sel)].copy()
+        datos = df_laboral[(df_laboral[col_comercial] == com_sel) & (df_laboral[col_temporal].dt.month == mes_sel)].copy()
         
         min_ret, faltas = 0, 0
+        historial_diario = []
         dias_mes = calendar.monthrange(2026, mes_sel)[1]
         
         for d in range(1, dias_mes + 1):
             fecha = date(2026, mes_sel, d)
-            if fecha.weekday() >= 5: continue # Fin de semana
+            if fecha.weekday() >= 5: continue 
             
             dia_data = datos[datos[col_temporal].dt.date == fecha]
             entradas = dia_data[dia_data[col_accion].str.contains("ENTRADA", case=False, na=False)]
             
+            # Comprobar vacaciones
+            es_vac = any(com_sel.upper() in nom.upper() and i <= fecha <= f for nom, (i, f) in vacaciones.items())
+            
             if entradas.empty:
-                # Comprobar si es vacación
-                es_vac = False
-                for nom, (i, f) in vacaciones.items():
-                    if com_sel.upper() in nom.upper() and i <= fecha <= f: es_vac = True
-                if not es_vac: faltas += 1
+                if not es_vac: 
+                    faltas += 1
+                    historial_diario.append({"Fecha": fecha, "Incidencia": "FALTA"})
             else:
                 hora = entradas[col_temporal].min().time()
                 if hora > time(9, 30):
-                    min_ret += (datetime.combine(fecha, hora) - datetime.combine(fecha, time(9, 30))).total_seconds() / 60
+                    retraso = (datetime.combine(fecha, hora) - datetime.combine(fecha, time(9, 30))).total_seconds() / 60
+                    min_ret += retraso
+                    historial_diario.append({"Fecha": fecha, "Incidencia": f"RETRASO ({int(retraso)} min)"})
 
-        # 5. DASHBOARD DE MÉTRICAS
+        # 5. DASHBOARD DE MÉTRICAS (COLORES LLAMATIVOS)
         st.markdown("### 📊 Resumen Mensual")
         c1, c2 = st.columns(2)
-        c1.metric("Minutos de Retraso", int(min_ret))
-        c2.metric("Días de Falta", faltas)
+        c1.markdown(f'<div style="background:#262730; padding:20px; border-radius:10px; border-left: 10px solid #ff4b4b; text-align:center;"><h3 style="color:#ff4b4b; margin:0;">MINUTOS RETRASO</h3><h1 style="color:white; margin:0;">{int(min_ret)}</h1></div>', unsafe_allow_html=True)
+        c2.markdown(f'<div style="background:#262730; padding:20px; border-radius:10px; border-left: 10px solid #ffaa00; text-align:center;"><h3 style="color:#ffaa00; margin:0;">TOTAL FALTAS</h3><h1 style="color:white; margin:0;">{faltas}</h1></div>', unsafe_allow_html=True)
         
         # 6. HISTORIAL
         st.markdown("---")
         with st.expander("🔍 VER HISTORIAL DE REGISTROS"):
-            st.dataframe(datos.sort_values(col_temporal, ascending=False), use_container_width=True)
+            # Unir datos originales con el reporte de incidencias
+            hist_df = pd.DataFrame(historial_diario)
+            if not hist_df.empty:
+                st.dataframe(hist_df, use_container_width=True)
+            else:
+                st.write("No hay incidencias registradas en este mes.")
 
     except Exception as e:
-        st.error(f"Error: {e}")
+        st.error(f"Error procesando datos: {e}")
