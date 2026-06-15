@@ -664,34 +664,64 @@ elif menu == "🕒 CONTROL LABORAL":
         df_laboral = pd.read_csv(url_csv)
         df_laboral.columns = [str(c).strip().upper() for c in df_laboral.columns]
         
-        # DETECCIÓN DINÁMICA DE COLUMNAS (Para evitar el KeyError)
-        col_comercial = next((c for c in df_laboral.columns if "QUIÉN" in c or "COMERCIAL" in c or "NOMBRE" in c), None)
-        col_temporal = next((c for c in df_laboral.columns if "TEMPORAL" in c or "MARCA" in c or "FECHA" in c), None)
-        col_accion = next((c for c in df_laboral.columns if "HACER" in c or "ACCIÓN" in c), None)
+        col_comercial = next((c for c in df_laboral.columns if "QUIÉN" in c or "COMERCIAL" in c), None)
+        col_temporal = next((c for c in df_laboral.columns if "TEMPORAL" in c or "MARCA" in c), None)
+        col_accion = next((c for c in df_laboral.columns if "HACER" in c), None)
         
-        if not col_comercial or not col_temporal or not col_accion:
-            st.error(f"No se pudieron detectar las columnas necesarias. Columnas encontradas: {list(df_laboral.columns)}")
-            st.stop()
-            
         df_laboral[col_temporal] = pd.to_datetime(df_laboral[col_temporal], dayfirst=True, errors='coerce')
         df_laboral = df_laboral.dropna(subset=[col_temporal, col_comercial])
-        
-        # 2. SELECCIÓN DE COMERCIAL
-        comerciales = sorted(df_laboral[col_comercial].unique().astype(str))
-        com_sel = st.selectbox("👤 Selecciona Comercial", comerciales)
 
-        # 3. LÓGICA DE AUDITORÍA
-        st.markdown(f"### 📊 Auditoría: {com_sel}")
-        datos = df_laboral[df_laboral[col_comercial] == com_sel].copy()
-        
-        # (Cálculos de retrasos y faltas aquí...)
-        # ... resto de tu lógica de cálculo ...
+        # 2. CALENDARIO DE VACACIONES
+        vacaciones = {
+            "RAQUEL GUADALUPE": (date(2026, 6, 22), date(2026, 6, 26)),
+            "MARIA JOSE ARACIL": (date(2026, 8, 3), date(2026, 8, 9))
+        }
 
-        # 4. HISTORIAL
+        with st.expander("📅 CALENDARIO DE VACACIONES"):
+            for nombre, (inicio, fin) in vacaciones.items():
+                st.info(f"**{nombre}**: {inicio.strftime('%d/%m')} al {fin.strftime('%d/%m')}")
+
+        # 3. FILTROS
+        col_f1, col_f2 = st.columns(2)
+        coms = sorted(df_laboral[col_comercial].unique().astype(str))
+        com_sel = col_f1.selectbox("👤 Selecciona Comercial", coms)
+        mes_sel = col_f2.selectbox("📅 Selecciona Mes", range(1, 13), index=5)
+
+        # 4. LÓGICA DE AUDITORÍA
+        datos = df_laboral[(df_laboral[col_comercial] == com_sel) & 
+                           (df_laboral[col_temporal].dt.month == mes_sel)].copy()
+        
+        min_ret, faltas = 0, 0
+        dias_mes = calendar.monthrange(2026, mes_sel)[1]
+        
+        for d in range(1, dias_mes + 1):
+            fecha = date(2026, mes_sel, d)
+            if fecha.weekday() >= 5: continue # Fin de semana
+            
+            dia_data = datos[datos[col_temporal].dt.date == fecha]
+            entradas = dia_data[dia_data[col_accion].str.contains("ENTRADA", case=False, na=False)]
+            
+            if entradas.empty:
+                # Comprobar si es vacación
+                es_vac = False
+                for nom, (i, f) in vacaciones.items():
+                    if com_sel.upper() in nom.upper() and i <= fecha <= f: es_vac = True
+                if not es_vac: faltas += 1
+            else:
+                hora = entradas[col_temporal].min().time()
+                if hora > time(9, 30):
+                    min_ret += (datetime.combine(fecha, hora) - datetime.combine(fecha, time(9, 30))).total_seconds() / 60
+
+        # 5. DASHBOARD DE MÉTRICAS
+        st.markdown("### 📊 Resumen Mensual")
+        c1, c2 = st.columns(2)
+        c1.metric("Minutos de Retraso", int(min_ret))
+        c2.metric("Días de Falta", faltas)
+        
+        # 6. HISTORIAL
         st.markdown("---")
         with st.expander("🔍 VER HISTORIAL DE REGISTROS"):
             st.dataframe(datos.sort_values(col_temporal, ascending=False), use_container_width=True)
 
     except Exception as e:
-        st.error(f"Error crítico en el módulo de Control Laboral: {e}")
-        st.info("Revisa que el enlace de Google Sheets esté público y tenga las columnas correctas.")
+        st.error(f"Error: {e}")
