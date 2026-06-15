@@ -382,6 +382,98 @@ elif menu == "⚖️ COMPARADOR LUZ":
     total_propuesta = (coste_energia + coste_potencia) * 1.21 
     
     st.markdown(f"### AHORRO ESTIMADO: {f_act - total_propuesta:.2f} €")
+# --- COMPARADOR GAS ---
+elif menu == "⚖️ COMPARADOR GAS":
+    st.header("Estudio de Ahorro de Gas Personalizado")
+
+    # 1. CARGA DE DATOS DESDE ARCHIVO
+    try:
+        # Si es Excel usa: pd.read_excel("precios energia.xlsx")
+        df_precios = pd.read_csv("precios energia.csv") 
+        df_precios.columns = [c.strip().upper() for c in df_precios.columns]
+        # Filtrar solo gas
+        df_gas = df_precios[df_precios['TIPO'].str.upper() == 'GAS']
+    except Exception as e:
+        st.error(f"Error al cargar 'precios energia.csv': {e}")
+        st.stop()
+
+    c1, c2 = st.columns(2)
+    with c1:
+        cliente = st.text_input("Nombre del cliente", "Nombre Apellidos")
+        f_act = st.number_input("Factura actual con IVA (EUR)", value=0.0, key="gas_f_act")
+        dias_factura = st.number_input("Días del periodo de factura", value=30, key="gas_dias")
+        alquiler_contador = st.number_input("Alquiler de contador (EUR/mes)", value=0.69)
+        iva_sel = st.selectbox("IVA a aplicar (%)", [21, 10], index=0, key="gas_iva")
+        iva_factor = 1 + (iva_sel / 100)
+    
+    with c2:
+        comp_sel = st.selectbox("Compañía Propuesta", sorted(df_gas['COMPAÑÍA'].unique()), key="gas_comp")
+        tarifas_f = df_gas[df_gas['COMPAÑÍA'] == comp_sel]['TARIFA'].unique()
+        tarifa_sel_nombre = st.selectbox("Tarifa Seleccionada", tarifas_f, key="gas_tarifa")
+        
+        sel = df_gas[(df_gas['COMPAÑÍA'] == comp_sel) & (df_gas['TARIFA'] == tarifa_sel_nombre)].iloc[0]
+        consumo_kwh = st.number_input("Consumo total del periodo (kWh)", value=0.0, key="gas_kwh")
+
+    # --- CÁLCULOS ---
+    p_fijo_mensual = float(sel['FIJO'])
+    p_energia_kwh = float(sel['ENERGIA'])
+    imp_hidrocarburos = consumo_kwh * 0.00234
+    
+    coste_fijo_periodo = (p_fijo_mensual / 30) * dias_factura
+    coste_variable_periodo = consumo_kwh * p_energia_kwh
+    coste_alquiler_periodo = (alquiler_contador / 30) * dias_factura
+    
+    subtotal = coste_fijo_periodo + coste_variable_periodo + imp_hidrocarburos + coste_alquiler_periodo
+    coste_total_iva = subtotal * iva_factor
+    ahorro = f_act - coste_total_iva
+
+    st.markdown(f'<div style="background:#d2ff00; padding:20px; border-radius:10px; text-align:center;"><h2 style="color:black;">AHORRO ESTIMADO: {ahorro:.2f} €</h2></div>', unsafe_allow_html=True)
+    
+    if st.button("GENERAR ESTUDIO PDF"):
+        try:
+            from fpdf import FPDF
+            import os
+            pdf = FPDF()
+            pdf.add_page()
+            
+            # --- LOGOS ---
+            for ruta in ["manuales/tecomparotodo_logo.jpg", "tecomparotodo_logo.jpg"]:
+                if os.path.exists(ruta):
+                    pdf.image(ruta, 10, 8, 45)
+                    break
+            
+            pdf.ln(30)
+            pdf.set_font("Arial", "B", 18)
+            pdf.cell(190, 10, "ESTUDIO COMPARATIVO DE GAS", ln=True, align="C")
+            
+            pdf.ln(10)
+            pdf.set_font("Arial", "B", 11)
+            pdf.cell(190, 8, f"CLIENTE: {cliente.upper()}", ln=True, fill=True)
+            
+            pdf.set_font("Arial", "", 10)
+            items_pdf = [
+                ("Compañía", comp_sel), ("Tarifa", tarifa_sel_nombre),
+                ("Término Fijo", f"{p_fijo_mensual:.2f} EUR/mes"),
+                ("Término Energía", f"{p_energia_kwh:.4f} EUR/kWh"),
+                ("Consumo", f"{consumo_kwh} kWh"),
+                ("Factura Actual", f"{f_act:.2f} EUR"),
+                ("Nueva Factura", f"{coste_total_iva:.2f} EUR")
+            ]
+            
+            for d, v in items_pdf:
+                pdf.cell(95, 8, d, border=1)
+                pdf.cell(95, 8, str(v), border=1, ln=True)
+            
+            pdf.ln(10)
+            pdf.set_font("Arial", "B", 14)
+            pdf.cell(190, 15, f"AHORRO ESTIMADO: {ahorro:.2f} EUR", ln=True, align="C", fill=True)
+            
+            pdf_data = pdf.output(dest='S').encode('latin-1', 'replace')
+            st.download_button("📥 DESCARGAR ESTUDIO PDF", data=pdf_data, file_name=f"Estudio_Gas_{cliente}.pdf")
+            
+        except Exception as e:
+            st.error(f"Error al generar el PDF: {e}")
+
 # --- ANUNCIOS Y PLAN AMIGO ---
 elif menu == "📢 ANUNCIOS Y PLAN AMIGO":
     st.header("📢 Anuncios y Plan Amigo")
