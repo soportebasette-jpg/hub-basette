@@ -307,11 +307,12 @@ elif menu == "📊 PRECIOS":
         st.divider()
         
         st.subheader("O2")
-        # MODIFICACIÓN: Ruta actualizada a manuales/PRECIOS JUNIO O2.png
-        if os.path.exists("manuales/PRECIOS JUNIO O2.png"):
-            st.image("manuales/PRECIOS JUNIO O2.png", use_container_width=True)
+        # RUTA CORREGIDA: Apuntando a tarifas_visuales/PRECIOS JUNIO O2.PNG
+        ruta_o2 = "tarifas_visuales/PRECIOS JUNIO O2.PNG"
+        if os.path.exists(ruta_o2):
+            st.image(ruta_o2, use_container_width=True)
         else:
-            st.error("No se encuentra la imagen: manuales/PRECIOS JUNIO O2.png. Verifica que el nombre sea exacto.")
+            st.error(f"No se encuentra la imagen en: {ruta_o2}. Asegúrate de que el nombre exacto del archivo sea 'PRECIOS JUNIO O2.PNG' (incluyendo mayúsculas y extensión).")
 
     with t3:
         st.markdown('<div class="block-header">🛡️ ALARMAS</div>', unsafe_allow_html=True)
