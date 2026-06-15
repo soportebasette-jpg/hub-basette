@@ -385,61 +385,49 @@ elif menu == "⚖️ COMPARADOR LUZ":
 # --- ANUNCIOS Y PLAN AMIGO ---
 elif menu == "📢 ANUNCIOS Y PLAN AMIGO":
     st.header("📢 Anuncios y Plan Amigo")
-    st.markdown('<div class="block-header">🎁 PLAN AMIGO Y FORMULARIOS</div>', unsafe_allow_html=True)
-    
-    col1, col2 = st.columns(2)
-    with col1:
-        st.subheader("QR Plan Amigo")
-        # Ajustado al nombre exacto de tu imagen
-        qr_plan = "anunciosbasette/qr-plan amigo.png"
-        if os.path.exists(qr_plan):
-            st.image(qr_plan, width=200)
-            with open(qr_plan, "rb") as file:
-                st.download_button("Descargar QR Plan Amigo", file, "qr-plan-amigo.png")
-        else:
-            st.error(f"No encontrado: {qr_plan}")
-
-    with col2:
-        st.subheader("QR Formulario Web")
-        # Ajustado al nombre exacto de tu imagen (revisa la extensión .jpeg)
-        qr_form = "anunciosbasette/QR FORMULARIO.jpeg"
-        if os.path.exists(qr_form):
-            st.image(qr_form, width=200)
-            with open(qr_form, "rb") as file:
-                st.download_button("Descargar QR Formulario", file, "qr-formulario.jpeg")
-        else:
-            st.error(f"No encontrado: {qr_form}")
-
     st.markdown('<div class="block-header">🖼️ MATERIAL PUBLICITARIO</div>', unsafe_allow_html=True)
-    st.write("Visualiza y descarga los últimos anuncios:")
     
     path_anuncios = "anunciosbasette/"
-    # Lista actualizada con los nombres exactos de tu imagen
-    lista_anuncios = [
-        {"file": "ahorro facil dazon total.png", "name": "Ahorro Fácil Dazon"},
-        {"file": "tarifa solar actualizada 250526.png", "name": "Tarifa Solar"},
-        {"file": "tarifas actualizadas 250526 energia.png", "name": "Tarifas Energía"},
-        {"file": "tecomparotodolowi_1(1).png", "name": "Tarifas Lowi"},
-        {"file": "tecomparotodoo2.png", "name": "Tarifas O2"},
-        {"file": "verano plan amigo.jpeg", "name": "Verano Plan Amigo"}
-    ]
     
-    cols_anuncios = st.columns(3)
-    for idx, item in enumerate(lista_anuncios):
-        with cols_anuncios[idx % 3]:
-            full_path = f"{path_anuncios}{item['file']}"
-            if os.path.exists(full_path):
-                st.image(full_path, use_container_width=True)
-                with open(full_path, "rb") as f_anuncio:
-                    st.download_button(
-                        label=f"📥 {item['name']}",
-                        data=f_anuncio.read(),
-                        file_name=item['file'],
-                        mime="image/png" if item['file'].lower().endswith('.png') else "image/jpeg",
-                        key=f"btn_anuncio_{idx}"
-                    )
-            else:
-                st.warning(f"Falta: {item['file']}")
+    # 1. BÚSQUEDA AUTOMÁTICA DE ARCHIVOS (Evita errores de nombres)
+    if os.path.exists(path_anuncios):
+        # Listamos todos los archivos que sean imágenes
+        archivos = [f for f in os.listdir(path_anuncios) if f.lower().endswith(('.png', '.jpg', '.jpeg'))]
+        
+        if not archivos:
+            st.info("La carpeta 'anunciosbasette' está vacía o no contiene imágenes.")
+        else:
+            cols = st.columns(3)
+            for idx, file_name in enumerate(archivos):
+                with cols[idx % 3]:
+                    full_path = os.path.join(path_anuncios, file_name)
+                    # Mostrar imagen
+                    st.image(full_path, use_container_width=True)
+                    
+                    # Botón de descarga
+                    with open(full_path, "rb") as f_anuncio:
+                        mime = "image/png" if file_name.lower().endswith('.png') else "image/jpeg"
+                        st.download_button(
+                            label=f"📥 {file_name[:15]}...", # Nombre corto para no romper el diseño
+                            data=f_anuncio.read(),
+                            file_name=file_name,
+                            mime=mime,
+                            key=f"btn_{idx}"
+                        )
+    else:
+        st.error(f"La carpeta '{path_anuncios}' no existe en el directorio del proyecto.")
+
+    # 2. SECCIÓN ESPECIAL QR (Si los archivos tienen nombres específicos)
+    st.markdown("---")
+    st.subheader("Códigos QR")
+    c1, c2 = st.columns(2)
+    # Buscamos QR por palabra clave
+    for file in os.listdir(path_anuncios):
+        if "QR" in file.upper():
+            if "AMIGO" in file.upper():
+                with c1: st.image(os.path.join(path_anuncios, file), width=150, caption="Plan Amigo")
+            elif "FORMULARIO" in file.upper():
+                with c2: st.image(os.path.join(path_anuncios, file), width=150, caption="Formulario")
 
 # --- DASHBOARD Y RANKING ---
 elif menu == "📈 DASHBOARD Y RANKING":
