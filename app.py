@@ -658,7 +658,7 @@ elif menu == "🕒 CONTROL LABORAL":
     st.markdown('<div class="block-header">🕒 CONTROL LABORAL Y ASISTENCIA</div>', unsafe_allow_html=True)
     
     try:
-        # 1. CARGA Y LIMPIEZA
+        # 1. CARGA Y CONFIGURACIÓN
         sheet_id = "175LGa4j6dAhsjQ7Wiy-8tZnKWuDC9_C9uy6SYC-i-LY"
         url_csv = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv"
         df_laboral = pd.read_csv(url_csv)
@@ -671,20 +671,21 @@ elif menu == "🕒 CONTROL LABORAL":
         df_laboral[col_temporal] = pd.to_datetime(df_laboral[col_temporal], dayfirst=True, errors='coerce')
         df_laboral = df_laboral.dropna(subset=[col_temporal, col_comercial])
 
-        # 2. CALENDARIO DE VACACIONES
+        # 2. CALENDARIO Y VACACIONES
+        festivos = [date(2026, 5, 1)]
         vacaciones = {
             "RAQUEL GUADALUPE": (date(2026, 6, 22), date(2026, 6, 26)),
             "MARIA JOSE ARACIL": (date(2026, 8, 3), date(2026, 8, 9))
         }
 
-        with st.expander("📅 CALENDARIO DE VACACIONES"):
-            cols_cal = st.columns(len(vacaciones))
-            for i, (nombre, (inicio, fin)) in enumerate(vacaciones.items()):
-                cols_cal[i].markdown(f"**{nombre}**:<br>{inicio.strftime('%d/%m')} al {fin.strftime('%d/%m')}", unsafe_allow_html=True)
+        with st.expander("📅 CALENDARIO Y VACACIONES"):
+            for nombre, (i, f) in vacaciones.items():
+                st.write(f"🏖️ **{nombre}**: {i.strftime('%d/%m')} al {f.strftime('%d/%m')}")
 
         # 3. FILTROS
         col_f1, col_f2 = st.columns(2)
-        com_sel = col_f1.selectbox("👤 Selecciona Comercial", sorted(df_laboral[col_comercial].unique().astype(str)))
+        coms = sorted(df_laboral[col_comercial].unique().astype(str))
+        com_sel = col_f1.selectbox("👤 Selecciona Comercial", coms)
         mes_sel = col_f2.selectbox("📅 Selecciona Mes", range(1, 13), index=5)
 
         # 4. LÓGICA DE AUDITORÍA
@@ -692,44 +693,42 @@ elif menu == "🕒 CONTROL LABORAL":
         
         min_ret, faltas = 0, 0
         historial_diario = []
-        dias_mes = calendar.monthrange(2026, mes_sel)[1]
-        
-        for d in range(1, dias_mes + 1):
+        for d in range(1, calendar.monthrange(2026, mes_sel)[1] + 1):
             fecha = date(2026, mes_sel, d)
-            if fecha.weekday() >= 5: continue 
+            if fecha.weekday() >= 5 or fecha in festivos: continue 
             
+            es_vac = any(com_sel.upper() in nom.upper() and i <= fecha <= f for nom, (i, f) in vacaciones.items())
+            if es_vac: continue
+
             dia_data = datos[datos[col_temporal].dt.date == fecha]
             entradas = dia_data[dia_data[col_accion].str.contains("ENTRADA", case=False, na=False)]
+            salidas = dia_data[dia_data[col_accion].str.contains("SALIDA", case=False, na=False)]
             
-            # Comprobar vacaciones
-            es_vac = any(com_sel.upper() in nom.upper() and i <= fecha <= f for nom, (i, f) in vacaciones.items())
+            h_in = entradas[col_temporal].min().time() if not entradas.empty else None
+            h_out = salidas[col_temporal].max().time() if not salidas.empty else None
             
-            if entradas.empty:
-                if not es_vac: 
-                    faltas += 1
-                    historial_diario.append({"Fecha": fecha, "Incidencia": "FALTA"})
-            else:
-                hora = entradas[col_temporal].min().time()
-                if hora > time(9, 30):
-                    retraso = (datetime.combine(fecha, hora) - datetime.combine(fecha, time(9, 30))).total_seconds() / 60
+            if not entradas.empty:
+                incidencia = "OK"
+                if h_in > time(9, 30):
+                    retraso = (datetime.combine(fecha, h_in) - datetime.combine(fecha, time(9, 30))).total_seconds() / 60
                     min_ret += retraso
-                    historial_diario.append({"Fecha": fecha, "Incidencia": f"RETRASO ({int(retraso)} min)"})
-
-        # 5. DASHBOARD DE MÉTRICAS (COLORES LLAMATIVOS)
-        st.markdown("### 📊 Resumen Mensual")
-        c1, c2 = st.columns(2)
-        c1.markdown(f'<div style="background:#262730; padding:20px; border-radius:10px; border-left: 10px solid #ff4b4b; text-align:center;"><h3 style="color:#ff4b4b; margin:0;">MINUTOS RETRASO</h3><h1 style="color:white; margin:0;">{int(min_ret)}</h1></div>', unsafe_allow_html=True)
-        c2.markdown(f'<div style="background:#262730; padding:20px; border-radius:10px; border-left: 10px solid #ffaa00; text-align:center;"><h3 style="color:#ffaa00; margin:0;">TOTAL FALTAS</h3><h1 style="color:white; margin:0;">{faltas}</h1></div>', unsafe_allow_html=True)
-        
-        # 6. HISTORIAL
-        st.markdown("---")
-        with st.expander("🔍 VER HISTORIAL DE REGISTROS"):
-            # Unir datos originales con el reporte de incidencias
-            hist_df = pd.DataFrame(historial_diario)
-            if not hist_df.empty:
-                st.dataframe(hist_df, use_container_width=True)
+                    incidencia = f"RETRASO ({int(retraso)}m)"
+                historial_diario.append({"Fecha": fecha, "Entrada": h_in, "Salida": h_out, "Incidencia": incidencia})
             else:
-                st.write("No hay incidencias registradas en este mes.")
+                faltas += 1
+                historial_diario.append({"Fecha": fecha, "Entrada": "-", "Salida": "-", "Incidencia": "FALTA"})
+
+        # 5. DASHBOARD
+        c1, c2 = st.columns(2)
+        c1.markdown(f'<div style="background:#262730; padding:20px; border-radius:10px; border-left: 10px solid #ff4b4b; text-align:center;"><h3>MINUTOS RETRASO</h3><h1>{int(min_ret)}</h1></div>', unsafe_allow_html=True)
+        c2.markdown(f'<div style="background:#262730; padding:20px; border-radius:10px; border-left: 10px solid #ffaa00; text-align:center;"><h3>TOTAL FALTAS</h3><h1>{faltas}</h1></div>', unsafe_allow_html=True)
+        
+        # 6. HISTORIAL DETALLADO
+        st.markdown("---")
+        if historial_diario:
+            st.dataframe(pd.DataFrame(historial_diario).sort_values("Fecha", ascending=False), use_container_width=True)
+        else:
+            st.info("Sin registros en este periodo.")
 
     except Exception as e:
         st.error(f"Error procesando datos: {e}")
