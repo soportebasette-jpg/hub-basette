@@ -652,88 +652,89 @@ elif menu == "📂 REPOSITORIO":
 
 # --- CONTROL LABORAL ---
 elif menu == "🕒 CONTROL LABORAL":
-    import pandas as pd
-    import calendar
-    from datetime import datetime, time
-    st.markdown('<div class="block-header">🕒 CONTROL LABORAL Y ASISTENCIA</div>', unsafe_allow_html=True)
+    import streamlit as st
+import pandas as pd
+import calendar
+from datetime import datetime, time, timedelta
+
+def app_control_laboral():
+    st.markdown('<h2 style="color:#d2ff00;">🕒 CONTROL LABORAL Y ASISTENCIA</h2>', unsafe_allow_html=True)
+    
+    # 1. CARGA DE DATOS
+    sheet_id = "175LGa4j6dAhsjQ7Wiy-8tZnKWuDC9_C9uy6SYC-i-LY"
+    url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv"
     
     try:
-        # 1. CARGA Y LIMPIEZA
-        sheet_id = "175LGa4j6dAhsjQ7Wiy-8tZnKWuDC9_C9uy6SYC-i-LY"
-        url_csv = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv"
-        df_laboral = pd.read_csv(url_csv)
-        df_laboral.columns = [str(c).strip().upper() for c in df_laboral.columns]
-        
-        # Búsqueda dinámica de columnas
-        col_comercial = next((c for c in df_laboral.columns if "QUIÉN" in c or "COMERCIAL" in c), None)
-        col_temporal = next((c for c in df_laboral.columns if "TEMPORAL" in c or "MARCA" in c), None)
-        col_accion = next((c for c in df_laboral.columns if "HACER" in c), None)
-        
-        if not all([col_comercial, col_temporal, col_accion]):
-            st.error("Error: No se encontraron las columnas. Verifica los encabezados en el Google Sheet.")
-            st.stop()
-
-        # LIMPIEZA DE DATOS (IMPORTANTE: Esto evita el TypeError)
-        df_laboral = df_laboral.dropna(subset=[col_comercial, col_temporal])
-        df_laboral[col_comercial] = df_laboral[col_comercial].astype(str).str.strip()
-        df_laboral[col_temporal] = pd.to_datetime(df_laboral[col_temporal], dayfirst=True, errors='coerce')
-        df_laboral = df_laboral.dropna(subset=[col_temporal])
-        
-        # 2. CONFIGURACIÓN
-        festivos = ['2026-04-02', '2026-04-03', '2026-04-22', '2026-05-01']
-
-        # --- CALENDARIO ANUAL ---
-        with st.expander("📅 PLANIFICACIÓN ANUAL"):
-            col_cal1, col_cal2 = st.columns(2)
-            for i, m in enumerate([4, 6]):
-                with [col_cal1, col_cal2][i]:
-                    st.write(f"**{calendar.month_name[m]} 2026**")
-                    for week in calendar.monthcalendar(2026, m):
-                        cols = st.columns(7)
-                        for idx, day in enumerate(week):
-                            if day != 0:
-                                cols[idx].markdown(f'<div style="text-align:center; border:1px solid #30363d; border-radius:5px;">{day}</div>', unsafe_allow_html=True)
-
-        st.markdown("---")
-        # Aquí eliminamos valores vacíos y convertimos a lista
-        lista_comerciales = sorted(df_laboral[col_comercial].unique().tolist())
-        com_sel = st.selectbox("👤 Selecciona Comercial", lista_comerciales)
-
-        # 3. LÓGICA DE CÁLCULO
-        def calcular_auditoria(df, nombre):
-            datos = df[df[col_comercial] == nombre].copy()
-            min_ret, dias_deuda, dias_rojos = 0, [], []
-            hoy = datetime.now().date()
-            inicio = datos[col_temporal].min().date()
-            
-            for dia in pd.date_range(inicio, hoy):
-                if dia.weekday() >= 5: continue
-                
-                dia_data = datos[datos[col_temporal].dt.date == dia]
-                entradas = dia_data[dia_data[col_accion].astype(str).str.contains("ENTRADA", case=False, na=False)]
-                
-                if entradas.empty:
-                    dias_deuda.append(dia.strftime('%d/%m/%Y'))
-                else:
-                    h_lim_e = time(9, 30)
-                    h_real = entradas[col_temporal].min().time()
-                    if h_real > h_lim_e:
-                        min_ret += (datetime.combine(dia, h_real) - datetime.combine(dia, h_lim_e)).total_seconds() / 60
-            return int(min_ret), dias_deuda
-
-        m_ret, l_deuda = calcular_auditoria(df_laboral, com_sel)
-        
-        # 4. DASHBOARD
-        st.markdown(f"### 📊 Resumen: {com_sel}")
-        c1, c2 = st.columns(2)
-        c1.metric("Retrasos (min)", m_ret)
-        c2.metric("Días pendientes", len(l_deuda))
-        
-        if l_deuda: st.warning(f"📌 Días con falta de registro: {', '.join(l_deuda)}")
-
-        with st.expander("🔍 VER HISTORIAL"):
-            h_df = df_laboral[df_laboral[col_comercial] == com_sel][[col_temporal, col_accion]].sort_values(col_temporal, ascending=False)
-            st.dataframe(h_df, use_container_width=True)
-
+        df = pd.read_csv(url)
+        df.columns = [c.strip() for c in df.columns]
+        # Renombrar columnas para facilitar manejo
+        df = df.rename(columns={
+            "Marca temporal": "Fecha",
+            "¿Quién eres?": "Comercial",
+            "¿Qué vas a hacer?": "Accion"
+        })
+        df["Fecha"] = pd.to_datetime(df["Fecha"], dayfirst=True)
+        df["Accion"] = df["Accion"].str.upper().str.strip()
     except Exception as e:
-        st.error(f"Error procesando control laboral: {e}")
+        st.error(f"Error cargando datos: {e}")
+        return
+
+    # 2. CONFIGURACIÓN DE DÍAS ESPECIALES
+    festivos = pd.to_datetime(['2026-04-02', '2026-04-03', '2026-05-01']).date
+    vacaciones = {
+        'RAQUEL GUADALUPE': pd.date_range('2026-06-22', '2026-06-26').date,
+        'MARIA JOSE ARACIL': pd.date_range('2026-08-03', '2026-08-09').date
+    }
+
+    # 3. FILTROS
+    col1, col2 = st.columns(2)
+    comerciales = sorted(df["Comercial"].unique().astype(str))
+    sel_comercial = col1.selectbox("Selecciona Comercial:", comerciales)
+    sel_mes = col2.selectbox("Mes:", range(1, 13), index=5) # Junio por defecto
+
+    # 4. CÁLCULO DE AUDITORÍA
+    datos_com = df[df["Comercial"] == sel_comercial]
+    hoy = datetime.now().date()
+    
+    st.markdown("---")
+    resumen = []
+    
+    # Bucle por los días del mes seleccionado
+    dias_del_mes = calendar.monthrange(2026, sel_mes)[1]
+    
+    for dia in range(1, dias_del_mes + 1):
+        fecha_actual = datetime(2026, sel_mes, dia).date()
+        if fecha_actual > hoy: break
+        if fecha_actual.weekday() >= 5 or fecha_actual in festivos: continue
+        
+        # Verificar vacaciones
+        es_vacaciones = False
+        for nombre, rango in vacaciones.items():
+            if sel_comercial.upper() in nombre.upper() and fecha_actual in rango:
+                es_vacaciones = True
+        if es_vacaciones: continue
+
+        # Buscar registros del día
+        data_dia = datos_com[datos_com["Fecha"].dt.date == fecha_actual]
+        entradas = data_dia[data_dia["Accion"] == "ENTRADA"]
+        
+        if entradas.empty:
+            resumen.append({"Fecha": fecha_actual, "Estado": "❌ FALTA", "Retraso": 0})
+        else:
+            hora_entrada = entradas["Fecha"].min().time()
+            limite = time(9, 30) # Hora tope
+            retraso = 0
+            if hora_entrada > limite:
+                retraso = (datetime.combine(fecha_actual, hora_entrada) - datetime.combine(fecha_actual, limite)).total_seconds() / 60
+            resumen.append({"Fecha": fecha_actual, "Estado": "✅ OK", "Retraso": int(retraso)})
+
+    # 5. MOSTRAR RESULTADOS
+    res_df = pd.DataFrame(resumen)
+    c_met1, c_met2 = st.columns(2)
+    c_met1.metric("Total Retrasos (min)", res_df["Retraso"].sum())
+    c_met2.metric("Faltas", len(res_df[res_df["Estado"] == "❌ FALTA"]))
+    
+    st.table(res_df)
+
+# Ejecución
+app_control_laboral()
