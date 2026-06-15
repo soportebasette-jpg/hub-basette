@@ -657,6 +657,22 @@ elif menu == "🕒 CONTROL LABORAL":
     from datetime import datetime, time, date
     st.markdown('<div class="block-header">🕒 CONTROL LABORAL Y ASISTENCIA</div>', unsafe_allow_html=True)
     
+    # 1. VACACIONES CONFIGURADAS (Para visualización)
+    vacaciones = {
+        "RAQUEL GUADALUPE": (date(2026, 6, 22), date(2026, 6, 28)),
+        "MARIA JOSE ARACIL": (date(2026, 8, 3), date(2026, 8, 9))
+    }
+
+    with st.expander("🏖️ PRÓXIMAS VACACIONES DE COMERCIALES"):
+        cols = st.columns(len(vacaciones))
+        for i, (nombre, (inicio, fin)) in enumerate(vacaciones.items()):
+            cols[i].markdown(f"""
+                <div style="background:#161b22; padding:10px; border-radius:8px; border:1px solid #d2ff00; text-align:center;">
+                <p style="margin:0; font-size:0.8rem; color:#d2ff00;">{nombre}</p>
+                <b style="font-size:0.9rem;">{inicio.strftime('%d/%m')} - {fin.strftime('%d/%m')}</b>
+                </div>
+            """, unsafe_allow_html=True)
+
     try:
         # 1. CARGA Y LIMPIEZA
         sheet_id = "175LGa4j6dAhsjQ7Wiy-8tZnKWuDC9_C9uy6SYC-i-LY"
@@ -671,20 +687,14 @@ elif menu == "🕒 CONTROL LABORAL":
         df_laboral[col_temporal] = pd.to_datetime(df_laboral[col_temporal], dayfirst=True, errors='coerce')
         df_laboral = df_laboral.dropna(subset=[col_temporal, col_comercial])
 
-        # 2. CONFIGURACIÓN
-        festivos = [date(2026, 4, 2), date(2026, 4, 3), date(2026, 4, 22), date(2026, 5, 1), date(2026, 5, 29), date(2026, 6, 4)]
-        
-        vacaciones = {
-            "RAQUEL GUADALUPE": (date(2026, 6, 22), date(2026, 6, 28)),
-            "MARIA JOSE ARACIL": (date(2026, 8, 3), date(2026, 8, 9))
-        }
-        
-        # 3. FILTROS
+        # 2. FILTROS
         col_f1, col_f2 = st.columns(2)
-        com_sel = col_f1.selectbox("👤 Selecciona Comercial", sorted(df_laboral[col_comercial].unique().astype(str)))
+        coms = sorted(df_laboral[col_comercial].unique().astype(str))
+        com_sel = col_f1.selectbox("👤 Selecciona Comercial", coms)
         mes_sel = col_f2.selectbox("📅 Selecciona Mes", range(1, 13), index=5)
 
-        # 4. LÓGICA DE AUDITORÍA
+        # 3. LÓGICA DE AUDITORÍA
+        festivos = [date(2026, 4, 2), date(2026, 4, 3), date(2026, 4, 22), date(2026, 5, 1), date(2026, 5, 29), date(2026, 6, 4)]
         datos = df_laboral[(df_laboral[col_comercial] == com_sel) & (df_laboral[col_temporal].dt.month == mes_sel)].copy()
         
         min_ret, faltas, dias_vac = 0, 0, 0
@@ -696,7 +706,6 @@ elif menu == "🕒 CONTROL LABORAL":
             if fecha > date.today(): break
             if fecha.weekday() >= 5 or fecha in festivos: continue
             
-            # Comprobar vacaciones
             es_vac = any(com_sel.upper() in nom.upper() and i <= fecha <= f for nom, (i, f) in vacaciones.items())
             if es_vac:
                 dias_vac += 1
@@ -721,7 +730,7 @@ elif menu == "🕒 CONTROL LABORAL":
                 faltas += 1
                 historial_diario.append({"Fecha": fecha, "Entrada": "-", "Salida": "-", "Incidencia": "FALTA"})
 
-        # 5. DASHBOARD MEJORADO
+        # 4. DASHBOARD
         c1, c2, c3 = st.columns(3)
         c1.markdown(f'<div style="background:#262730; padding:15px; border-radius:10px; border-left: 8px solid #ff4b4b; text-align:center;"><h3>RETRASO</h3><h1>{int(min_ret)} m</h1></div>', unsafe_allow_html=True)
         c2.markdown(f'<div style="background:#262730; padding:15px; border-radius:10px; border-left: 8px solid #ffaa00; text-align:center;"><h3>FALTAS</h3><h1>{faltas}</h1></div>', unsafe_allow_html=True)
