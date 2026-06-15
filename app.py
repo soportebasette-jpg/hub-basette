@@ -652,89 +652,72 @@ elif menu == "📂 REPOSITORIO":
 
 # --- CONTROL LABORAL ---
 elif menu == "🕒 CONTROL LABORAL":
-    import streamlit as st
+    iimport streamlit as st
 import pandas as pd
 import calendar
-from datetime import datetime, time, timedelta
+from datetime import datetime, time, date
 
 def app_control_laboral():
     st.markdown('<h2 style="color:#d2ff00;">🕒 CONTROL LABORAL Y ASISTENCIA</h2>', unsafe_allow_html=True)
     
-    # 1. CARGA DE DATOS
+    # 1. DATOS DE EMPLEADOS Y FESTIVOS
+    empleados = {
+        'BELEN TRONCOSO': {'alta': date(2026, 3, 18), 'baja': date(2026, 5, 21)},
+        'DEBORAH RODRIGUEZ': {'alta': date(2026, 3, 18), 'baja': date(2026, 5, 14)},
+        'LAURA RUBIO': {'alta': date(2026, 5, 25), 'baja': date(2026, 5, 27)},
+        'LORENA POZO': {'alta': date(2026, 3, 18), 'baja': date(2026, 6, 11)},
+        'LUIS RODRIGUEZ': {'alta': date(2026, 4, 8), 'baja': date(2026, 4, 27)},
+        'MARIA JOSE ARACIL': {'alta': date(2026, 5, 4), 'baja': date(2099, 1, 1)},
+        'RAQUEL GUADALUPE': {'alta': date(2026, 3, 19), 'baja': date(2099, 1, 1)},
+        'MACARENA BACA': {'alta': date(2026, 3, 18), 'baja': date(2026, 3, 19)}
+    }
+    
+    festivos = [date(2026, 4, 2), date(2026, 4, 3), date(2026, 4, 22), date(2026, 5, 1), date(2026, 6, 4)]
+    
+    # 2. CARGA DE DATOS
     sheet_id = "175LGa4j6dAhsjQ7Wiy-8tZnKWuDC9_C9uy6SYC-i-LY"
     url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv"
     
-    try:
-        df = pd.read_csv(url)
-        df.columns = [c.strip() for c in df.columns]
-        # Renombrar columnas para facilitar manejo
-        df = df.rename(columns={
-            "Marca temporal": "Fecha",
-            "¿Quién eres?": "Comercial",
-            "¿Qué vas a hacer?": "Accion"
-        })
-        df["Fecha"] = pd.to_datetime(df["Fecha"], dayfirst=True)
-        df["Accion"] = df["Accion"].str.upper().str.strip()
-    except Exception as e:
-        st.error(f"Error cargando datos: {e}")
-        return
-
-    # 2. CONFIGURACIÓN DE DÍAS ESPECIALES
-    festivos = pd.to_datetime(['2026-04-02', '2026-04-03', '2026-05-01']).date
-    vacaciones = {
-        'RAQUEL GUADALUPE': pd.date_range('2026-06-22', '2026-06-26').date,
-        'MARIA JOSE ARACIL': pd.date_range('2026-08-03', '2026-08-09').date
-    }
+    df = pd.read_csv(url)
+    df.columns = [c.strip() for c in df.columns]
+    df = df.rename(columns={"Marca temporal": "Fecha", "¿Quién eres?": "Comercial", "¿Qué vas a hacer?": "Accion"})
+    df["Fecha"] = pd.to_datetime(df["Fecha"], dayfirst=True)
+    df["Accion"] = df["Accion"].str.upper().str.strip()
 
     # 3. FILTROS
-    col1, col2 = st.columns(2)
-    comerciales = sorted(df["Comercial"].unique().astype(str))
-    sel_comercial = col1.selectbox("Selecciona Comercial:", comerciales)
-    sel_mes = col2.selectbox("Mes:", range(1, 13), index=5) # Junio por defecto
+    sel_comercial = st.selectbox("👤 Selecciona Comercial:", sorted(empleados.keys()))
+    sel_mes = st.selectbox("📅 Mes:", range(1, 13), index=5)
 
-    # 4. CÁLCULO DE AUDITORÍA
+    # 4. CÁLCULO
+    info = empleados[sel_comercial]
     datos_com = df[df["Comercial"] == sel_comercial]
-    hoy = datetime.now().date()
-    
-    st.markdown("---")
     resumen = []
     
-    # Bucle por los días del mes seleccionado
     dias_del_mes = calendar.monthrange(2026, sel_mes)[1]
     
     for dia in range(1, dias_del_mes + 1):
-        fecha_actual = datetime(2026, sel_mes, dia).date()
-        if fecha_actual > hoy: break
-        if fecha_actual.weekday() >= 5 or fecha_actual in festivos: continue
+        f_act = date(2026, sel_mes, dia)
+        if f_act > date.today() or f_act < info['alta'] or f_act > info['baja']: continue
+        if f_act.weekday() >= 5 or f_act in festivos: continue
         
-        # Verificar vacaciones
-        es_vacaciones = False
-        for nombre, rango in vacaciones.items():
-            if sel_comercial.upper() in nombre.upper() and fecha_actual in rango:
-                es_vacaciones = True
-        if es_vacaciones: continue
-
-        # Buscar registros del día
-        data_dia = datos_com[datos_com["Fecha"].dt.date == fecha_actual]
+        data_dia = datos_com[datos_com["Fecha"].dt.date == f_act]
         entradas = data_dia[data_dia["Accion"] == "ENTRADA"]
         
         if entradas.empty:
-            resumen.append({"Fecha": fecha_actual, "Estado": "❌ FALTA", "Retraso": 0})
+            resumen.append({"Fecha": f_act, "Estado": "FALTA", "Retraso": 0})
         else:
-            hora_entrada = entradas["Fecha"].min().time()
-            limite = time(9, 30) # Hora tope
-            retraso = 0
-            if hora_entrada > limite:
-                retraso = (datetime.combine(fecha_actual, hora_entrada) - datetime.combine(fecha_actual, limite)).total_seconds() / 60
-            resumen.append({"Fecha": fecha_actual, "Estado": "✅ OK", "Retraso": int(retraso)})
+            hora = entradas["Fecha"].min().time()
+            retraso = max(0, (datetime.combine(f_act, hora) - datetime.combine(f_act, time(9, 30))).total_seconds() / 60)
+            resumen.append({"Fecha": f_act, "Estado": "OK", "Retraso": int(retraso)})
 
-    # 5. MOSTRAR RESULTADOS
+    # 5. VISUALIZACIÓN MEJORADA
     res_df = pd.DataFrame(resumen)
-    c_met1, c_met2 = st.columns(2)
-    c_met1.metric("Total Retrasos (min)", res_df["Retraso"].sum())
-    c_met2.metric("Faltas", len(res_df[res_df["Estado"] == "❌ FALTA"]))
     
-    st.table(res_df)
+    # Métrica con colores visibles
+    c1, c2 = st.columns(2)
+    c1.markdown(f'<div style="background:#1c2128; padding:10px; border-radius:5px; border:1px solid #d2ff00; color:#d2ff00; text-align:center;"><h3>MINUTOS RETRASO</h3><h2>{res_df["Retraso"].sum()}</h2></div>', unsafe_allow_html=True)
+    c2.markdown(f'<div style="background:#1c2128; padding:10px; border-radius:5px; border:1px solid #ff4b4b; color:#ff4b4b; text-align:center;"><h3>TOTAL FALTAS</h3><h2>{len(res_df[res_df["Estado"] == "FALTA"])}</h2></div>', unsafe_allow_html=True)
+    
+    st.table(res_df.style.map(lambda x: 'color: #ff4b4b; font-weight:bold;' if x == "FALTA" else 'color: #7ee787;', subset=["Estado"]))
 
-# Ejecución
 app_control_laboral()
