@@ -671,16 +671,21 @@ elif menu == "🕒 CONTROL LABORAL":
         df_laboral[col_temporal] = pd.to_datetime(df_laboral[col_temporal], dayfirst=True, errors='coerce')
         df_laboral = df_laboral.dropna(subset=[col_temporal, col_comercial])
 
-        # 2. CALENDARIO Y VACACIONES
-        festivos = [date(2026, 5, 1)]
+        # 2. CONFIGURACIÓN (FESTIVOS, VACACIONES Y BAJAS EMPRESA)
+        festivos = [date(2026, 5, 1), date(2026, 6, 4)]
         vacaciones = {
             "RAQUEL GUADALUPE": (date(2026, 6, 22), date(2026, 6, 26)),
             "MARIA JOSE ARACIL": (date(2026, 8, 3), date(2026, 8, 9))
         }
-
-        with st.expander("📅 CALENDARIO Y VACACIONES"):
-            for nombre, (i, f) in vacaciones.items():
-                st.write(f"🏖️ **{nombre}**: {i.strftime('%d/%m')} al {f.strftime('%d/%m')}")
+        bajas_empresa = {
+            "BELEN TRONCOSO": date(2026, 5, 21),
+            "DEBORAH RODRIGUEZ": date(2026, 5, 14),
+            "LAURA RUBIO": date(2026, 5, 27),
+            "LORENA POZO": date(2026, 6, 11),
+            "LUIS RODRIGUEZ": date(2026, 4, 27),
+            "MARIA JOSE MORENO": date(2026, 5, 18),
+            "MACARENA BACA": date(2026, 3, 19)
+        }
 
         # 3. FILTROS
         col_f1, col_f2 = st.columns(2)
@@ -698,14 +703,18 @@ elif menu == "🕒 CONTROL LABORAL":
         
         for d in range(1, dias_mes + 1):
             fecha = date(2026, mes_sel, d)
-            if fecha > hoy: break # No contar faltas futuras
+            if fecha > hoy: break 
             if fecha.weekday() >= 5 or fecha in festivos: continue 
             
-            # Comprobar vacaciones
+            # Comprobar estado especial
             es_vac = any(com_sel.upper() in nom.upper() and i <= fecha <= f for nom, (i, f) in vacaciones.items())
+            es_baja = com_sel.upper() in [n.upper() for n in bajas_empresa] and fecha > bajas_empresa.get(next((n for n in bajas_empresa if n.upper() in com_sel.upper()), ""), date(2099,1,1))
             
             if es_vac:
                 historial_diario.append({"Fecha": fecha, "Entrada": "-", "Salida": "-", "Incidencia": "VACACIONES"})
+                continue
+            if es_baja:
+                historial_diario.append({"Fecha": fecha, "Entrada": "-", "Salida": "-", "Incidencia": "BAJA EMPRESA"})
                 continue
 
             dia_data = datos[datos[col_temporal].dt.date == fecha]
@@ -727,7 +736,7 @@ elif menu == "🕒 CONTROL LABORAL":
                 faltas += 1
                 historial_diario.append({"Fecha": fecha, "Entrada": "-", "Salida": "-", "Incidencia": "FALTA"})
 
-        # 5. DASHBOARD
+        # 5. DASHBOARD Y RESULTADOS
         c1, c2 = st.columns(2)
         c1.markdown(f'<div style="background:#262730; padding:20px; border-radius:10px; border-left: 10px solid #ff4b4b; text-align:center;"><h3>MINUTOS RETRASO</h3><h1>{int(min_ret)}</h1></div>', unsafe_allow_html=True)
         c2.markdown(f'<div style="background:#262730; padding:20px; border-radius:10px; border-left: 10px solid #ffaa00; text-align:center;"><h3>TOTAL FALTAS</h3><h1>{faltas}</h1></div>', unsafe_allow_html=True)
