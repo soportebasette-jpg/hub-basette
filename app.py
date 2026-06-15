@@ -287,7 +287,6 @@ if menu == "🚀 CRM":
 elif menu == "📊 PRECIOS":
     st.header("Tarifario Oficial")
     
-    # Estructura de pestañas
     t1, t2, t3 = st.tabs(["⚡ LUZ Y GAS", "📶 TELECOMUNICACIONES", "🛡️ ALARMAS"])
     
     with t1:
@@ -307,12 +306,17 @@ elif menu == "📊 PRECIOS":
         st.divider()
         
         st.subheader("O2")
-        # RUTA CORREGIDA: Apuntando a tarifas_visuales/PRECIOS JUNIO O2.PNG
-        ruta_o2 = "tarifas_visuales/PRECIOS JUNIO O2.PNG"
-        if os.path.exists(ruta_o2):
-            st.image(ruta_o2, use_container_width=True)
+        # --- BÚSQUEDA INTELIGENTE DE IMAGEN ---
+        carpeta = "tarifas_visuales"
+        archivos_en_carpeta = os.listdir(carpeta) if os.path.exists(carpeta) else []
+        
+        # Buscamos cualquier archivo que contenga "PRECIOS JUNIO O2" sin importar mayúsculas
+        archivo_o2 = next((f for f in archivos_en_carpeta if "PRECIOS JUNIO O2" in f.upper()), None)
+        
+        if archivo_o2:
+            st.image(f"{carpeta}/{archivo_o2}", use_container_width=True)
         else:
-            st.error(f"No se encuentra la imagen en: {ruta_o2}. Asegúrate de que el nombre exacto del archivo sea 'PRECIOS JUNIO O2.PNG' (incluyendo mayúsculas y extensión).")
+            st.error(f"No se encontró ninguna imagen para O2 en '{carpeta}'. Archivos hallados: {archivos_en_carpeta}")
 
     with t3:
         st.markdown('<div class="block-header">🛡️ ALARMAS</div>', unsafe_allow_html=True)
