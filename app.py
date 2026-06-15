@@ -677,7 +677,9 @@ elif menu == "🕒 CONTROL LABORAL":
             "RAQUEL GUADALUPE": (date(2026, 6, 22), date(2026, 6, 26)),
             "MARIA JOSE ARACIL": (date(2026, 8, 3), date(2026, 8, 9))
         }
-        # Incluye fechas de alta y baja
+        permisos = {
+            "LORENA POZO": (date(2026, 5, 27), date(2026, 6, 3))
+        }
         contratos = {
             "BELEN TRONCOSO": (date(2026, 3, 18), date(2026, 5, 21)),
             "DEBORAH RODRIGUEZ": (date(2026, 3, 18), date(2026, 5, 14)),
@@ -707,17 +709,20 @@ elif menu == "🕒 CONTROL LABORAL":
         for d in range(1, dias_mes + 1):
             fecha = date(2026, mes_sel, d)
             if fecha > hoy: break 
+            if fecha.weekday() >= 5 or fecha in festivos: continue 
             
-            # Validaciones: Fuera contrato, fin de semana, festivos, vacaciones
-            if fecha.weekday() >= 5 or fecha in festivos: continue
+            # Validación de estado
+            es_vac = any(com_sel.upper() in nom.upper() and i <= fecha <= f for nom, (i, f) in vacaciones.items())
+            es_permiso = any(com_sel.upper() in nom.upper() and i <= fecha <= f for nom, (i, f) in permisos.items())
             
-            # Filtro por vida laboral (alta/baja)
             alta, baja = contratos.get(next((n for n in contratos if n.upper() in com_sel.upper()), (date(2000,1,1), date(2099,1,1))))
             if fecha < alta or fecha > baja: continue
             
-            es_vac = any(com_sel.upper() in nom.upper() and i <= fecha <= f for nom, (i, f) in vacaciones.items())
             if es_vac:
                 historial_diario.append({"Fecha": fecha, "Entrada": "-", "Salida": "-", "Incidencia": "VACACIONES"})
+                continue
+            if es_permiso:
+                historial_diario.append({"Fecha": fecha, "Entrada": "-", "Salida": "-", "Incidencia": "HOSP. FAMILIAR"})
                 continue
 
             dia_data = datos[datos[col_temporal].dt.date == fecha]
@@ -729,7 +734,6 @@ elif menu == "🕒 CONTROL LABORAL":
             
             if not entradas.empty:
                 incidencia = "OK"
-                # Excluir retraso 05/06
                 if fecha != date(2026, 6, 5) and h_in > time(9, 30):
                     retraso = (datetime.combine(fecha, h_in) - datetime.combine(fecha, time(9, 30))).total_seconds() / 60
                     min_ret += retraso
@@ -739,7 +743,7 @@ elif menu == "🕒 CONTROL LABORAL":
                 faltas += 1
                 historial_diario.append({"Fecha": fecha, "Entrada": "-", "Salida": "-", "Incidencia": "FALTA"})
 
-        # 5. DASHBOARD Y HISTORIAL
+        # 5. DASHBOARD
         c1, c2 = st.columns(2)
         c1.markdown(f'<div style="background:#262730; padding:20px; border-radius:10px; border-left: 10px solid #ff4b4b; text-align:center;"><h3>MINUTOS RETRASO</h3><h1>{int(min_ret)}</h1></div>', unsafe_allow_html=True)
         c2.markdown(f'<div style="background:#262730; padding:20px; border-radius:10px; border-left: 10px solid #ffaa00; text-align:center;"><h3>TOTAL FALTAS</h3><h1>{faltas}</h1></div>', unsafe_allow_html=True)
