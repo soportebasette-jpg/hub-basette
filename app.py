@@ -389,18 +389,20 @@ elif menu == "📢 ANUNCIOS Y PLAN AMIGO":
     
     path_anuncios = "anunciosbasette/"
     
-    # 1. BÚSQUEDA AUTOMÁTICA DE ARCHIVOS (Evita errores de nombres)
+    # Búsqueda automática de archivos en la carpeta
     if os.path.exists(path_anuncios):
-        # Listamos todos los archivos que sean imágenes
+        # Listamos todos los archivos que sean imágenes (png, jpg, jpeg)
         archivos = [f for f in os.listdir(path_anuncios) if f.lower().endswith(('.png', '.jpg', '.jpeg'))]
         
         if not archivos:
             st.info("La carpeta 'anunciosbasette' está vacía o no contiene imágenes.")
         else:
+            # Mostramos en rejilla de 3 columnas
             cols = st.columns(3)
             for idx, file_name in enumerate(archivos):
                 with cols[idx % 3]:
                     full_path = os.path.join(path_anuncios, file_name)
+                    
                     # Mostrar imagen
                     st.image(full_path, use_container_width=True)
                     
@@ -408,26 +410,14 @@ elif menu == "📢 ANUNCIOS Y PLAN AMIGO":
                     with open(full_path, "rb") as f_anuncio:
                         mime = "image/png" if file_name.lower().endswith('.png') else "image/jpeg"
                         st.download_button(
-                            label=f"📥 {file_name[:15]}...", # Nombre corto para no romper el diseño
+                            label=f"📥 {file_name[:18]}...", # Nombre truncado para evitar romper el diseño
                             data=f_anuncio.read(),
                             file_name=file_name,
                             mime=mime,
                             key=f"btn_{idx}"
                         )
     else:
-        st.error(f"La carpeta '{path_anuncios}' no existe en el directorio del proyecto.")
-
-    # 2. SECCIÓN ESPECIAL QR (Si los archivos tienen nombres específicos)
-    st.markdown("---")
-    st.subheader("Códigos QR")
-    c1, c2 = st.columns(2)
-    # Buscamos QR por palabra clave
-    for file in os.listdir(path_anuncios):
-        if "QR" in file.upper():
-            if "AMIGO" in file.upper():
-                with c1: st.image(os.path.join(path_anuncios, file), width=150, caption="Plan Amigo")
-            elif "FORMULARIO" in file.upper():
-                with c2: st.image(os.path.join(path_anuncios, file), width=150, caption="Formulario")
+        st.error(f"La carpeta '{path_anuncios}' no existe en el directorio del proyecto. Por favor, verifica la ruta.")
 
 # --- DASHBOARD Y RANKING ---
 elif menu == "📈 DASHBOARD Y RANKING":
