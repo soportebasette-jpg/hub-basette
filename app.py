@@ -387,51 +387,73 @@ elif menu == "⚖️ COMPARADOR LUZ":
 elif menu == "⚖️ COMPARADOR GAS":
     st.header("Estudio de Ahorro de Gas Personalizado")
 
-    # 1. CARGA Y FILTRADO ESPECIAL
+    # 1. CARGA DE DATOS ESPECÍFICA
     try:
-        # Leemos el archivo sin encabezado fijo para tratarlo manualmente
-        df_raw = pd.read_csv("TARIFAS LUZ Y GAS JUNIO 2026.xlsx - Hoja1.csv", header=None)
+        # Saltamos las primeras 16 filas para empezar en la 17
+        df_gas = pd.read_csv("TARIFAS LUZ Y GAS JUNIO 2026.xlsx - Hoja1.csv", header=None, skiprows=17)
+        # Asignamos nombres a las columnas basándonos en tu estructura de gas
+        df_gas.columns = ['COMPAÑÍA', 'TARIFA', 'FIJO', 'ENERGIA', 'OBSERVACIONES', 'X', 'X2']
         
-        # Basado en tu imagen, los datos de GAS están más abajo. 
-        # Buscamos la fila donde empieza "GAS" o simplemente tomamos la tabla de gas
-        # Supongamos que la tabla de GAS empieza en la fila 15 (ajusta este índice si es necesario)
-        df_gas = df_raw.iloc[15:25].copy() 
-        df_gas.columns = ['COMPAÑÍA', 'TARIFA', 'FIJO', 'ENERGIA', 'X', 'X2', 'X3']
-        
-        # Limpieza: Convertimos a numérico, si falla ponemos 0
-        df_gas['FIJO'] = pd.to_numeric(df_gas['FIJO'], errors='coerce').fillna(0.0)
-        df_gas['ENERGIA'] = pd.to_numeric(df_gas['ENERGIA'], errors='coerce').fillna(0.0)
+        # Limpieza de datos
+        df_gas['FIJO'] = pd.to_numeric(df_gas['FIJO'], errors='coerce')
+        df_gas['ENERGIA'] = pd.to_numeric(df_gas['ENERGIA'], errors='coerce')
+        df_gas = df_gas.dropna(subset=['COMPAÑÍA', 'TARIFA'])
         
     except Exception as e:
-        st.error(f"Error cargando el archivo: {e}")
+        st.error(f"Error al cargar el archivo: {e}")
         st.stop()
 
-    # 2. RESTO DE LA INTERFAZ
+    # 2. INTERFAZ
     c1, c2 = st.columns(2)
     with c1:
         cliente = st.text_input("Nombre del cliente", "Nombre Apellidos")
         f_act = st.number_input("Factura actual con IVA (EUR)", value=0.0)
-        dias_factura = st.number_input("Días del periodo", value=30)
-        iva_sel = st.selectbox("IVA (%)", [21, 10], index=0)
+        dias_factura = st.number_input("Días del periodo de factura", value=30)
+        iva_sel = st.selectbox("IVA a aplicar (%)", [21, 10], index=0)
     
     with c2:
-        comp_sel = st.selectbox("Compañía", df_gas['COMPAÑÍA'].unique())
-        sel = df_gas[df_gas['COMPAÑÍA'] == comp_sel].iloc[0]
-        consumo_kwh = st.number_input("Consumo (kWh)", value=0.0)
+        comp_sel = st.selectbox("Compañía Propuesta", sorted(df_gas['COMPAÑÍA'].unique()))
+        
+        # Filtramos tarifas disponibles para la compañía seleccionada
+        tarifas_disponibles = df_gas[df_gas['COMPAÑÍA'] == comp_sel]['TARIFA'].unique()
+        tarifa_sel = st.selectbox("Tarifa (RL.1, RL.2, RL.3)", tarifas_disponibles)
+        
+        # Obtenemos la fila seleccionada
+        sel = df_gas[(df_gas['COMPAÑÍA'] == comp_sel) & (df_gas['TARIFA'] == tarifa_sel)].iloc[0]
+        
+        st.info(f"Termino Fijo: {sel['FIJO']} €/mes")
+        st.write(f"Observaciones: {sel['OBSERVACIONES']}")
+        
+        consumo_kwh = st.number_input("Consumo total del periodo (kWh)", value=0.0)
 
     # 3. CÁLCULOS
-    p_fijo_mensual = float(sel['FIJO'])
-    p_energia_kwh = float(sel['ENERGIA'])
+    p_fijo_mes = float(sel['FIJO'])
+    p_energia = float(sel['ENERGIA'])
     
-    coste_fijo_periodo = (p_fijo_mensual / 30) * dias_factura
-    coste_variable_periodo = consumo_kwh * p_energia_kwh
-    subtotal = coste_fijo_periodo + coste_variable_periodo
-    coste_total_iva = subtotal * (1 + iva_sel/100)
-    ahorro = f_act - coste_total_iva
+    coste_fijo = (p_fijo_mes / 30) * dias_factura
+    coste_variable = consumo_kwh * p_energia
+    subtotal = coste_fijo + coste_variable
+    coste_final = subtotal * (1 + (iva_sel / 100))
+    ahorro = f_act - coste_final
 
-    st.markdown(f"### AHORRO ESTIMADO: {ahorro:.2f} €")
+    st.markdown(f'<div style="background:#d2ff00; padding:15px; border-radius:10px; text-align:center;"><h2 style="color:black;">AHORRO ESTIMADO: {ahorro:.2f} €</h2></div>', unsafe_allow_html=True)
 
-
+    # 4. BOTÓN PDF
+    if st.button("GENERAR ESTUDIO PDF"):
+        from fpdf import FPDF
+        pdf = FPDF()
+        pdf.add_page()
+        pdf.set_font("Arial", "B", 16)
+        pdf.cell(190, 10, "ESTUDIO DE AHORRO GAS", ln=True, align="C")
+        pdf.set_font("Arial", "", 12)
+        pdf.ln(10)
+        pdf.cell(190, 10, f"Cliente: {cliente}", ln=True)
+        pdf.cell(190, 10, f"Compañia: {comp_sel} ({tarifa_sel})", ln=True)
+        pdf.cell(190, 10, f"Observaciones: {sel['OBSERVACIONES']}", ln=True)
+        pdf.cell(190, 10, f"Ahorro estimado: {ahorro:.2f} EUR", ln=True)
+        
+        pdf_data = pdf.output(dest='S').encode('latin-1', 'replace')
+        st.download_button("📥 DESCARGAR PDF", data=pdf_data, file_name="Estudio_Gas.pdf")
 # --- ANUNCIOS Y PLAN AMIGO ---
 elif menu == "📢 ANUNCIOS Y PLAN AMIGO":
     st.header("📢 Anuncios y Plan Amigo")
