@@ -671,62 +671,36 @@ elif menu == "🕒 CONTROL LABORAL":
         df_laboral[col_temporal] = pd.to_datetime(df_laboral[col_temporal], dayfirst=True, errors='coerce')
         df_laboral = df_laboral.dropna(subset=[col_temporal, col_comercial])
 
-        # 2. CONFIGURACIÓN COMPLETA
+        # 2. CONFIGURACIÓN
         festivos = [date(2026, 4, 2), date(2026, 4, 3), date(2026, 4, 22), date(2026, 5, 1), date(2026, 5, 29), date(2026, 6, 4)]
         
-        # VACACIONES ACTUALIZADAS
         vacaciones = {
             "RAQUEL GUADALUPE": (date(2026, 6, 22), date(2026, 6, 28)),
             "MARIA JOSE ARACIL": (date(2026, 8, 3), date(2026, 8, 9))
         }
         
-        permisos = {
-            "LORENA POZO": (date(2026, 5, 27), date(2026, 6, 3))
-        }
-        
-        contratos = {
-            "BELEN TRONCOSO": (date(2026, 3, 18), date(2026, 5, 21)),
-            "DEBORAH RODRIGUEZ": (date(2026, 3, 18), date(2026, 5, 14)),
-            "LAURA RUBIO": (date(2026, 5, 25), date(2026, 5, 27)),
-            "LORENA POZO": (date(2026, 3, 18), date(2026, 6, 11)),
-            "LUIS RODRIGUEZ": (date(2026, 4, 8), date(2026, 4, 27)),
-            "MARIA JOSE ARACIL": (date(2026, 5, 4), date(2099, 12, 31)),
-            "MARIA JOSE MORENO": (date(2026, 5, 4), date(2026, 5, 18)),
-            "RAQUEL GUADALUPE": (date(2026, 3, 19), date(2099, 12, 31)),
-            "MACARENA BACA": (date(2026, 3, 18), date(2026, 3, 19))
-        }
-
         # 3. FILTROS
         col_f1, col_f2 = st.columns(2)
-        coms = sorted(df_laboral[col_comercial].unique().astype(str))
-        com_sel = col_f1.selectbox("👤 Selecciona Comercial", coms)
+        com_sel = col_f1.selectbox("👤 Selecciona Comercial", sorted(df_laboral[col_comercial].unique().astype(str)))
         mes_sel = col_f2.selectbox("📅 Selecciona Mes", range(1, 13), index=5)
 
         # 4. LÓGICA DE AUDITORÍA
         datos = df_laboral[(df_laboral[col_comercial] == com_sel) & (df_laboral[col_temporal].dt.month == mes_sel)].copy()
         
-        min_ret, faltas = 0, 0
+        min_ret, faltas, dias_vac = 0, 0, 0
         historial_diario = []
         dias_mes = calendar.monthrange(2026, mes_sel)[1]
-        hoy = date.today()
         
         for d in range(1, dias_mes + 1):
             fecha = date(2026, mes_sel, d)
-            if fecha > hoy: break 
-            if fecha.weekday() >= 5 or fecha in festivos: continue 
+            if fecha > date.today(): break
+            if fecha.weekday() >= 5 or fecha in festivos: continue
             
-            # Validación de estado
+            # Comprobar vacaciones
             es_vac = any(com_sel.upper() in nom.upper() and i <= fecha <= f for nom, (i, f) in vacaciones.items())
-            es_permiso = any(com_sel.upper() in nom.upper() and i <= fecha <= f for nom, (i, f) in permisos.items())
-            
-            alta, baja = contratos.get(next((n for n in contratos if n.upper() in com_sel.upper()), (date(2000,1,1), date(2099,1,1))))
-            if fecha < alta or fecha > baja: continue
-            
             if es_vac:
+                dias_vac += 1
                 historial_diario.append({"Fecha": fecha, "Entrada": "-", "Salida": "-", "Incidencia": "VACACIONES"})
-                continue
-            if es_permiso:
-                historial_diario.append({"Fecha": fecha, "Entrada": "-", "Salida": "-", "Incidencia": "HOSP. FAMILIAR"})
                 continue
 
             dia_data = datos[datos[col_temporal].dt.date == fecha]
@@ -738,7 +712,6 @@ elif menu == "🕒 CONTROL LABORAL":
             
             if not entradas.empty:
                 incidencia = "OK"
-                # Excluir retraso 05/06
                 if fecha != date(2026, 6, 5) and h_in > time(9, 30):
                     retraso = (datetime.combine(fecha, h_in) - datetime.combine(fecha, time(9, 30))).total_seconds() / 60
                     min_ret += retraso
@@ -748,10 +721,11 @@ elif menu == "🕒 CONTROL LABORAL":
                 faltas += 1
                 historial_diario.append({"Fecha": fecha, "Entrada": "-", "Salida": "-", "Incidencia": "FALTA"})
 
-        # 5. DASHBOARD
-        c1, c2 = st.columns(2)
-        c1.markdown(f'<div style="background:#262730; padding:20px; border-radius:10px; border-left: 10px solid #ff4b4b; text-align:center;"><h3>MINUTOS RETRASO</h3><h1>{int(min_ret)}</h1></div>', unsafe_allow_html=True)
-        c2.markdown(f'<div style="background:#262730; padding:20px; border-radius:10px; border-left: 10px solid #ffaa00; text-align:center;"><h3>TOTAL FALTAS</h3><h1>{faltas}</h1></div>', unsafe_allow_html=True)
+        # 5. DASHBOARD MEJORADO
+        c1, c2, c3 = st.columns(3)
+        c1.markdown(f'<div style="background:#262730; padding:15px; border-radius:10px; border-left: 8px solid #ff4b4b; text-align:center;"><h3>RETRASO</h3><h1>{int(min_ret)} m</h1></div>', unsafe_allow_html=True)
+        c2.markdown(f'<div style="background:#262730; padding:15px; border-radius:10px; border-left: 8px solid #ffaa00; text-align:center;"><h3>FALTAS</h3><h1>{faltas}</h1></div>', unsafe_allow_html=True)
+        c3.markdown(f'<div style="background:#262730; padding:15px; border-radius:10px; border-left: 8px solid #7ee787; text-align:center;"><h3>VACACIONES</h3><h1>{dias_vac} días</h1></div>', unsafe_allow_html=True)
         
         st.markdown("---")
         if historial_diario:
