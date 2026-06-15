@@ -658,7 +658,7 @@ elif menu == "🕒 CONTROL LABORAL":
     st.markdown('<div class="block-header">🕒 CONTROL LABORAL Y ASISTENCIA</div>', unsafe_allow_html=True)
     
     try:
-        # 1. CARGA Y CONFIGURACIÓN
+        # 1. CARGA Y LIMPIEZA
         sheet_id = "175LGa4j6dAhsjQ7Wiy-8tZnKWuDC9_C9uy6SYC-i-LY"
         url_csv = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv"
         df_laboral = pd.read_csv(url_csv)
@@ -693,12 +693,20 @@ elif menu == "🕒 CONTROL LABORAL":
         
         min_ret, faltas = 0, 0
         historial_diario = []
-        for d in range(1, calendar.monthrange(2026, mes_sel)[1] + 1):
+        dias_mes = calendar.monthrange(2026, mes_sel)[1]
+        hoy = date.today()
+        
+        for d in range(1, dias_mes + 1):
             fecha = date(2026, mes_sel, d)
+            if fecha > hoy: break # No contar faltas futuras
             if fecha.weekday() >= 5 or fecha in festivos: continue 
             
+            # Comprobar vacaciones
             es_vac = any(com_sel.upper() in nom.upper() and i <= fecha <= f for nom, (i, f) in vacaciones.items())
-            if es_vac: continue
+            
+            if es_vac:
+                historial_diario.append({"Fecha": fecha, "Entrada": "-", "Salida": "-", "Incidencia": "VACACIONES"})
+                continue
 
             dia_data = datos[datos[col_temporal].dt.date == fecha]
             entradas = dia_data[dia_data[col_accion].str.contains("ENTRADA", case=False, na=False)]
@@ -709,11 +717,12 @@ elif menu == "🕒 CONTROL LABORAL":
             
             if not entradas.empty:
                 incidencia = "OK"
-                if h_in > time(9, 30):
+                # Excluir retraso autorizado del día 05/06/2026
+                if fecha != date(2026, 6, 5) and h_in > time(9, 30):
                     retraso = (datetime.combine(fecha, h_in) - datetime.combine(fecha, time(9, 30))).total_seconds() / 60
                     min_ret += retraso
                     incidencia = f"RETRASO ({int(retraso)}m)"
-                historial_diario.append({"Fecha": fecha, "Entrada": h_in, "Salida": h_out, "Incidencia": incidencia})
+                historial_diario.append({"Fecha": fecha, "Entrada": str(h_in), "Salida": str(h_out), "Incidencia": incidencia})
             else:
                 faltas += 1
                 historial_diario.append({"Fecha": fecha, "Entrada": "-", "Salida": "-", "Incidencia": "FALTA"})
@@ -723,7 +732,6 @@ elif menu == "🕒 CONTROL LABORAL":
         c1.markdown(f'<div style="background:#262730; padding:20px; border-radius:10px; border-left: 10px solid #ff4b4b; text-align:center;"><h3>MINUTOS RETRASO</h3><h1>{int(min_ret)}</h1></div>', unsafe_allow_html=True)
         c2.markdown(f'<div style="background:#262730; padding:20px; border-radius:10px; border-left: 10px solid #ffaa00; text-align:center;"><h3>TOTAL FALTAS</h3><h1>{faltas}</h1></div>', unsafe_allow_html=True)
         
-        # 6. HISTORIAL DETALLADO
         st.markdown("---")
         if historial_diario:
             st.dataframe(pd.DataFrame(historial_diario).sort_values("Fecha", ascending=False), use_container_width=True)
