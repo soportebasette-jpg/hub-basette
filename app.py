@@ -652,7 +652,7 @@ elif menu == "📂 REPOSITORIO":
 
 # --- CONTROL LABORAL ---
 elif menu == "🕒 CONTROL LABORAL":
-    iimport streamlit as st
+import streamlit as st
 import pandas as pd
 import calendar
 from datetime import datetime, time, date
