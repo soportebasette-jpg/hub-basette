@@ -713,4 +713,48 @@ elif menu == "🕒 CONTROL LABORAL":
             if fecha.weekday() >= 5 or fecha in festivos: continue 
             
             # Validación de estado
-            es_vac
+            es_vac = any(com_sel.upper() in nom.upper() and i <= fecha <= f for nom, (i, f) in vacaciones.items())
+            es_permiso = any(com_sel.upper() in nom.upper() and i <= fecha <= f for nom, (i, f) in permisos.items())
+            
+            alta, baja = contratos.get(next((n for n in contratos if n.upper() in com_sel.upper()), (date(2000,1,1), date(2099,1,1))))
+            if fecha < alta or fecha > baja: continue
+            
+            if es_vac:
+                historial_diario.append({"Fecha": fecha, "Entrada": "-", "Salida": "-", "Incidencia": "VACACIONES"})
+                continue
+            if es_permiso:
+                historial_diario.append({"Fecha": fecha, "Entrada": "-", "Salida": "-", "Incidencia": "HOSP. FAMILIAR"})
+                continue
+
+            dia_data = datos[datos[col_temporal].dt.date == fecha]
+            entradas = dia_data[dia_data[col_accion].str.contains("ENTRADA", case=False, na=False)]
+            salidas = dia_data[dia_data[col_accion].str.contains("SALIDA", case=False, na=False)]
+            
+            h_in = entradas[col_temporal].min().time() if not entradas.empty else None
+            h_out = salidas[col_temporal].max().time() if not salidas.empty else None
+            
+            if not entradas.empty:
+                incidencia = "OK"
+                # Excluir retraso 05/06
+                if fecha != date(2026, 6, 5) and h_in > time(9, 30):
+                    retraso = (datetime.combine(fecha, h_in) - datetime.combine(fecha, time(9, 30))).total_seconds() / 60
+                    min_ret += retraso
+                    incidencia = f"RETRASO ({int(retraso)}m)"
+                historial_diario.append({"Fecha": fecha, "Entrada": str(h_in), "Salida": str(h_out), "Incidencia": incidencia})
+            else:
+                faltas += 1
+                historial_diario.append({"Fecha": fecha, "Entrada": "-", "Salida": "-", "Incidencia": "FALTA"})
+
+        # 5. DASHBOARD
+        c1, c2 = st.columns(2)
+        c1.markdown(f'<div style="background:#262730; padding:20px; border-radius:10px; border-left: 10px solid #ff4b4b; text-align:center;"><h3>MINUTOS RETRASO</h3><h1>{int(min_ret)}</h1></div>', unsafe_allow_html=True)
+        c2.markdown(f'<div style="background:#262730; padding:20px; border-radius:10px; border-left: 10px solid #ffaa00; text-align:center;"><h3>TOTAL FALTAS</h3><h1>{faltas}</h1></div>', unsafe_allow_html=True)
+        
+        st.markdown("---")
+        if historial_diario:
+            st.dataframe(pd.DataFrame(historial_diario).sort_values("Fecha", ascending=False), use_container_width=True)
+        else:
+            st.info("Sin registros en este periodo.")
+
+    except Exception as e:
+        st.error(f"Error procesando datos: {e}")
