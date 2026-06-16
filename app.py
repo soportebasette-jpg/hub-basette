@@ -204,7 +204,7 @@ with st.sidebar:
     st.markdown("---")
     menu = st.sidebar.radio(
     "Navegación",
-    ["🚀 CRM", "📊 PRECIOS", "⚖️ COMPARADOR LUZ", "⚖️ COMPARADOR LUZ Y GAS", "📢 ANUNCIOS Y PLAN AMIGO", "📈 DASHBOARD Y RANKING", "📂 REPOSITORIO", "🕒 CONTROL LABORAL"]
+    ["🚀 CRM", "📊 PRECIOS", "⚡ COMPARADOR ENERGÍA", "📶 COMPARADOR TELCO", "📢 ANUNCIOS Y PLAN AMIGO", "📈 DASHBOARD Y RANKING", "📂 REPOSITORIO", "🕒 CONTROL LABORAL"]
 )
 
 # --- CRM ---
@@ -333,127 +333,27 @@ elif menu == "📊 PRECIOS":
             st.image("tarifas_visuales/3d.jpg", use_container_width=True)
         st.markdown('<div style="background-color: #d2ff00; color: black; padding: 10px; border-radius: 5px; font-weight: bold; text-align: center; font-size: 1.5rem;">PRIMEROS 12 MESES POR 24.20€</div>', unsafe_allow_html=True)
 
-# --- COMPARADOR LUZ ---
-elif menu == "⚖️ COMPARADOR LUZ":
-    st.header("⚖️ Comparador de Luz")
-    
-    # 1. CARGA SEGURA DEL CSV
-    # Saltamos las filas iniciales que no tienen datos de columna
-    try:
-        df = pd.read_csv("TARIFAS LUZ Y GAS JUNIO 2026.xlsx - Hoja1.csv", skiprows=2)
-        df.columns = [str(c).strip() for c in df.columns]
-        # Limpiar filas donde no hay comercial (quitar las filas vacías)
-        df = df[df['COMERCIALIZADORA'].notna()]
-    except Exception as e:
-        st.error(f"Error al leer el archivo: {e}")
-        st.stop()
+# --- COMPARADOR ENERGÍA ---
+elif menu == "⚡ COMPARADOR ENERGÍA":
+    st.markdown('<div class="block-header">⚡ COMPARADOR DE ENERGÍA</div>', unsafe_allow_html=True)
+    st.markdown("""
+        <div style="background:#161b22; border:2px solid #d2ff00; border-radius:15px; padding:30px; text-align:center; margin-bottom:30px;">
+            <h2 style="color:#d2ff00; margin-bottom:10px;">🔗 Comparador de Luz y Gas</h2>
+            <p style="color:#8b949e; font-size:1rem; margin-bottom:20px;">Accede a la herramienta de comparación de tarifas de energía para encontrar la mejor oferta para tu cliente.</p>
+        </div>
+    """, unsafe_allow_html=True)
+    st.link_button("⚡ ABRIR COMPARADOR DE ENERGÍA", "https://soportebasette-jpg.github.io/Tecomparotodo/", use_container_width=True)
 
-    # 2. INTERFAZ
-    c1, c2 = st.columns(2)
-    with c1:
-        f_act = st.number_input("Factura actual (€)", value=0.0)
-        potencia = st.number_input("Potencia (kW)", value=4.6)
-        dias = st.number_input("Días", value=30)
-    
-    with c2:
-        comp_sel = st.selectbox("Compañía", df['COMERCIALIZADORA'].unique())
-        # Filtramos por comercial
-        opciones = df[df['COMERCIALIZADORA'] == comp_sel]
-        # Usamos la columna real del CSV para la tarifa
-        tarifa_sel = st.selectbox("Tarifa", opciones['COMERCIALIZADORA'].index)
-        datos = opciones.loc[tarifa_sel]
-
-    # 3. CÁLCULO
-    col1, col2, col3 = st.columns(3)
-    c_punta = col1.number_input("Consumo Punta (kWh)", value=0.0)
-    c_llano = col2.number_input("Consumo Llano (kWh)", value=0.0)
-    c_valle = col3.number_input("Consumo Valle (kWh)", value=0.0)
-
-    # Convertimos los valores a números de forma segura
-    def limpiar_num(val):
-        return float(str(val).replace(',', '.').split()[0]) if pd.notnull(val) else 0.0
-
-    precio_kwh = limpiar_num(datos['SIN SVA'])
-    p1 = limpiar_num(datos['P1'])
-    p2 = limpiar_num(datos['P2'])
-    
-    coste_energia = (c_punta + c_llano + c_valle) * precio_kwh
-    coste_potencia = potencia * (p1 + p2) * dias
-    total_propuesta = (coste_energia + coste_potencia) * 1.21 
-    
-    st.markdown(f"### AHORRO ESTIMADO: {f_act - total_propuesta:.2f} €")
-
-# --- COMPARADOR GAS ---
-elif menu == "⚖️ COMPARADOR GAS":
-    st.header("Estudio de Ahorro de Gas Personalizado")
-
-    # 1. CARGA DE DATOS ESPECÍFICA
-    try:
-        # Saltamos las primeras 16 filas para empezar en la 17
-        df_gas = pd.read_csv("TARIFAS LUZ Y GAS JUNIO 2026.xlsx - Hoja1.csv", header=None, skiprows=17)
-        # Asignamos nombres a las columnas basándonos en tu estructura de gas
-        df_gas.columns = ['COMPAÑÍA', 'TARIFA', 'FIJO', 'ENERGIA', 'OBSERVACIONES', 'X', 'X2']
-        
-        # Limpieza de datos
-        df_gas['FIJO'] = pd.to_numeric(df_gas['FIJO'], errors='coerce')
-        df_gas['ENERGIA'] = pd.to_numeric(df_gas['ENERGIA'], errors='coerce')
-        df_gas = df_gas.dropna(subset=['COMPAÑÍA', 'TARIFA'])
-        
-    except Exception as e:
-        st.error(f"Error al cargar el archivo: {e}")
-        st.stop()
-
-    # 2. INTERFAZ
-    c1, c2 = st.columns(2)
-    with c1:
-        cliente = st.text_input("Nombre del cliente", "Nombre Apellidos")
-        f_act = st.number_input("Factura actual con IVA (EUR)", value=0.0)
-        dias_factura = st.number_input("Días del periodo de factura", value=30)
-        iva_sel = st.selectbox("IVA a aplicar (%)", [21, 10], index=0)
-    
-    with c2:
-        comp_sel = st.selectbox("Compañía Propuesta", sorted(df_gas['COMPAÑÍA'].unique()))
-        
-        # Filtramos tarifas disponibles para la compañía seleccionada
-        tarifas_disponibles = df_gas[df_gas['COMPAÑÍA'] == comp_sel]['TARIFA'].unique()
-        tarifa_sel = st.selectbox("Tarifa (RL.1, RL.2, RL.3)", tarifas_disponibles)
-        
-        # Obtenemos la fila seleccionada
-        sel = df_gas[(df_gas['COMPAÑÍA'] == comp_sel) & (df_gas['TARIFA'] == tarifa_sel)].iloc[0]
-        
-        st.info(f"Termino Fijo: {sel['FIJO']} €/mes")
-        st.write(f"Observaciones: {sel['OBSERVACIONES']}")
-        
-        consumo_kwh = st.number_input("Consumo total del periodo (kWh)", value=0.0)
-
-    # 3. CÁLCULOS
-    p_fijo_mes = float(sel['FIJO'])
-    p_energia = float(sel['ENERGIA'])
-    
-    coste_fijo = (p_fijo_mes / 30) * dias_factura
-    coste_variable = consumo_kwh * p_energia
-    subtotal = coste_fijo + coste_variable
-    coste_final = subtotal * (1 + (iva_sel / 100))
-    ahorro = f_act - coste_final
-
-    st.markdown(f'<div style="background:#d2ff00; padding:15px; border-radius:10px; text-align:center;"><h2 style="color:black;">AHORRO ESTIMADO: {ahorro:.2f} €</h2></div>', unsafe_allow_html=True)
-
-    # 4. BOTÓN PDF
-    if st.button("GENERAR ESTUDIO PDF"):
-        from fpdf import FPDF
-        pdf = FPDF()
-        pdf.add_page()
-        pdf.set_font("Arial", "B", 16)
-        pdf.cell(190, 10, "ESTUDIO DE AHORRO GAS", ln=True, align="C")
-        pdf.set_font("Arial", "", 12)
-        pdf.ln(10)
-        pdf.cell(190, 10, f"Cliente: {cliente}", ln=True)
-        pdf.cell(190, 10, f"Compañia: {comp_sel} ({tarifa_sel})", ln=True)
-        pdf.cell(190, 10, f"Observaciones: {sel['OBSERVACIONES']}", ln=True)
-        pdf.cell(190, 10, f"Ahorro estimado: {ahorro:.2f} EUR", ln=True)
-        
-        pdf_data = pdf.output(dest='S').encode('latin-1', 'replace')
-        st.download_button("📥 DESCARGAR PDF", data=pdf_data, file_name="Estudio_Gas.pdf")
+# --- COMPARADOR TELCO ---
+elif menu == "📶 COMPARADOR TELCO":
+    st.markdown('<div class="block-header">📶 COMPARADOR DE TELECOMUNICACIONES</div>', unsafe_allow_html=True)
+    st.markdown("""
+        <div style="background:#161b22; border:2px solid #d2ff00; border-radius:15px; padding:30px; text-align:center; margin-bottom:30px;">
+            <h2 style="color:#d2ff00; margin-bottom:10px;">🔗 Comparador de Telco</h2>
+            <p style="color:#8b949e; font-size:1rem; margin-bottom:20px;">Accede a la herramienta de comparación de tarifas de telecomunicaciones para encontrar la mejor oferta de fibra y móvil para tu cliente.</p>
+        </div>
+    """, unsafe_allow_html=True)
+    st.link_button("📶 ABRIR COMPARADOR DE TELCO", "https://soportebasette-jpg.github.io/Tecomparotodo-telco/telco.html", use_container_width=True)
 # --- ANUNCIOS Y PLAN AMIGO ---
 elif menu == "📢 ANUNCIOS Y PLAN AMIGO":
     st.header("📢 Anuncios y Plan Amigo")
@@ -729,47 +629,102 @@ elif menu == "🕒 CONTROL LABORAL":
     from datetime import datetime, time, date
     st.markdown('<div class="block-header">🕒 CONTROL LABORAL Y ASISTENCIA</div>', unsafe_allow_html=True)
     
-    # 1. VACACIONES CONFIGURADAS (Para visualización)
+    # ── BAJAS DE EMPRESA ── (no cuentan como falta durante su periodo en la empresa)
+    # fecha_alta: primer día que trabaja | fecha_baja: último día que trabaja (None = sigue activa)
+    empleados_empresa = {
+        "BELEN TRONCOSO CAMPOS":      {"alta": date(2026, 3, 16), "baja": date(2025, 5, 20)},
+        "DEBORAH RODRIGUEZ URBINA":   {"alta": date(2026, 3, 16), "baja": date(2026, 5, 13)},
+        "LORENA POZO ALVAREZ":        {"alta": date(2026, 3, 16), "baja": date(2026, 6, 17)},
+        "MACARENA BACA LOPEZ":        {"alta": date(2026, 3, 16), "baja": date(2026, 3, 19)},
+        "LUIS RODRIGUEZ GOMEZ":       {"alta": date(2025, 4,  6), "baja": date(2026, 4, 24)},
+        "MARIA JOSE MORENO":          {"alta": date(2026, 5,  4), "baja": date(2026, 5, 18)},
+        "LAURA RUBIO GARCIA":         {"alta": date(2026, 5, 25), "baja": date(2026, 5, 27)},
+        "MARIA JOSE ARACIL RUEDA":    {"alta": date(2026, 5,  4), "baja": None},   # activa
+        "RAQUEL GUADALUPE CASTILLO":  {"alta": date(2026, 3, 19), "baja": None},   # activa
+    }
+
+    def empleado_activo_en_fecha(nombre_comercial, fecha):
+        """Devuelve True si el comercial estaba en plantilla en esa fecha."""
+        nombre_up = nombre_comercial.upper()
+        for emp, periodos in empleados_empresa.items():
+            if emp.upper() in nombre_up or nombre_up in emp.upper():
+                alta = periodos["alta"]
+                baja = periodos["baja"]
+                if alta <= fecha:
+                    if baja is None or fecha <= baja:
+                        return True
+        return False  # Si no está en la lista o fuera de periodo, se asume externo
+
+    # ── VACACIONES ──
     vacaciones = {
         "RAQUEL GUADALUPE": (date(2026, 6, 22), date(2026, 6, 28)),
         "MARIA JOSE ARACIL": (date(2026, 8, 3), date(2026, 8, 9))
     }
 
-    with st.expander("🏖️ PRÓXIMAS VACACIONES DE COMERCIALES"):
+    # ── PANEL DE INFO ──
+    tab_vac, tab_emp = st.tabs(["🏖️ Vacaciones Programadas", "👥 Plantilla / Bajas Empresa"])
+
+    with tab_vac:
         cols = st.columns(len(vacaciones))
         for i, (nombre, (inicio, fin)) in enumerate(vacaciones.items()):
+            dias_hasta = (inicio - date.today()).days
+            estado_color = "#d2ff00" if dias_hasta > 7 else "#ffaa00" if dias_hasta > 0 else "#7ee787"
             cols[i].markdown(f"""
-                <div style="background:#161b22; padding:10px; border-radius:8px; border:1px solid #d2ff00; text-align:center;">
-                <p style="margin:0; font-size:0.8rem; color:#d2ff00;">{nombre}</p>
-                <b style="font-size:0.9rem;">{inicio.strftime('%d/%m')} - {fin.strftime('%d/%m')}</b>
+                <div style="background:#161b22; padding:15px; border-radius:10px; border:2px solid {estado_color}; text-align:center;">
+                <p style="margin:0; font-size:0.85rem; color:{estado_color}; font-weight:bold;">{nombre}</p>
+                <b style="font-size:1rem; color:white;">{inicio.strftime('%d/%m/%Y')} → {fin.strftime('%d/%m/%Y')}</b>
+                <p style="margin:4px 0 0 0; font-size:0.75rem; color:#8b949e;">{(fin - inicio).days + 1} días laborables</p>
                 </div>
             """, unsafe_allow_html=True)
 
+    with tab_emp:
+        st.markdown('<p style="color:#8b949e; font-size:0.85rem; margin-bottom:10px;">Los días fuera del rango Alta–Baja se marcan como <b style="color:#888">BAJA EMPRESA</b> y no computan como falta.</p>', unsafe_allow_html=True)
+        activas = {k: v for k, v in empleados_empresa.items() if v["baja"] is None}
+        bajas   = {k: v for k, v in empleados_empresa.items() if v["baja"] is not None}
+        
+        col_a, col_b = st.columns(2)
+        with col_a:
+            st.markdown('<p style="color:#7ee787; font-weight:bold;">✅ Activas en plantilla</p>', unsafe_allow_html=True)
+            for nombre, p in activas.items():
+                st.markdown(f'<div style="background:#0d2818; border:1px solid #7ee787; border-radius:8px; padding:8px 12px; margin-bottom:6px;"><span style="color:white; font-size:0.9rem;">{nombre}</span><br><span style="color:#8b949e; font-size:0.75rem;">Alta: {p["alta"].strftime("%d/%m/%Y")}</span></div>', unsafe_allow_html=True)
+        with col_b:
+            st.markdown('<p style="color:#ff4b4b; font-weight:bold;">📋 Bajas procesadas</p>', unsafe_allow_html=True)
+            for nombre, p in bajas.items():
+                st.markdown(f'<div style="background:#1a0a0a; border:1px solid #30363d; border-radius:8px; padding:8px 12px; margin-bottom:6px;"><span style="color:#8b949e; font-size:0.9rem;">{nombre}</span><br><span style="color:#8b949e; font-size:0.75rem;">Alta: {p["alta"].strftime("%d/%m/%Y")} · Baja: {p["baja"].strftime("%d/%m/%Y")}</span></div>', unsafe_allow_html=True)
+
+    st.markdown("---")
+
     try:
-        # 1. CARGA Y LIMPIEZA
+        # ── CARGA Y LIMPIEZA ──
         sheet_id = "175LGa4j6dAhsjQ7Wiy-8tZnKWuDC9_C9uy6SYC-i-LY"
         url_csv = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv"
         df_laboral = pd.read_csv(url_csv)
         df_laboral.columns = [str(c).strip().upper() for c in df_laboral.columns]
         
         col_comercial = next((c for c in df_laboral.columns if "QUIÉN" in c or "COMERCIAL" in c), None)
-        col_temporal = next((c for c in df_laboral.columns if "TEMPORAL" in c or "MARCA" in c), None)
-        col_accion = next((c for c in df_laboral.columns if "HACER" in c), None)
+        col_temporal  = next((c for c in df_laboral.columns if "TEMPORAL" in c or "MARCA" in c), None)
+        col_accion    = next((c for c in df_laboral.columns if "HACER" in c), None)
         
         df_laboral[col_temporal] = pd.to_datetime(df_laboral[col_temporal], dayfirst=True, errors='coerce')
         df_laboral = df_laboral.dropna(subset=[col_temporal, col_comercial])
 
-        # 2. FILTROS
+        # ── FILTROS ──
         col_f1, col_f2 = st.columns(2)
-        coms = sorted(df_laboral[col_comercial].unique().astype(str))
+        coms    = sorted(df_laboral[col_comercial].unique().astype(str))
         com_sel = col_f1.selectbox("👤 Selecciona Comercial", coms)
-        mes_sel = col_f2.selectbox("📅 Selecciona Mes", range(1, 13), index=5)
+        mes_sel = col_f2.selectbox("📅 Selecciona Mes", range(1, 13), index=datetime.now().month - 1)
 
-        # 3. LÓGICA DE AUDITORÍA
-        festivos = [date(2026, 4, 2), date(2026, 4, 3), date(2026, 4, 22), date(2026, 5, 1), date(2026, 5, 29), date(2026, 6, 4)]
-        datos = df_laboral[(df_laboral[col_comercial] == com_sel) & (df_laboral[col_temporal].dt.month == mes_sel)].copy()
+        # ── LÓGICA DE AUDITORÍA ──
+        festivos = [
+            date(2026, 4, 2), date(2026, 4, 3), date(2026, 4, 22),
+            date(2026, 5, 1), date(2026, 5, 29), date(2026, 6, 4)
+        ]
+        datos = df_laboral[
+            (df_laboral[col_comercial] == com_sel) &
+            (df_laboral[col_temporal].dt.month == mes_sel)
+        ].copy()
         
-        min_ret, faltas, dias_vac = 0, 0, 0
+        min_ret, faltas, dias_vac, dias_baja_emp = 0, 0, 0, 0
         historial_diario = []
         dias_mes = calendar.monthrange(2026, mes_sel)[1]
         
@@ -777,40 +732,80 @@ elif menu == "🕒 CONTROL LABORAL":
             fecha = date(2026, mes_sel, d)
             if fecha > date.today(): break
             if fecha.weekday() >= 5 or fecha in festivos: continue
-            
+
+            # ── Baja de empresa: no computa ──
+            activo = empleado_activo_en_fecha(com_sel, fecha)
+            if not activo:
+                dias_baja_emp += 1
+                historial_diario.append({
+                    "Fecha": fecha, "Entrada": "-", "Salida": "-",
+                    "Incidencia": "🔴 BAJA EMPRESA"
+                })
+                continue
+
+            # ── Vacaciones ──
             es_vac = any(com_sel.upper() in nom.upper() and i <= fecha <= f for nom, (i, f) in vacaciones.items())
             if es_vac:
                 dias_vac += 1
-                historial_diario.append({"Fecha": fecha, "Entrada": "-", "Salida": "-", "Incidencia": "VACACIONES"})
+                historial_diario.append({
+                    "Fecha": fecha, "Entrada": "-", "Salida": "-",
+                    "Incidencia": "🏖️ VACACIONES"
+                })
                 continue
 
             dia_data = datos[datos[col_temporal].dt.date == fecha]
             entradas = dia_data[dia_data[col_accion].str.contains("ENTRADA", case=False, na=False)]
-            salidas = dia_data[dia_data[col_accion].str.contains("SALIDA", case=False, na=False)]
+            salidas  = dia_data[dia_data[col_accion].str.contains("SALIDA",  case=False, na=False)]
             
-            h_in = entradas[col_temporal].min().time() if not entradas.empty else None
-            h_out = salidas[col_temporal].max().time() if not salidas.empty else None
+            h_in  = entradas[col_temporal].min().time() if not entradas.empty else None
+            h_out = salidas[col_temporal].max().time()  if not salidas.empty  else None
             
             if not entradas.empty:
-                incidencia = "OK"
+                incidencia = "✅ OK"
                 if fecha != date(2026, 6, 5) and h_in > time(9, 30):
                     retraso = (datetime.combine(fecha, h_in) - datetime.combine(fecha, time(9, 30))).total_seconds() / 60
                     min_ret += retraso
-                    incidencia = f"RETRASO ({int(retraso)}m)"
-                historial_diario.append({"Fecha": fecha, "Entrada": str(h_in), "Salida": str(h_out), "Incidencia": incidencia})
+                    incidencia = f"⚠️ RETRASO ({int(retraso)}m)"
+                historial_diario.append({
+                    "Fecha": fecha,
+                    "Entrada": str(h_in)[:5] if h_in else "-",
+                    "Salida":  str(h_out)[:5] if h_out else "—",
+                    "Incidencia": incidencia
+                })
             else:
                 faltas += 1
-                historial_diario.append({"Fecha": fecha, "Entrada": "-", "Salida": "-", "Incidencia": "FALTA"})
+                historial_diario.append({
+                    "Fecha": fecha, "Entrada": "-", "Salida": "-",
+                    "Incidencia": "❌ FALTA"
+                })
 
-        # 4. DASHBOARD
-        c1, c2, c3 = st.columns(3)
-        c1.markdown(f'<div style="background:#262730; padding:15px; border-radius:10px; border-left: 8px solid #ff4b4b; text-align:center;"><h3>RETRASO</h3><h1>{int(min_ret)} m</h1></div>', unsafe_allow_html=True)
-        c2.markdown(f'<div style="background:#262730; padding:15px; border-radius:10px; border-left: 8px solid #ffaa00; text-align:center;"><h3>FALTAS</h3><h1>{faltas}</h1></div>', unsafe_allow_html=True)
-        c3.markdown(f'<div style="background:#262730; padding:15px; border-radius:10px; border-left: 8px solid #7ee787; text-align:center;"><h3>VACACIONES</h3><h1>{dias_vac} días</h1></div>', unsafe_allow_html=True)
+        # ── DASHBOARD MÉTRICAS ──
+        st.markdown("<br>", unsafe_allow_html=True)
+        c1, c2, c3, c4 = st.columns(4)
+        c1.markdown(f'<div style="background:#262730; padding:15px; border-radius:10px; border-left:8px solid #ff4b4b; text-align:center;"><p style="color:#ff4b4b; font-size:0.8rem; margin:0; font-weight:bold;">⏰ RETRASO ACUM.</p><h1 style="color:white; margin:5px 0;">{int(min_ret)} m</h1></div>', unsafe_allow_html=True)
+        c2.markdown(f'<div style="background:#262730; padding:15px; border-radius:10px; border-left:8px solid #ffaa00; text-align:center;"><p style="color:#ffaa00; font-size:0.8rem; margin:0; font-weight:bold;">❌ FALTAS</p><h1 style="color:white; margin:5px 0;">{faltas}</h1></div>', unsafe_allow_html=True)
+        c3.markdown(f'<div style="background:#262730; padding:15px; border-radius:10px; border-left:8px solid #7ee787; text-align:center;"><p style="color:#7ee787; font-size:0.8rem; margin:0; font-weight:bold;">🏖️ VACACIONES</p><h1 style="color:white; margin:5px 0;">{dias_vac} d</h1></div>', unsafe_allow_html=True)
+        c4.markdown(f'<div style="background:#262730; padding:15px; border-radius:10px; border-left:8px solid #8b949e; text-align:center;"><p style="color:#8b949e; font-size:0.8rem; margin:0; font-weight:bold;">🔴 BAJA EMPRESA</p><h1 style="color:white; margin:5px 0;">{dias_baja_emp} d</h1></div>', unsafe_allow_html=True)
         
         st.markdown("---")
+
+        # ── TABLA HISTORIAL ──
         if historial_diario:
-            st.dataframe(pd.DataFrame(historial_diario).sort_values("Fecha", ascending=False), use_container_width=True)
+            df_hist = pd.DataFrame(historial_diario).sort_values("Fecha", ascending=False)
+            df_hist["Fecha"] = df_hist["Fecha"].apply(lambda x: x.strftime("%a %d/%m/%Y").upper())
+
+            def color_incidencia(val):
+                if "FALTA" in val:       return "background-color: rgba(255,75,75,0.2); color: #ff4b4b; font-weight:bold"
+                if "RETRASO" in val:     return "background-color: rgba(255,170,0,0.2); color: #ffaa00; font-weight:bold"
+                if "VACACIONES" in val:  return "background-color: rgba(126,231,135,0.15); color: #7ee787"
+                if "BAJA EMPRESA" in val:return "background-color: rgba(139,148,158,0.15); color: #8b949e"
+                return "color: #7ee787"
+
+            st.dataframe(
+                df_hist.style.applymap(color_incidencia, subset=["Incidencia"]),
+                use_container_width=True,
+                height=450
+            )
         else:
             st.info("Sin registros en este periodo.")
 
