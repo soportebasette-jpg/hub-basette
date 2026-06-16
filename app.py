@@ -204,7 +204,7 @@ with st.sidebar:
     st.markdown("---")
     menu = st.sidebar.radio(
     "Navegación",
-    ["🚀 CRM", "📊 PRECIOS", "⚡ COMPARADOR ENERGÍA", "📶 COMPARADOR TELCO", "📢 ANUNCIOS Y PLAN AMIGO", "📈 DASHBOARD Y RANKING", "📂 REPOSITORIO", "🕒 CONTROL LABORAL"]
+    ["🚀 CRM", "📊 PRECIOS", "⚡ COMPARADOR ENERGÍA", "📶 COMPARADOR TELCO", "📢 ANUNCIOS Y PLAN AMIGO", "📈 DASHBOARD Y RANKING", "📂 REPOSITORIO", "🕒 CONTROL LABORAL", "🔐 ZONA DIRECTIVOS"]
 )
 
 # --- CRM ---
@@ -291,10 +291,17 @@ elif menu == "📊 PRECIOS":
     
     with t1:
         st.markdown('<div class="block-header">⚡ LUZ Y GAS</div>', unsafe_allow_html=True)
-        if os.path.exists("tarifas_visuales/luz_gas.jpg"):
-            st.image("tarifas_visuales/luz_gas.jpg", use_container_width=True)
+        # Buscar la imagen en varios formatos posibles
+        img_luz_gas = None
+        for ext in ["luz_gas.jpeg", "luz_gas.jpg", "luz_gas.png"]:
+            ruta_candidata = f"tarifas_visuales/{ext}"
+            if os.path.exists(ruta_candidata):
+                img_luz_gas = ruta_candidata
+                break
+        if img_luz_gas:
+            st.image(img_luz_gas, use_container_width=True)
         else:
-            st.warning("Imagen 'tarifas_visuales/luz_gas.jpg' no encontrada.")
+            st.warning("Imagen de Luz y Gas no encontrada en tarifas_visuales/ (se busca luz_gas.jpeg / .jpg / .png)")
 
     with t2:
         st.markdown('<div class="block-header">📶 TELECOMUNICACIONES</div>', unsafe_allow_html=True)
@@ -801,13 +808,269 @@ elif menu == "🕒 CONTROL LABORAL":
                 if "BAJA EMPRESA" in val:return "background-color: rgba(139,148,158,0.15); color: #8b949e"
                 return "color: #7ee787"
 
-            st.dataframe(
-                df_hist.style.applymap(color_incidencia, subset=["Incidencia"]),
-                use_container_width=True,
-                height=450
-            )
+            try:
+                styled = df_hist.style.map(color_incidencia, subset=["Incidencia"])
+            except AttributeError:
+                styled = df_hist.style.applymap(color_incidencia, subset=["Incidencia"])
+            st.dataframe(styled, use_container_width=True, height=450)
         else:
             st.info("Sin registros en este periodo.")
 
     except Exception as e:
         st.error(f"Error procesando datos: {e}")
+
+# ══════════════════════════════════════════════════════
+# --- ZONA DIRECTIVOS ---
+# ══════════════════════════════════════════════════════
+elif menu == "🔐 ZONA DIRECTIVOS":
+    import os
+    from datetime import datetime
+
+    # ── CSS adicional para la zona directivos ──
+    st.markdown("""
+        <style>
+        .dir-header {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            border: 2px solid #gold;
+            border-image: linear-gradient(135deg, #FFD700, #FFA500) 1;
+            border-radius: 15px;
+            padding: 30px;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .dir-card {
+            background: linear-gradient(135deg, #161b22, #1c2430);
+            border: 1px solid #FFD700;
+            border-radius: 12px;
+            padding: 18px;
+            margin-bottom: 12px;
+            transition: all 0.3s;
+        }
+        .dir-card:hover { border-color: #FFA500; transform: translateY(-3px); }
+        .gold-badge {
+            background: linear-gradient(135deg, #FFD700, #FFA500);
+            color: black;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: bold;
+        }
+        </style>
+    """, unsafe_allow_html=True)
+
+    # ── AUTENTICACIÓN DIRECTIVOS ──
+    if "dir_auth" not in st.session_state:
+        st.session_state["dir_auth"] = False
+
+    if not st.session_state["dir_auth"]:
+        st.markdown("""
+            <div style="background:linear-gradient(135deg,#1a1a2e,#0f3460); border:2px solid #FFD700;
+                        border-radius:20px; padding:40px; text-align:center; max-width:450px; margin:60px auto;">
+                <h1 style="color:#FFD700; font-size:2.5rem; margin-bottom:5px;">🔐</h1>
+                <h2 style="color:#FFD700; margin-bottom:5px;">ZONA DIRECTIVOS</h2>
+                <p style="color:#8b949e; font-size:0.9rem;">Acceso restringido · Basette Group</p>
+            </div>
+        """, unsafe_allow_html=True)
+
+        _, col_dir, _ = st.columns([1, 1.2, 1])
+        with col_dir:
+            pwd_dir = st.text_input("🔑 Clave Directivos:", type="password", key="pwd_dir_input")
+            if st.button("ACCEDER A ZONA DIRECTIVOS", use_container_width=True):
+                if pwd_dir == "Directivos2026*":
+                    st.session_state["dir_auth"] = True
+                    st.rerun()
+                else:
+                    st.error("❌ Clave incorrecta. Acceso denegado.")
+        st.stop()
+
+    # ── CONTENIDO ZONA DIRECTIVOS (solo si autenticado) ──
+    st.markdown("""
+        <div style="background:linear-gradient(135deg,#1a1a2e,#0f3460); border:2px solid #FFD700;
+                    border-radius:15px; padding:25px; text-align:center; margin-bottom:25px;">
+            <h2 style="color:#FFD700; margin:0;">🏛️ ZONA DIRECTIVOS · BASETTE GROUP</h2>
+            <p style="color:#8b949e; margin:5px 0 0 0; font-size:0.85rem;">Área de acceso restringido · Documentación confidencial</p>
+        </div>
+    """, unsafe_allow_html=True)
+
+    # Botón cerrar sesión directivos
+    col_cerrar = st.columns([5, 1])
+    with col_cerrar[1]:
+        if st.button("🔒 Cerrar sesión", key="cerrar_dir"):
+            st.session_state["dir_auth"] = False
+            st.rerun()
+
+    # ── TABS PRINCIPALES ──
+    tab_rrhh, tab_ret, tab_nom, tab_liq, tab_docs = st.tabs([
+        "👥 PERSONAL",
+        "💰 MARCOS RETRIBUTIVOS",
+        "💼 NÓMINAS",
+        "📊 LIQUIDACIONES",
+        "📁 DOCS EMPRESA"
+    ])
+
+    # ── FUNCIÓN REPOSITORIO DIRECTIVOS ──
+    def mostrar_carpeta_dir(ruta_base, nombre_carpeta, icono="📄"):
+        ruta = os.path.join(ruta_base, nombre_carpeta)
+        if os.path.exists(ruta):
+            archivos = [f for f in os.listdir(ruta) if os.path.isfile(os.path.join(ruta, f))]
+            if archivos:
+                for filename in sorted(archivos):
+                    ruta_archivo = os.path.join(ruta, filename)
+                    ext = filename.split('.')[-1].lower()
+                    mime_map = {
+                        "pdf": "application/pdf",
+                        "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                        "xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        "jpg": "image/jpeg", "jpeg": "image/jpeg", "png": "image/png"
+                    }
+                    m_type = mime_map.get(ext, "application/octet-stream")
+                    with open(ruta_archivo, "rb") as f:
+                        st.download_button(
+                            label=f"{icono} {filename}",
+                            data=f.read(),
+                            file_name=filename,
+                            mime=m_type,
+                            key=f"dir_{ruta_base}_{nombre_carpeta}_{filename}".replace(" ", "_").replace("/", "_")
+                        )
+            else:
+                st.info("📭 Carpeta vacía. Sube archivos para que aparezcan aquí.")
+        else:
+            st.caption(f"🚫 Carpeta no encontrada: {ruta}")
+            st.info(f"Crea la carpeta `{ruta}` y sube los documentos.")
+
+    # ── TAB PERSONAL ──
+    with tab_rrhh:
+        st.markdown('<div class="block-header">👥 GESTIÓN DE PERSONAL</div>', unsafe_allow_html=True)
+
+        # Resumen de plantilla actual
+        from datetime import date
+        empleados_dir = {
+            "RAQUEL GUADALUPE CASTILLO":  {"alta": date(2026, 3, 19), "baja": None,           "estado": "✅ ACTIVA"},
+            "MARIA JOSE ARACIL RUEDA":    {"alta": date(2026, 5,  4), "baja": None,           "estado": "✅ ACTIVA"},
+            "BELEN TRONCOSO CAMPOS":      {"alta": date(2026, 3, 16), "baja": date(2025, 5, 20), "estado": "🔴 BAJA"},
+            "DEBORAH RODRIGUEZ URBINA":   {"alta": date(2026, 3, 16), "baja": date(2026, 5, 13), "estado": "🔴 BAJA"},
+            "LORENA POZO ALVAREZ":        {"alta": date(2026, 3, 16), "baja": date(2026, 6, 17), "estado": "🔴 BAJA"},
+            "MACARENA BACA LOPEZ":        {"alta": date(2026, 3, 16), "baja": date(2026, 3, 19), "estado": "🔴 BAJA"},
+            "LUIS RODRIGUEZ GOMEZ":       {"alta": date(2025, 4,  6), "baja": date(2026, 4, 24), "estado": "🔴 BAJA"},
+            "MARIA JOSE MORENO":          {"alta": date(2026, 5,  4), "baja": date(2026, 5, 18), "estado": "🔴 BAJA"},
+            "LAURA RUBIO GARCIA":         {"alta": date(2026, 5, 25), "baja": date(2026, 5, 27), "estado": "🔴 BAJA"},
+        }
+
+        activos = [k for k, v in empleados_dir.items() if v["baja"] is None]
+        bajas_e = [k for k, v in empleados_dir.items() if v["baja"] is not None]
+
+        col_res1, col_res2, col_res3 = st.columns(3)
+        col_res1.markdown(f'<div style="background:#0d2818;border:2px solid #7ee787;border-radius:12px;padding:20px;text-align:center;"><p style="color:#7ee787;margin:0;font-weight:bold;font-size:0.85rem;">ACTIVOS</p><h1 style="color:white;margin:5px 0;">{len(activos)}</h1></div>', unsafe_allow_html=True)
+        col_res2.markdown(f'<div style="background:#1a0a0a;border:2px solid #ff4b4b;border-radius:12px;padding:20px;text-align:center;"><p style="color:#ff4b4b;margin:0;font-weight:bold;font-size:0.85rem;">BAJAS HISTÓRICAS</p><h1 style="color:white;margin:5px 0;">{len(bajas_e)}</h1></div>', unsafe_allow_html=True)
+        col_res3.markdown(f'<div style="background:#161b22;border:2px solid #FFD700;border-radius:12px;padding:20px;text-align:center;"><p style="color:#FFD700;margin:0;font-weight:bold;font-size:0.85rem;">TOTAL HISTORIAL</p><h1 style="color:white;margin:5px 0;">{len(empleados_dir)}</h1></div>', unsafe_allow_html=True)
+
+        st.markdown("<br>", unsafe_allow_html=True)
+
+        df_personal = pd.DataFrame([
+            {
+                "Nombre": k,
+                "Alta": v["alta"].strftime("%d/%m/%Y"),
+                "Baja": v["baja"].strftime("%d/%m/%Y") if v["baja"] else "—",
+                "Estado": v["estado"],
+                "Días en empresa": (v["baja"] - v["alta"]).days if v["baja"] else (date.today() - v["alta"]).days
+            }
+            for k, v in empleados_dir.items()
+        ])
+        st.dataframe(df_personal, use_container_width=True, hide_index=True)
+
+        st.markdown("---")
+        st.markdown('<div class="block-header">📂 DOCUMENTACIÓN DE PERSONAL</div>', unsafe_allow_html=True)
+        st.markdown("Coloca los contratos, expedientes y fichas en `directivos/PERSONAL/`")
+        mostrar_carpeta_dir("directivos", "PERSONAL", "📋")
+
+    # ── TAB MARCOS RETRIBUTIVOS ──
+    with tab_ret:
+        st.markdown('<div class="block-header">💰 MARCOS RETRIBUTIVOS</div>', unsafe_allow_html=True)
+        st.markdown("""
+            <div style="background:#161b22; border-left:4px solid #FFD700; padding:15px; border-radius:8px; margin-bottom:20px;">
+                <p style="color:#FFD700; font-weight:bold; margin:0;">ℹ️ ÁREA CONFIDENCIAL</p>
+                <p style="color:#8b949e; margin:5px 0 0 0; font-size:0.85rem;">Los documentos de estructura salarial, bandas retributivas y comisiones se gestionan aquí.</p>
+            </div>
+        """, unsafe_allow_html=True)
+        col_ret1, col_ret2 = st.columns(2)
+        with col_ret1:
+            with st.expander("📈 Escala de Comisiones"):
+                mostrar_carpeta_dir("directivos", "COMISIONES", "💰")
+            with st.expander("🏷️ Bandas Salariales"):
+                mostrar_carpeta_dir("directivos", "BANDAS_SALARIALES", "💼")
+        with col_ret2:
+            with st.expander("🎯 Objetivos e Incentivos"):
+                mostrar_carpeta_dir("directivos", "INCENTIVOS", "🎯")
+            with st.expander("📋 Contratos y Acuerdos"):
+                mostrar_carpeta_dir("directivos", "CONTRATOS", "📋")
+
+    # ── TAB NÓMINAS ──
+    with tab_nom:
+        st.markdown('<div class="block-header">💼 GESTIÓN DE NÓMINAS</div>', unsafe_allow_html=True)
+        st.markdown("""
+            <div style="background:#161b22; border-left:4px solid #FFD700; padding:15px; border-radius:8px; margin-bottom:20px;">
+                <p style="color:#8b949e; margin:0; font-size:0.85rem;">Sube las nóminas en <code>directivos/NOMINAS/AÑO/MES/</code> para organizarlas por periodo.</p>
+            </div>
+        """, unsafe_allow_html=True)
+
+        meses_nom = ["ENERO","FEBRERO","MARZO","ABRIL","MAYO","JUNIO",
+                     "JULIO","AGOSTO","SEPTIEMBRE","OCTUBRE","NOVIEMBRE","DICIEMBRE"]
+        col_nom_sel1, col_nom_sel2 = st.columns(2)
+        anio_nom = col_nom_sel1.selectbox("📅 Año", ["2026", "2025", "2024"], key="anio_nom")
+        mes_nom  = col_nom_sel2.selectbox("📅 Mes", meses_nom, index=datetime.now().month - 1, key="mes_nom")
+
+        ruta_nom = os.path.join("directivos", "NOMINAS", anio_nom, mes_nom)
+        st.markdown(f"**Ruta:** `{ruta_nom}`")
+        if os.path.exists(ruta_nom):
+            archivos_nom = [f for f in os.listdir(ruta_nom) if os.path.isfile(os.path.join(ruta_nom, f))]
+            if archivos_nom:
+                for fn in sorted(archivos_nom):
+                    ext = fn.split('.')[-1].lower()
+                    m_type = "application/pdf" if ext == "pdf" else "application/octet-stream"
+                    with open(os.path.join(ruta_nom, fn), "rb") as fnom:
+                        st.download_button(f"💼 {fn}", fnom.read(), file_name=fn, mime=m_type,
+                                           key=f"nom_{anio_nom}_{mes_nom}_{fn}".replace(" ","_"))
+            else:
+                st.info(f"No hay nóminas en {mes_nom} {anio_nom}.")
+        else:
+            st.info(f"Carpeta no encontrada: `{ruta_nom}`. Créala y sube los archivos.")
+
+    # ── TAB LIQUIDACIONES ──
+    with tab_liq:
+        st.markdown('<div class="block-header">📊 LIQUIDACIONES</div>', unsafe_allow_html=True)
+        st.markdown("""
+            <div style="background:#161b22; border-left:4px solid #FFD700; padding:15px; border-radius:8px; margin-bottom:20px;">
+                <p style="color:#8b949e; margin:0; font-size:0.85rem;">Liquidaciones de comisiones y ventas por comercial y periodo. Guarda los archivos en <code>directivos/LIQUIDACIONES/</code></p>
+            </div>
+        """, unsafe_allow_html=True)
+        col_liq1, col_liq2 = st.columns(2)
+        with col_liq1:
+            with st.expander("📊 Liquidaciones Energía"):
+                mostrar_carpeta_dir("directivos", "LIQUIDACIONES/ENERGIA", "⚡")
+            with st.expander("📊 Liquidaciones Telco"):
+                mostrar_carpeta_dir("directivos", "LIQUIDACIONES/TELCO", "📶")
+        with col_liq2:
+            with st.expander("📊 Liquidaciones Alarmas"):
+                mostrar_carpeta_dir("directivos", "LIQUIDACIONES/ALARMAS", "🛡️")
+            with st.expander("📊 Liquidaciones Generales"):
+                mostrar_carpeta_dir("directivos", "LIQUIDACIONES/GENERAL", "📋")
+
+    # ── TAB DOCS EMPRESA ──
+    with tab_docs:
+        st.markdown('<div class="block-header">📁 DOCUMENTACIÓN DE EMPRESA</div>', unsafe_allow_html=True)
+        st.markdown("""
+            <div style="background:#161b22; border-left:4px solid #FFD700; padding:15px; border-radius:8px; margin-bottom:20px;">
+                <p style="color:#8b949e; margin:0; font-size:0.85rem;">Escrituras, certificados, seguros, licencias y cualquier documentación oficial de la empresa. Carpeta: <code>directivos/EMPRESA/</code></p>
+            </div>
+        """, unsafe_allow_html=True)
+        col_doc1, col_doc2 = st.columns(2)
+        with col_doc1:
+            with st.expander("🏛️ Documentación Legal"):
+                mostrar_carpeta_dir("directivos", "EMPRESA/LEGAL", "⚖️")
+            with st.expander("🔏 Certificados y Licencias"):
+                mostrar_carpeta_dir("directivos", "EMPRESA/CERTIFICADOS", "🔏")
+        with col_doc2:
+            with st.expander("🛡️ Seguros"):
+                mostrar_carpeta_dir("directivos", "EMPRESA/SEGUROS", "🛡️")
+            with st.expander("📑 Otros Documentos"):
+                mostrar_carpeta_dir("directivos", "EMPRESA/OTROS", "📑")
