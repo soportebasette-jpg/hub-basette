@@ -204,7 +204,7 @@ with st.sidebar:
     st.markdown("---")
     menu = st.sidebar.radio(
     "Navegación",
-    ["🚀 CRM", "📊 PRECIOS", "⚡ COMPARADOR ENERGÍA", "📶 COMPARADOR TELCO", "📢 ANUNCIOS Y PLAN AMIGO", "📈 DASHBOARD Y RANKING", "📂 REPOSITORIO", "🕒 CONTROL LABORAL", "🔐 ZONA DIRECTIVOS"]
+    ["🚀 CRM", "📊 PRECIOS", "⚡ COMPARADOR ENERGÍA", "📶 COMPARADOR TELCO", "📢 ANUNCIOS Y PLAN AMIGO", "📈 DASHBOARD Y RANKING", "📂 REPOSITORIO", "🕒 CONTROL LABORAL", "🔐 ZONA DIRECTIVOS", "🛠️ SOPORTE"]
 )
 
 # --- CRM ---
@@ -282,6 +282,47 @@ if menu == "🚀 CRM":
         with c_t2:
             st.markdown('<div style="background:#161b22; padding:15px; border-radius:10px; border:1px solid #30363d; text-align:center; margin-bottom:10px;"><h4 style="color:white; margin:0;">LOWI</h4></div>', unsafe_allow_html=True)
             st.link_button("ENTRAR LOWI", "https://vodafone.topgestion.es/login", use_container_width=True)
+
+    # ── HERRAMIENTAS ADICIONALES ──
+    st.markdown("---")
+    st.markdown('<div class="block-header">🛠️ SOPORTE Y GESTIÓN</div>', unsafe_allow_html=True)
+    soporte_links = [
+        {"n": "NODO",                   "u": "https://optimum.nodogestion.com/",                                                                                                            "ico": "🖥️"},
+        {"n": "SUBIR DOCU TOTAL ENERGY","u": "https://contrato.totalenergies.es/",                                                                                                         "ico": "📤"},
+        {"n": "INFOJOBS",               "u": "https://www.infojobs.net/employer-login.xhtml",                                                                                              "ico": "💼"},
+        {"n": "SAUC NATURGY",           "u": "https://sauc.gestdocout360.es/ServiceTonic/xhtml/portal/portal_home.jsf",                                                                   "ico": "🔧"},
+        {"n": "LIQUIDACION TOTAL ENERGY","u":"https://ipbuestotalenergies-ipbuestotalenergiesprod.eu.cloud.varicent.com/payeewebv2/login?nextPathname=%2FPresenterAdaptive%2F67",          "ico": "💰"},
+    ]
+    cols_sop = st.columns(3)
+    for i, p in enumerate(soporte_links):
+        with cols_sop[i % 3]:
+            st.markdown(f'<div style="background:#161b22; padding:12px; border-radius:10px; border:1px solid #30363d; text-align:center; margin-bottom:10px;"><h4 style="color:white; margin:0;">{p["ico"]} {p["n"]}</h4></div>', unsafe_allow_html=True)
+            st.link_button("ENTRAR", p["u"], use_container_width=True)
+
+    st.markdown("---")
+    st.markdown('<div class="block-header">📞 B2COM · CENTRALITA</div>', unsafe_allow_html=True)
+    b2com_links = [
+        {"n": "B2COM AGENTE",     "u": "https://grupobasette.vozipcenter.com/l/0/#/",                                                   "ico": "🎧"},
+        {"n": "B2COM SUPERVISOR", "u": "https://grupobasette-super.vozipcenter.com/supervisor.html#/agentes",                           "ico": "👁️"},
+        {"n": "B2COM ADMIN",      "u": "https://grupobasette-admin.vozipcenter.com/(X(9edb6d37-9516-4e3d-a150-1182e9197070))/",        "ico": "⚙️"},
+        {"n": "B2COM PANEL",      "u": "https://pac.b2com.com/login",                                                                   "ico": "📊"},
+    ]
+    cols_b2 = st.columns(4)
+    for i, p in enumerate(b2com_links):
+        with cols_b2[i % 4]:
+            st.markdown(f'<div style="background:#161b22; padding:12px; border-radius:10px; border:1px solid #30363d; text-align:center; margin-bottom:10px;"><h4 style="color:white; margin:0;">{p["ico"]} {p["n"]}</h4></div>', unsafe_allow_html=True)
+            st.link_button("ENTRAR", p["u"], use_container_width=True)
+
+    st.markdown("---")
+    st.markdown('<div class="block-header">🌐 RRSS Y BBDD</div>', unsafe_allow_html=True)
+    rrss_links = [
+        {"n": "IONOS",  "u": "https://login.ionos.es/oauth-mandatorlogin?language=es_ES&redirect_url=https%3A%2F%2Fauth.ionos.es%2F1.0%2Foauth%2Fauth%2Fotk&oauthclient=Control+Panel+Webhosting&oauthinternal=true", "ico": "🌐"},
+    ]
+    cols_rrss = st.columns(3)
+    for i, p in enumerate(rrss_links):
+        with cols_rrss[i % 3]:
+            st.markdown(f'<div style="background:#161b22; padding:12px; border-radius:10px; border:1px solid #30363d; text-align:center; margin-bottom:10px;"><h4 style="color:white; margin:0;">{p["ico"]} {p["n"]}</h4></div>', unsafe_allow_html=True)
+            st.link_button("ENTRAR", p["u"], use_container_width=True)
 
 # --- PRECIOS ---
 elif menu == "📊 PRECIOS":
@@ -647,11 +688,15 @@ elif menu == "🕒 CONTROL LABORAL":
         "MARIA JOSE MORENO":          {"alta": date(2026, 5,  4), "baja": date(2026, 5, 18)},
         "LAURA RUBIO GARCIA":         {"alta": date(2026, 5, 25), "baja": date(2026, 5, 27)},
         "MARIA JOSE ARACIL RUEDA":    {"alta": date(2026, 5,  4), "baja": None},   # activa
-        "RAQUEL GUADALUPE CASTILLO":  {"alta": date(2026, 3, 19), "baja": None},   # activa
+        "RAQUEL GUADALUPE CASTILLO":  {"alta": date(2026, 3, 2), "baja": None},    # activa
+    }
+
+    # Periodo de gracia: del 02/03 al 18/03 Raquel aparece como OK aunque no haya fichado
+    PERIODOS_GRACIA = {
+        "RAQUEL GUADALUPE CASTILLO": (date(2026, 3, 2), date(2026, 3, 18)),
     }
 
     def empleado_activo_en_fecha(nombre_comercial, fecha):
-        """Devuelve True si el comercial estaba en plantilla en esa fecha."""
         nombre_up = nombre_comercial.upper()
         for emp, periodos in empleados_empresa.items():
             if emp.upper() in nombre_up or nombre_up in emp.upper():
@@ -660,7 +705,15 @@ elif menu == "🕒 CONTROL LABORAL":
                 if alta <= fecha:
                     if baja is None or fecha <= baja:
                         return True
-        return False  # Si no está en la lista o fuera de periodo, se asume externo
+        return False
+
+    def en_periodo_gracia(nombre_comercial, fecha):
+        nombre_up = nombre_comercial.upper()
+        for emp, (inicio, fin) in PERIODOS_GRACIA.items():
+            if emp.upper() in nombre_up or nombre_up in emp.upper():
+                if inicio <= fecha <= fin:
+                    return True
+        return False
 
     # ── VACACIONES ──
     vacaciones = {
@@ -780,11 +833,18 @@ elif menu == "🕒 CONTROL LABORAL":
                     "Incidencia": incidencia
                 })
             else:
-                faltas += 1
-                historial_diario.append({
-                    "Fecha": fecha, "Entrada": "-", "Salida": "-",
-                    "Incidencia": "❌ FALTA"
-                })
+                # Periodo de gracia → OK aunque no haya fichaje
+                if en_periodo_gracia(com_sel, fecha):
+                    historial_diario.append({
+                        "Fecha": fecha, "Entrada": "—", "Salida": "—",
+                        "Incidencia": "✅ OK"
+                    })
+                else:
+                    faltas += 1
+                    historial_diario.append({
+                        "Fecha": fecha, "Entrada": "-", "Salida": "-",
+                        "Incidencia": "❌ FALTA"
+                    })
 
         # ── DASHBOARD MÉTRICAS ──
         st.markdown("<br>", unsafe_allow_html=True)
@@ -945,7 +1005,7 @@ elif menu == "🔐 ZONA DIRECTIVOS":
         # Resumen de plantilla actual
         from datetime import date
         empleados_dir = {
-            "RAQUEL GUADALUPE CASTILLO":  {"alta": date(2026, 3, 19), "baja": None,           "estado": "✅ ACTIVA"},
+            "RAQUEL GUADALUPE CASTILLO":  {"alta": date(2026, 3, 2),  "baja": None,           "estado": "✅ ACTIVA"},
             "MARIA JOSE ARACIL RUEDA":    {"alta": date(2026, 5,  4), "baja": None,           "estado": "✅ ACTIVA"},
             "BELEN TRONCOSO CAMPOS":      {"alta": date(2026, 3, 16), "baja": date(2025, 5, 20), "estado": "🔴 BAJA"},
             "DEBORAH RODRIGUEZ URBINA":   {"alta": date(2026, 3, 16), "baja": date(2026, 5, 13), "estado": "🔴 BAJA"},
@@ -1074,3 +1134,85 @@ elif menu == "🔐 ZONA DIRECTIVOS":
                 mostrar_carpeta_dir("directivos", "EMPRESA/SEGUROS", "🛡️")
             with st.expander("📑 Otros Documentos"):
                 mostrar_carpeta_dir("directivos", "EMPRESA/OTROS", "📑")
+
+# ══════════════════════════════════════════════════════
+# --- SOPORTE ---
+# ══════════════════════════════════════════════════════
+elif menu == "🛠️ SOPORTE":
+    st.markdown('<div class="block-header">🛠️ PANEL DE SOPORTE Y HERRAMIENTAS</div>', unsafe_allow_html=True)
+
+    def render_links(lista, ncols=3):
+        """Renderiza una lista de links en columnas uniformes."""
+        cols = st.columns(ncols)
+        for i, p in enumerate(lista):
+            with cols[i % ncols]:
+                st.markdown(
+                    f'<div style="background:#161b22; padding:14px; border-radius:10px; '
+                    f'border:1px solid #30363d; text-align:center; margin-bottom:10px;">'
+                    f'<p style="color:#d2ff00; font-size:1.1rem; margin:0;">{p.get("ico","🔗")}</p>'
+                    f'<h4 style="color:white; margin:4px 0 0 0; font-size:0.9rem;">{p["n"]}</h4></div>',
+                    unsafe_allow_html=True
+                )
+                st.link_button("ENTRAR", p["u"], use_container_width=True)
+
+    # ── SOPORTE / GESTIÓN ──
+    st.markdown('<div class="block-header">🖥️ HERRAMIENTAS DE SOPORTE</div>', unsafe_allow_html=True)
+    render_links([
+        {"n": "NODO",                    "u": "https://optimum.nodogestion.com/",                                                                                                           "ico": "🖥️"},
+        {"n": "SUBIR DOCU TOTAL ENERGY", "u": "https://contrato.totalenergies.es/",                                                                                                        "ico": "📤"},
+        {"n": "INFOJOBS",                "u": "https://www.infojobs.net/employer-login.xhtml",                                                                                             "ico": "💼"},
+        {"n": "SAUC NATURGY",            "u": "https://sauc.gestdocout360.es/ServiceTonic/xhtml/portal/portal_home.jsf",                                                                  "ico": "🔧"},
+        {"n": "LIQUIDACION TOTAL ENERGY","u": "https://ipbuestotalenergies-ipbuestotalenergiesprod.eu.cloud.varicent.com/payeewebv2/login?nextPathname=%2FPresenterAdaptive%2F67",         "ico": "💰"},
+    ], ncols=3)
+
+    st.markdown("---")
+
+    # ── CRM Y PORTALES ENERGÍA ──
+    st.markdown('<div class="block-header">💡 🔥 ENERGÍA</div>', unsafe_allow_html=True)
+    render_links([
+        {"n": "CRM BASETTE",   "u": "https://crm.grupobasette.eu/login",                                                                                                                   "ico": "🏢"},
+        {"n": "GANA ENERGÍA",  "u": "https://colaboradores.ganaenergia.com/",                                                                                                              "ico": "⚡"},
+        {"n": "NATURGY",       "u": "https://checkout.naturgy.es/backoffice",                                                                                                              "ico": "🔥"},
+        {"n": "TOTAL ENERGY",  "u": "https://totalenergiesespana.my.site.com/portalcolaboradores/s/login/?ec=302&startURL=%2Fportalcolaboradores%2Fs%2F",                                  "ico": "🌍"},
+        {"n": "IBERDROLA",     "u": "https://crm.gesventas.eu/login.php",                                                                                                                  "ico": "💛"},
+        {"n": "NIBA",          "u": "https://clientes.niba.es/",                                                                                                                           "ico": "🔵"},
+        {"n": "ENDESA",        "u": "https://inergia.app",                                                                                                                                 "ico": "🔴"},
+        {"n": "REPSOL",        "u": "https://inergia.app/login.php",                                                                                                                       "ico": "🛢️"},
+    ], ncols=4)
+
+    st.markdown("---")
+
+    # ── TELCO ──
+    st.markdown('<div class="block-header">📶 TELECOMUNICACIONES</div>', unsafe_allow_html=True)
+    render_links([
+        {"n": "O2",   "u": "https://o2online.es/auth/login/?next=%2Fventas%2F&type=retail", "ico": "📱"},
+        {"n": "LOWI", "u": "https://vodafone.topgestion.es/login",                          "ico": "📡"},
+    ], ncols=3)
+
+    st.markdown("---")
+
+    # ── ALARMAS ──
+    st.markdown('<div class="block-header">🚨 ALARMAS</div>', unsafe_allow_html=True)
+    render_links([
+        {"n": "SEGURMA", "u": "https://crm.segurma.com/web#action=619&cids=1&menu_id=200&model=sale.order&view_type=list", "ico": "🛡️"},
+        {"n": "3D",      "u": "https://www.3dseguridad.es/reportes/menu.php",                                              "ico": "🔒"},
+    ], ncols=3)
+
+    st.markdown("---")
+
+    # ── B2COM CENTRALITA ──
+    st.markdown('<div class="block-header">📞 B2COM · CENTRALITA</div>', unsafe_allow_html=True)
+    render_links([
+        {"n": "B2COM AGENTE",     "u": "https://grupobasette.vozipcenter.com/l/0/#/",                                                 "ico": "🎧"},
+        {"n": "B2COM SUPERVISOR", "u": "https://grupobasette-super.vozipcenter.com/supervisor.html#/agentes",                         "ico": "👁️"},
+        {"n": "B2COM ADMIN",      "u": "https://grupobasette-admin.vozipcenter.com/(X(9edb6d37-9516-4e3d-a150-1182e9197070))/",      "ico": "⚙️"},
+        {"n": "B2COM PANEL",      "u": "https://pac.b2com.com/login",                                                                 "ico": "📊"},
+    ], ncols=4)
+
+    st.markdown("---")
+
+    # ── RRSS Y BBDD ──
+    st.markdown('<div class="block-header">🌐 RRSS Y BBDD</div>', unsafe_allow_html=True)
+    render_links([
+        {"n": "IONOS", "u": "https://login.ionos.es/oauth-mandatorlogin?language=es_ES&redirect_url=https%3A%2F%2Fauth.ionos.es%2F1.0%2Foauth%2Fauth%2Fotk&oauthclient=Control+Panel+Webhosting&oauthinternal=true", "ico": "🌐"},
+    ], ncols=3)
