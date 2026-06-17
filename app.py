@@ -815,41 +815,12 @@ elif menu == "🕒 CONTROL LABORAL":
                     min_ret += retraso
                     incidencia = f"⚠️ RETRASO ENTRADA ({int(retraso)}m)"
 
-                # ── Turno partido (Raquel): comprobar tarde también ──
-                if es_turno_partido and h_out is not None:
-                    tarde_inicio = horario["tarde_inicio"]
-                    tarde_fin    = horario["tarde_fin"]
-                    # Entradas de tarde (≥17:00)
-                    entradas_tarde = [
-                        e.time() for e in entradas[col_temporal]
-                        if e.time() >= tarde_inicio
-                    ] if not entradas.empty else []
-                    salidas_tarde = [
-                        s.time() for s in salidas[col_temporal]
-                        if s.time() >= tarde_inicio
-                    ] if not salidas.empty else []
-
-                    if not entradas_tarde:
-                        # No fichó por la tarde
-                        nota_tarde = " · ⚠️ SIN TARDE"
-                        incidencia = ("✅ OK" + nota_tarde) if incidencia == "✅ OK" else (incidencia + nota_tarde)
-                    else:
-                        h_tarde_in = min(entradas_tarde)
-                        if h_tarde_in > tarde_inicio:
-                            ret_tarde = (datetime.combine(fecha, h_tarde_in) - datetime.combine(fecha, tarde_inicio)).total_seconds() / 60
-                            min_ret += ret_tarde
-                            nota_tarde = f" · ⚠️ RETRASO TARDE ({int(ret_tarde)}m)"
-                            incidencia = ("✅ OK" + nota_tarde) if incidencia == "✅ OK" else (incidencia + nota_tarde)
-
-                    # Resumen de tarde para la tabla
-                    h_in_tarde_str  = min(entradas_tarde).strftime("%H:%M") if entradas_tarde else "—"
-                    h_out_tarde_str = max(salidas_tarde).strftime("%H:%M")  if salidas_tarde  else "—"
+                # ── Turno partido (Raquel): usa un único login/logout, no se comprueba tarde ──
+                if es_turno_partido:
                     historial_diario.append({
                         "Fecha":    fecha,
                         "Entrada":  str(h_in)[:5] if h_in else "-",
-                        "Salida M": str(h_out)[:5] if h_out else "—",
-                        "Ent. T":   h_in_tarde_str,
-                        "Sal. T":   h_out_tarde_str,
+                        "Salida":   str(h_out)[:5] if h_out else "—",
                         "Incidencia": incidencia
                     })
                 else:
@@ -862,16 +833,14 @@ elif menu == "🕒 CONTROL LABORAL":
             else:
                 # Periodo de gracia → OK aunque no haya fichaje
                 if en_periodo_gracia(com_sel, fecha):
-                    row = {"Fecha": fecha, "Entrada": "—", "Salida": "—", "Incidencia": "✅ OK"}
-                    if es_turno_partido:
-                        row.update({"Salida M": "—", "Ent. T": "—", "Sal. T": "—"})
-                    historial_diario.append(row)
+                    historial_diario.append({
+                        "Fecha": fecha, "Entrada": "—", "Salida": "—", "Incidencia": "✅ OK"
+                    })
                 else:
                     faltas += 1
-                    row = {"Fecha": fecha, "Entrada": "-", "Salida": "-", "Incidencia": "❌ FALTA"}
-                    if es_turno_partido:
-                        row.update({"Salida M": "-", "Ent. T": "-", "Sal. T": "-"})
-                    historial_diario.append(row)
+                    historial_diario.append({
+                        "Fecha": fecha, "Entrada": "-", "Salida": "-", "Incidencia": "❌ FALTA"
+                    })
 
         # ── DASHBOARD MÉTRICAS ──
         st.markdown("<br>", unsafe_allow_html=True)
@@ -1187,6 +1156,33 @@ elif menu == "🔐 ZONA DIRECTIVOS":
             {"n": "INFOJOBS",                "u": "https://www.infojobs.net/employer-login.xhtml",                                                                                               "ico": "💼"},
             {"n": "SAUC NATURGY",            "u": "https://sauc.gestdocout360.es/ServiceTonic/xhtml/portal/portal_home.jsf",                                                                    "ico": "🔧"},
             {"n": "LIQUIDACION TOTAL ENERGY","u": "https://ipbuestotalenergies-ipbuestotalenergiesprod.eu.cloud.varicent.com/payeewebv2/login?nextPathname=%2FPresenterAdaptive%2F67",           "ico": "💰"},
+        ], ncols=3)
+
+        st.markdown("---")
+        st.markdown("##### 💡 Energía")
+        render_links_dir([
+            {"n": "CRM BASETTE",   "u": "https://crm.grupobasette.eu/login",                                                                                                                     "ico": "🏢"},
+            {"n": "GANA ENERGÍA",  "u": "https://colaboradores.ganaenergia.com/",                                                                                                                "ico": "⚡"},
+            {"n": "NATURGY",       "u": "https://checkout.naturgy.es/backoffice",                                                                                                                "ico": "🔥"},
+            {"n": "TOTAL ENERGY",  "u": "https://totalenergiesespana.my.site.com/portalcolaboradores/s/login/?ec=302&startURL=%2Fportalcolaboradores%2Fs%2F",                                    "ico": "🌍"},
+            {"n": "IBERDROLA",     "u": "https://crm.gesventas.eu/login.php",                                                                                                                    "ico": "💛"},
+            {"n": "NIBA",          "u": "https://clientes.niba.es/",                                                                                                                             "ico": "🔵"},
+            {"n": "ENDESA",        "u": "https://inergia.app",                                                                                                                                   "ico": "🔴"},
+            {"n": "REPSOL",        "u": "https://inergia.app/login.php",                                                                                                                         "ico": "🛢️"},
+        ], ncols=4)
+
+        st.markdown("---")
+        st.markdown("##### 🚨 Alarmas")
+        render_links_dir([
+            {"n": "SEGURMA", "u": "https://crm.segurma.com/web#action=619&cids=1&menu_id=200&model=sale.order&view_type=list", "ico": "🛡️"},
+            {"n": "3D",      "u": "https://www.3dseguridad.es/reportes/menu.php",                                              "ico": "🔒"},
+        ], ncols=3)
+
+        st.markdown("---")
+        st.markdown("##### 📶 Telecomunicaciones")
+        render_links_dir([
+            {"n": "O2",   "u": "https://o2online.es/auth/login/?next=%2Fventas%2F&type=retail", "ico": "📱"},
+            {"n": "LOWI", "u": "https://vodafone.topgestion.es/login",                          "ico": "📡"},
         ], ncols=3)
 
         st.markdown("---")
