@@ -283,47 +283,6 @@ if menu == "🚀 CRM":
             st.markdown('<div style="background:#161b22; padding:15px; border-radius:10px; border:1px solid #30363d; text-align:center; margin-bottom:10px;"><h4 style="color:white; margin:0;">LOWI</h4></div>', unsafe_allow_html=True)
             st.link_button("ENTRAR LOWI", "https://vodafone.topgestion.es/login", use_container_width=True)
 
-    # ── HERRAMIENTAS ADICIONALES ──
-    st.markdown("---")
-    st.markdown('<div class="block-header">🛠️ SOPORTE Y GESTIÓN</div>', unsafe_allow_html=True)
-    soporte_links = [
-        {"n": "NODO",                   "u": "https://optimum.nodogestion.com/",                                                                                                            "ico": "🖥️"},
-        {"n": "SUBIR DOCU TOTAL ENERGY","u": "https://contrato.totalenergies.es/",                                                                                                         "ico": "📤"},
-        {"n": "INFOJOBS",               "u": "https://www.infojobs.net/employer-login.xhtml",                                                                                              "ico": "💼"},
-        {"n": "SAUC NATURGY",           "u": "https://sauc.gestdocout360.es/ServiceTonic/xhtml/portal/portal_home.jsf",                                                                   "ico": "🔧"},
-        {"n": "LIQUIDACION TOTAL ENERGY","u":"https://ipbuestotalenergies-ipbuestotalenergiesprod.eu.cloud.varicent.com/payeewebv2/login?nextPathname=%2FPresenterAdaptive%2F67",          "ico": "💰"},
-    ]
-    cols_sop = st.columns(3)
-    for i, p in enumerate(soporte_links):
-        with cols_sop[i % 3]:
-            st.markdown(f'<div style="background:#161b22; padding:12px; border-radius:10px; border:1px solid #30363d; text-align:center; margin-bottom:10px;"><h4 style="color:white; margin:0;">{p["ico"]} {p["n"]}</h4></div>', unsafe_allow_html=True)
-            st.link_button("ENTRAR", p["u"], use_container_width=True)
-
-    st.markdown("---")
-    st.markdown('<div class="block-header">📞 B2COM · CENTRALITA</div>', unsafe_allow_html=True)
-    b2com_links = [
-        {"n": "B2COM AGENTE",     "u": "https://grupobasette.vozipcenter.com/l/0/#/",                                                   "ico": "🎧"},
-        {"n": "B2COM SUPERVISOR", "u": "https://grupobasette-super.vozipcenter.com/supervisor.html#/agentes",                           "ico": "👁️"},
-        {"n": "B2COM ADMIN",      "u": "https://grupobasette-admin.vozipcenter.com/(X(9edb6d37-9516-4e3d-a150-1182e9197070))/",        "ico": "⚙️"},
-        {"n": "B2COM PANEL",      "u": "https://pac.b2com.com/login",                                                                   "ico": "📊"},
-    ]
-    cols_b2 = st.columns(4)
-    for i, p in enumerate(b2com_links):
-        with cols_b2[i % 4]:
-            st.markdown(f'<div style="background:#161b22; padding:12px; border-radius:10px; border:1px solid #30363d; text-align:center; margin-bottom:10px;"><h4 style="color:white; margin:0;">{p["ico"]} {p["n"]}</h4></div>', unsafe_allow_html=True)
-            st.link_button("ENTRAR", p["u"], use_container_width=True)
-
-    st.markdown("---")
-    st.markdown('<div class="block-header">🌐 RRSS Y BBDD</div>', unsafe_allow_html=True)
-    rrss_links = [
-        {"n": "IONOS",  "u": "https://login.ionos.es/oauth-mandatorlogin?language=es_ES&redirect_url=https%3A%2F%2Fauth.ionos.es%2F1.0%2Foauth%2Fauth%2Fotk&oauthclient=Control+Panel+Webhosting&oauthinternal=true", "ico": "🌐"},
-    ]
-    cols_rrss = st.columns(3)
-    for i, p in enumerate(rrss_links):
-        with cols_rrss[i % 3]:
-            st.markdown(f'<div style="background:#161b22; padding:12px; border-radius:10px; border:1px solid #30363d; text-align:center; margin-bottom:10px;"><h4 style="color:white; margin:0;">{p["ico"]} {p["n"]}</h4></div>', unsafe_allow_html=True)
-            st.link_button("ENTRAR", p["u"], use_container_width=True)
-
 # --- PRECIOS ---
 elif menu == "📊 PRECIOS":
     st.header("Tarifario Oficial")
@@ -680,7 +639,7 @@ elif menu == "🕒 CONTROL LABORAL":
     # ── BAJAS DE EMPRESA ── (no cuentan como falta durante su periodo en la empresa)
     # fecha_alta: primer día que trabaja | fecha_baja: último día que trabaja (None = sigue activa)
     empleados_empresa = {
-        "BELEN TRONCOSO CAMPOS":      {"alta": date(2026, 3, 16), "baja": date(2025, 5, 20)},
+        "BELEN TRONCOSO CAMPOS":      {"alta": date(2026, 3, 16), "baja": date(2026, 5, 20)},
         "DEBORAH RODRIGUEZ URBINA":   {"alta": date(2026, 3, 16), "baja": date(2026, 5, 13)},
         "LORENA POZO ALVAREZ":        {"alta": date(2026, 3, 16), "baja": date(2026, 6, 17)},
         "MACARENA BACA LOPEZ":        {"alta": date(2026, 3, 16), "baja": date(2026, 3, 19)},
@@ -774,20 +733,47 @@ elif menu == "🕒 CONTROL LABORAL":
         com_sel = col_f1.selectbox("👤 Selecciona Comercial", coms)
         mes_sel = col_f2.selectbox("📅 Selecciona Mes", range(1, 13), index=datetime.now().month - 1)
 
+        # ── BADGE HORARIO DEL COMERCIAL SELECCIONADO ──
+        if "RAQUEL" in com_sel.upper() and "GUADALUPE" in com_sel.upper():
+            st.markdown('<div style="background:#1a1a2e; border:1px solid #FFD700; border-radius:8px; padding:8px 16px; margin-bottom:10px; display:inline-block;"><span style="color:#FFD700; font-weight:bold;">⏰ Horario:</span> <span style="color:white;">09:00 – 14:30 · 17:00 – 19:30 (turno partido)</span></div>', unsafe_allow_html=True)
+        else:
+            st.markdown('<div style="background:#161b22; border:1px solid #30363d; border-radius:8px; padding:8px 16px; margin-bottom:10px; display:inline-block;"><span style="color:#d2ff00; font-weight:bold;">⏰ Horario:</span> <span style="color:white;">09:30 – 14:30</span></div>', unsafe_allow_html=True)
+
         # ── LÓGICA DE AUDITORÍA ──
         festivos = [
             date(2026, 4, 2), date(2026, 4, 3), date(2026, 4, 22),
             date(2026, 5, 1), date(2026, 5, 29), date(2026, 6, 4)
         ]
+
+        # ── HORARIOS POR COMERCIAL ──
+        # General: 9:30 – 14:30 (comerciales)
+        # Raquel:  9:00 – 14:30 + 17:00 – 19:30 (turno partido)
+        def get_horario(nombre):
+            if "RAQUEL" in nombre.upper() and "GUADALUPE" in nombre.upper():
+                return {
+                    "entrada": time(9, 0),
+                    "partido": True,
+                    "tarde_inicio": time(17, 0),
+                    "tarde_fin":    time(19, 30),
+                }
+            return {
+                "entrada": time(9, 30),
+                "partido": False,
+            }
+
         datos = df_laboral[
             (df_laboral[col_comercial] == com_sel) &
             (df_laboral[col_temporal].dt.month == mes_sel)
         ].copy()
-        
+
+        horario = get_horario(com_sel)
+        hora_entrada_limite = horario["entrada"]
+        es_turno_partido = horario.get("partido", False)
+
         min_ret, faltas, dias_vac, dias_baja_emp = 0, 0, 0, 0
         historial_diario = []
         dias_mes = calendar.monthrange(2026, mes_sel)[1]
-        
+
         for d in range(1, dias_mes + 1):
             fecha = date(2026, mes_sel, d)
             if fecha > date.today(): break
@@ -816,35 +802,76 @@ elif menu == "🕒 CONTROL LABORAL":
             dia_data = datos[datos[col_temporal].dt.date == fecha]
             entradas = dia_data[dia_data[col_accion].str.contains("ENTRADA", case=False, na=False)]
             salidas  = dia_data[dia_data[col_accion].str.contains("SALIDA",  case=False, na=False)]
-            
+
             h_in  = entradas[col_temporal].min().time() if not entradas.empty else None
             h_out = salidas[col_temporal].max().time()  if not salidas.empty  else None
-            
+
             if not entradas.empty:
                 incidencia = "✅ OK"
-                if fecha != date(2026, 6, 5) and h_in > time(9, 30):
-                    retraso = (datetime.combine(fecha, h_in) - datetime.combine(fecha, time(9, 30))).total_seconds() / 60
+
+                # ── Cálculo retraso entrada ──
+                if h_in > hora_entrada_limite:
+                    retraso = (datetime.combine(fecha, h_in) - datetime.combine(fecha, hora_entrada_limite)).total_seconds() / 60
                     min_ret += retraso
-                    incidencia = f"⚠️ RETRASO ({int(retraso)}m)"
-                historial_diario.append({
-                    "Fecha": fecha,
-                    "Entrada": str(h_in)[:5] if h_in else "-",
-                    "Salida":  str(h_out)[:5] if h_out else "—",
-                    "Incidencia": incidencia
-                })
+                    incidencia = f"⚠️ RETRASO ENTRADA ({int(retraso)}m)"
+
+                # ── Turno partido (Raquel): comprobar tarde también ──
+                if es_turno_partido and h_out is not None:
+                    tarde_inicio = horario["tarde_inicio"]
+                    tarde_fin    = horario["tarde_fin"]
+                    # Entradas de tarde (≥17:00)
+                    entradas_tarde = [
+                        e.time() for e in entradas[col_temporal]
+                        if e.time() >= tarde_inicio
+                    ] if not entradas.empty else []
+                    salidas_tarde = [
+                        s.time() for s in salidas[col_temporal]
+                        if s.time() >= tarde_inicio
+                    ] if not salidas.empty else []
+
+                    if not entradas_tarde:
+                        # No fichó por la tarde
+                        nota_tarde = " · ⚠️ SIN TARDE"
+                        incidencia = ("✅ OK" + nota_tarde) if incidencia == "✅ OK" else (incidencia + nota_tarde)
+                    else:
+                        h_tarde_in = min(entradas_tarde)
+                        if h_tarde_in > tarde_inicio:
+                            ret_tarde = (datetime.combine(fecha, h_tarde_in) - datetime.combine(fecha, tarde_inicio)).total_seconds() / 60
+                            min_ret += ret_tarde
+                            nota_tarde = f" · ⚠️ RETRASO TARDE ({int(ret_tarde)}m)"
+                            incidencia = ("✅ OK" + nota_tarde) if incidencia == "✅ OK" else (incidencia + nota_tarde)
+
+                    # Resumen de tarde para la tabla
+                    h_in_tarde_str  = min(entradas_tarde).strftime("%H:%M") if entradas_tarde else "—"
+                    h_out_tarde_str = max(salidas_tarde).strftime("%H:%M")  if salidas_tarde  else "—"
+                    historial_diario.append({
+                        "Fecha":    fecha,
+                        "Entrada":  str(h_in)[:5] if h_in else "-",
+                        "Salida M": str(h_out)[:5] if h_out else "—",
+                        "Ent. T":   h_in_tarde_str,
+                        "Sal. T":   h_out_tarde_str,
+                        "Incidencia": incidencia
+                    })
+                else:
+                    historial_diario.append({
+                        "Fecha":   fecha,
+                        "Entrada": str(h_in)[:5] if h_in else "-",
+                        "Salida":  str(h_out)[:5] if h_out else "—",
+                        "Incidencia": incidencia
+                    })
             else:
                 # Periodo de gracia → OK aunque no haya fichaje
                 if en_periodo_gracia(com_sel, fecha):
-                    historial_diario.append({
-                        "Fecha": fecha, "Entrada": "—", "Salida": "—",
-                        "Incidencia": "✅ OK"
-                    })
+                    row = {"Fecha": fecha, "Entrada": "—", "Salida": "—", "Incidencia": "✅ OK"}
+                    if es_turno_partido:
+                        row.update({"Salida M": "—", "Ent. T": "—", "Sal. T": "—"})
+                    historial_diario.append(row)
                 else:
                     faltas += 1
-                    historial_diario.append({
-                        "Fecha": fecha, "Entrada": "-", "Salida": "-",
-                        "Incidencia": "❌ FALTA"
-                    })
+                    row = {"Fecha": fecha, "Entrada": "-", "Salida": "-", "Incidencia": "❌ FALTA"}
+                    if es_turno_partido:
+                        row.update({"Salida M": "-", "Ent. T": "-", "Sal. T": "-"})
+                    historial_diario.append(row)
 
         # ── DASHBOARD MÉTRICAS ──
         st.markdown("<br>", unsafe_allow_html=True)
@@ -960,12 +987,13 @@ elif menu == "🔐 ZONA DIRECTIVOS":
             st.rerun()
 
     # ── TABS PRINCIPALES ──
-    tab_rrhh, tab_ret, tab_nom, tab_liq, tab_docs = st.tabs([
+    tab_rrhh, tab_ret, tab_nom, tab_liq, tab_docs, tab_sop = st.tabs([
         "👥 PERSONAL",
         "💰 MARCOS RETRIBUTIVOS",
         "💼 NÓMINAS",
         "📊 LIQUIDACIONES",
-        "📁 DOCS EMPRESA"
+        "📁 DOCS EMPRESA",
+        "🛠️ SOPORTE"
     ])
 
     # ── FUNCIÓN REPOSITORIO DIRECTIVOS ──
@@ -1007,7 +1035,7 @@ elif menu == "🔐 ZONA DIRECTIVOS":
         empleados_dir = {
             "RAQUEL GUADALUPE CASTILLO":  {"alta": date(2026, 3, 2),  "baja": None,           "estado": "✅ ACTIVA"},
             "MARIA JOSE ARACIL RUEDA":    {"alta": date(2026, 5,  4), "baja": None,           "estado": "✅ ACTIVA"},
-            "BELEN TRONCOSO CAMPOS":      {"alta": date(2026, 3, 16), "baja": date(2025, 5, 20), "estado": "🔴 BAJA"},
+            "BELEN TRONCOSO CAMPOS":      {"alta": date(2026, 3, 16), "baja": date(2026, 5, 20), "estado": "🔴 BAJA"},
             "DEBORAH RODRIGUEZ URBINA":   {"alta": date(2026, 3, 16), "baja": date(2026, 5, 13), "estado": "🔴 BAJA"},
             "LORENA POZO ALVAREZ":        {"alta": date(2026, 3, 16), "baja": date(2026, 6, 17), "estado": "🔴 BAJA"},
             "MACARENA BACA LOPEZ":        {"alta": date(2026, 3, 16), "baja": date(2026, 3, 19), "estado": "🔴 BAJA"},
@@ -1134,6 +1162,47 @@ elif menu == "🔐 ZONA DIRECTIVOS":
                 mostrar_carpeta_dir("directivos", "EMPRESA/SEGUROS", "🛡️")
             with st.expander("📑 Otros Documentos"):
                 mostrar_carpeta_dir("directivos", "EMPRESA/OTROS", "📑")
+
+    # ── TAB SOPORTE ──
+    with tab_sop:
+        st.markdown('<div class="block-header">🛠️ SOPORTE Y HERRAMIENTAS</div>', unsafe_allow_html=True)
+
+        def render_links_dir(lista, ncols=3):
+            cols = st.columns(ncols)
+            for i, p in enumerate(lista):
+                with cols[i % ncols]:
+                    st.markdown(
+                        f'<div style="background:#161b22; padding:14px; border-radius:10px; '
+                        f'border:1px solid #30363d; text-align:center; margin-bottom:10px;">'
+                        f'<p style="color:#FFD700; font-size:1.1rem; margin:0;">{p.get("ico","🔗")}</p>'
+                        f'<h4 style="color:white; margin:4px 0 0 0; font-size:0.9rem;">{p["n"]}</h4></div>',
+                        unsafe_allow_html=True
+                    )
+                    st.link_button("ENTRAR", p["u"], use_container_width=True)
+
+        st.markdown("##### 🖥️ Gestión y soporte")
+        render_links_dir([
+            {"n": "NODO",                    "u": "https://optimum.nodogestion.com/",                                                                                                             "ico": "🖥️"},
+            {"n": "SUBIR DOCU TOTAL ENERGY", "u": "https://contrato.totalenergies.es/",                                                                                                          "ico": "📤"},
+            {"n": "INFOJOBS",                "u": "https://www.infojobs.net/employer-login.xhtml",                                                                                               "ico": "💼"},
+            {"n": "SAUC NATURGY",            "u": "https://sauc.gestdocout360.es/ServiceTonic/xhtml/portal/portal_home.jsf",                                                                    "ico": "🔧"},
+            {"n": "LIQUIDACION TOTAL ENERGY","u": "https://ipbuestotalenergies-ipbuestotalenergiesprod.eu.cloud.varicent.com/payeewebv2/login?nextPathname=%2FPresenterAdaptive%2F67",           "ico": "💰"},
+        ], ncols=3)
+
+        st.markdown("---")
+        st.markdown("##### 📞 B2COM · Centralita")
+        render_links_dir([
+            {"n": "B2COM AGENTE",     "u": "https://grupobasette.vozipcenter.com/l/0/#/",                                                  "ico": "🎧"},
+            {"n": "B2COM SUPERVISOR", "u": "https://grupobasette-super.vozipcenter.com/supervisor.html#/agentes",                          "ico": "👁️"},
+            {"n": "B2COM ADMIN",      "u": "https://grupobasette-admin.vozipcenter.com/(X(9edb6d37-9516-4e3d-a150-1182e9197070))/",       "ico": "⚙️"},
+            {"n": "B2COM PANEL",      "u": "https://pac.b2com.com/login",                                                                  "ico": "📊"},
+        ], ncols=4)
+
+        st.markdown("---")
+        st.markdown("##### 🌐 RRSS y BBDD")
+        render_links_dir([
+            {"n": "IONOS", "u": "https://login.ionos.es/oauth-mandatorlogin?language=es_ES&redirect_url=https%3A%2F%2Fauth.ionos.es%2F1.0%2Foauth%2Fauth%2Fotk&oauthclient=Control+Panel+Webhosting&oauthinternal=true", "ico": "🌐"},
+        ], ncols=3)
 
 # ══════════════════════════════════════════════════════
 # --- SOPORTE ---
