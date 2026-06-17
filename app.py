@@ -1418,9 +1418,9 @@ elif menu == "🔐 ZONA DIRECTIVOS":
             </div>
         """, unsafe_allow_html=True)
 
-        col_up1, col_up2 = st.columns(2)
+        col_up1, col_up2, col_up3 = st.columns(3)
         with col_up1:
-            st.markdown('<p style="color:#d2ff00; font-weight:bold; font-size:1rem; margin-bottom:4px;">📄 Liquidación compañía</p>', unsafe_allow_html=True)
+            st.markdown('<p style="color:#d2ff00; font-weight:bold; font-size:1rem; margin-bottom:4px;">📄 Liquidación energía</p>', unsafe_allow_html=True)
             f_liquidacion = st.file_uploader(
                 "Sube la liquidación (.xlsx)",
                 type=['xlsx'],
@@ -1433,6 +1433,14 @@ elif menu == "🔐 ZONA DIRECTIVOS":
                 "Sube contratos_energia.xlsx",
                 type=['xlsx'],
                 key="con_upload",
+                label_visibility="collapsed"
+            )
+        with col_up3:
+            st.markdown('<p style="color:#d2ff00; font-weight:bold; font-size:1rem; margin-bottom:4px;">⚡ Liquidación SVA <span style="color:#8b949e; font-size:0.75rem;">(opcional)</span></p>', unsafe_allow_html=True)
+            f_sva = st.file_uploader(
+                "Sube liquidación SVA (.xlsx)",
+                type=['xlsx'],
+                key="sva_upload",
                 label_visibility="collapsed"
             )
 
@@ -1466,6 +1474,105 @@ elif menu == "🔐 ZONA DIRECTIVOS":
 
                     # Cruce
                     df_resultado = cruzar_con_contratos(df_liq_raw, df_con_filtrado)
+
+                    # ── CRUCE SVA (si se ha subido liquidación SVA) ──
+                    df_sva_resultado = pd.DataFrame()
+                    sva_pagados_n = 0
+                    sva_descom_n = 0
+                    sva_sinmatch_n = 0
+                    sva_total_pagado = 0.0
+                    sva_total_descom = 0.0
+
+                    if f_sva is not None:
+                        try:
+                            df_sva_raw = leer_excel_safe(f_sva, header=None)
+
+                            # Detectar cabecera SVA buscando CIF/CUPS/NIF
+                            sva_header_row = None
+                            for _si in range(0, 25):
+                                _vals = [str(v).upper() for v in df_sva_raw.iloc[_si].tolist()]
+                                if any('CIF' in v or 'CUP' in v or 'NIF' in v for v in _vals):
+                                    sva_header_row = _si
+                                    break
+
+                            if sva_header_row is not None:
+                                # Renombrar columnas con la fila de cabecera
+                                _hdr = [str(v).strip() if v is not None else f'col_{j}'
+                                        for j, v in enumerate(df_sva_raw.iloc[sva_header_row].tolist())]
+                                df_sva_data = df_sva_raw.iloc[sva_header_row+1:].copy()
+                                df_sva_data.columns = _hdr
+                                df_sva_data = df_sva_data.reset_index(drop=True)
+
+                                # Detectar automáticamente columnas clave del SVA
+                                # Buscar: columna CUP/CUPS, CIF/NIF, comisión/importe, fecha baja
+                                def find_col(df, keywords):
+                                    for kw in keywords:
+                                        for col in df.columns:
+                                            if kw.upper() in str(col).upper():
+                                                return col
+                                    return None
+
+                                col_cup_sva  = find_col(df_sva_data, ['CUPS','CUP','SUMINISTRO'])
+                                col_cif_sva  = find_col(df_sva_data, ['CIF','NIF','DNI'])
+                                col_com_sva  = find_col(df_sva_data, ['COMISION','COMISIÓN','IMPORTE','TOTAL','CANTIDAD'])
+                                col_baja_sva = find_col(df_sva_data, ['BAJA','FECHA BAJA','DESCOMISION'])
+                                col_prod_sva = find_col(df_sva_data, ['PRODUCTO','SERVICIO','SVA','DESCRIPCION'])
+
+                                if col_cup_sva:
+                                    # Normalizar CUPs del SVA
+                                    df_sva_data['CUP SVA Norm'] = df_sva_data[col_cup_sva].apply(normalize_cup)
+
+                                    # Merge con contratos por CUPS Luz (SVA siempre es electricidad)
+                                    df_con_sva = df_con_filtrado.copy()
+                                    if 'CUPS Luz Norm' not in df_con_sva.columns:
+                                        df_con_sva['CUPS Luz Norm'] = df_con_sva['CUPS Luz'].apply(normalize_cup)
+
+                                    crm_sva = df_con_sva[df_con_sva['CUPS Luz Norm'].notna()][
+                                        ['ID','ID Contrato Externo','Cliente','Comercial','Estado',
+                                         'Comercializadora','CUPS Luz Norm']
+                                    ].drop_duplicates('CUPS Luz Norm')
+
+                                    df_sva_merged = pd.merge(
+                                        df_sva_data[df_sva_data['CUP SVA Norm'].notna()],
+                                        crm_sva,
+                                        left_on='CUP SVA Norm', right_on='CUPS Luz Norm',
+                                        how='left'
+                                    )
+                                    df_sva_merged['CUP Cruce'] = df_sva_merged['CUP SVA Norm']
+                                    df_sva_merged['Tipo'] = 'SVA'
+
+                                    # Comisión SVA
+                                    if col_com_sva:
+                                        df_sva_merged['Comisión_liq'] = pd.to_numeric(
+                                            df_sva_merged[col_com_sva], errors='coerce').fillna(0)
+                                    else:
+                                        df_sva_merged['Comisión_liq'] = 0
+
+                                    # Descomisionado SVA
+                                    if col_baja_sva:
+                                        df_sva_merged['Descomisionado'] = df_sva_merged[col_baja_sva].apply(
+                                            lambda x: x is not None and str(x).strip() not in ['','nan','None'])
+                                    else:
+                                        df_sva_merged['Descomisionado'] = df_sva_merged['Comisión_liq'] < 0
+
+                                    # Producto SVA
+                                    if col_prod_sva:
+                                        df_sva_merged['Producto'] = df_sva_merged[col_prod_sva].fillna('SVA')
+                                    else:
+                                        df_sva_merged['Producto'] = 'SVA'
+
+                                    # Clasificar SVA
+                                    df_sva_merged['Estado Liquidación'] = df_sva_merged.apply(clasificar, axis=1)
+                                    df_sva_resultado = df_sva_merged
+
+                                    sva_pagados_n   = len(df_sva_resultado[df_sva_resultado['Estado Liquidación']=='✅ PAGADO'])
+                                    sva_descom_n    = len(df_sva_resultado[df_sva_resultado['Estado Liquidación']=='🔴 DESCOMISIONADO'])
+                                    sva_sinmatch_n  = len(df_sva_resultado[df_sva_resultado['Estado Liquidación']=='⚠️ SIN MATCH EN CRM'])
+                                    sva_total_pagado = float(df_sva_resultado[df_sva_resultado['Estado Liquidación']=='✅ PAGADO']['Comisión_liq'].sum())
+                                    sva_total_descom = float(df_sva_resultado[df_sva_resultado['Estado Liquidación']=='🔴 DESCOMISIONADO']['Comisión_liq'].sum())
+
+                        except Exception as _e_sva:
+                            st.warning(f"⚠️ No se pudo procesar el SVA: {_e_sva}")
 
                     # ── HEADER RESUMEN ──
                     meses_es = {'1':'Enero','2':'Febrero','3':'Marzo','4':'Abril','5':'Mayo','6':'Junio',
@@ -1509,14 +1616,35 @@ elif menu == "🔐 ZONA DIRECTIVOS":
 
                     st.markdown("<br>", unsafe_allow_html=True)
 
+                    # ── KPI SVA (si hay) ──
+                    if not df_sva_resultado.empty:
+                        st.markdown('<p style="color:#a78bfa; font-weight:bold; font-size:0.85rem; margin:0 0 6px 0;">⚡ SVA</p>', unsafe_allow_html=True)
+                        ks1, ks2, ks3, ks4 = st.columns(4)
+                        box_ks = "border-radius:8px; padding:10px 8px; text-align:center; margin-bottom:12px;"
+                        ks1.markdown(f'<div style="background:#0d1f2d; border:2px solid #a78bfa; {box_ks}"><p style="color:#a78bfa; font-size:0.7rem; font-weight:bold; margin:0;">⚡ SVA PAGADOS</p><h3 style="color:white; margin:4px 0;">{sva_pagados_n}</h3><p style="color:#a78bfa; font-size:0.8rem; margin:0;font-weight:bold;">{sva_total_pagado:,.0f}€</p></div>', unsafe_allow_html=True)
+                        ks2.markdown(f'<div style="background:#1a0a0a; border:2px solid #ff4b4b; {box_ks}"><p style="color:#ff4b4b; font-size:0.7rem; font-weight:bold; margin:0;">🔴 SVA DESCOM</p><h3 style="color:white; margin:4px 0;">{sva_descom_n}</h3><p style="color:#ff4b4b; font-size:0.8rem; margin:0;font-weight:bold;">{sva_total_descom:,.0f}€</p></div>', unsafe_allow_html=True)
+                        ks3.markdown(f'<div style="background:#1a1000; border:2px solid #ffaa00; {box_ks}"><p style="color:#ffaa00; font-size:0.7rem; font-weight:bold; margin:0;">⚠️ SVA SIN MATCH</p><h3 style="color:white; margin:4px 0;">{sva_sinmatch_n}</h3></div>', unsafe_allow_html=True)
+                        ks4.markdown(f'<div style="background:#0d1f2d; border:2px solid #d2ff00; {box_ks}"><p style="color:#d2ff00; font-size:0.7rem; font-weight:bold; margin:0;">📋 SVA TOTAL</p><h3 style="color:white; margin:4px 0;">{len(df_sva_resultado)}</h3></div>', unsafe_allow_html=True)
+                        st.markdown("<br>", unsafe_allow_html=True)
+
                     # ── TABS DE DETALLE ──
-                    t_pagado, t_descom, t_reclamar, t_sinmatch, t_todo = st.tabs([
+                    _tab_labels = [
                         f"✅ PAGADOS ({len(pagados)})",
                         f"🔴 DESCOMISIONADOS ({len(descomisionados)})",
                         f"💰 A RECLAMAR ({len(sin_match)+len(pendientes)})",
                         f"⚠️ SIN MATCH ({len(sin_match)})",
-                        f"📋 COMPLETO ({len(df_resultado)})"
-                    ])
+                        f"📋 COMPLETO ({len(df_resultado)})",
+                    ]
+                    if not df_sva_resultado.empty:
+                        _tab_labels.append(f"⚡ SVA ({len(df_sva_resultado)})")
+
+                    _tabs = st.tabs(_tab_labels)
+                    t_pagado   = _tabs[0]
+                    t_descom   = _tabs[1]
+                    t_reclamar = _tabs[2]
+                    t_sinmatch = _tabs[3]
+                    t_todo     = _tabs[4]
+                    t_sva      = _tabs[5] if not df_sva_resultado.empty else None
 
                     # Columnas a mostrar
                     cols_display = ['Tipo', 'CIF', 'Cliente', 'Comercial', 'Estado', 'CUP Cruce',
@@ -1576,6 +1704,30 @@ elif menu == "🔐 ZONA DIRECTIVOS":
                         if 'Comisión_liq' in df_todo_show.columns:
                             df_todo_show = df_todo_show.rename(columns={'Comisión_liq': 'Comisión €'})
                         st.dataframe(df_todo_show.reset_index(drop=True), use_container_width=True, height=500)
+
+                    if t_sva is not None and not df_sva_resultado.empty:
+                        with t_sva:
+                            st.markdown('<p style="color:#a78bfa; font-weight:bold;">Cruce de SVA por CUPS de electricidad. Se muestra el cliente identificado en el CRM, el estado y el importe abonado/descomisionado.</p>', unsafe_allow_html=True)
+
+                            # Columnas a mostrar para SVA
+                            cols_sva_show = ['Tipo','CIF','Cliente','Comercial','Estado','CUP Cruce',
+                                             'Producto','Comisión_liq','Estado Liquidación']
+                            # Añadir columna CIF del SVA si tiene nombre distinto
+                            cols_sva_show = [c for c in cols_sva_show if c in df_sva_resultado.columns]
+
+                            df_sva_show = df_sva_resultado[cols_sva_show].copy()
+                            if 'Comisión_liq' in df_sva_show.columns:
+                                df_sva_show = df_sva_show.rename(columns={'Comisión_liq': 'Importe SVA €'})
+                            st.dataframe(df_sva_show.reset_index(drop=True), use_container_width=True, height=400)
+
+                            # Sub-resumen por estado
+                            sc1, sc2, sc3 = st.columns(3)
+                            sva_p = df_sva_resultado[df_sva_resultado['Estado Liquidación']=='✅ PAGADO']
+                            sva_d = df_sva_resultado[df_sva_resultado['Estado Liquidación']=='🔴 DESCOMISIONADO']
+                            sva_r = df_sva_resultado[~df_sva_resultado['Estado Liquidación'].isin(['✅ PAGADO','🔴 DESCOMISIONADO'])]
+                            sc1.markdown(f"**✅ Pagados:** {len(sva_p)} · {sva_p['Comisión_liq'].sum():,.0f}€" if 'Comisión_liq' in df_sva_resultado.columns else f"**✅ Pagados:** {len(sva_p)}")
+                            sc2.markdown(f"**🔴 Descom:** {len(sva_d)} · {sva_d['Comisión_liq'].sum():,.0f}€" if 'Comisión_liq' in df_sva_resultado.columns else f"**🔴 Descom:** {len(sva_d)}")
+                            sc3.markdown(f"**⚠️ Sin match / pendiente:** {len(sva_r)}")
 
 
                     # ── DESCARGA RESULTADO ──
@@ -1781,12 +1933,37 @@ elif menu == "🔐 ZONA DIRECTIVOS":
                         except ImportError:
                             pass
 
+                    def df_sva_export(df_s):
+                        """SVA export: CUP, cliente CRM, producto, importe pagado/descom."""
+                        cols_s = ['Tipo','CIF','Cliente','Comercial','Estado','CUP Cruce',
+                                  'Producto','Comisión_liq','Estado Liquidación']
+                        cols_s = [c for c in cols_s if c in df_s.columns]
+                        df_e = prep_df_export(df_s[cols_s].copy())
+                        if 'Comisión_liq' in df_e.columns:
+                            df_e = df_e.rename(columns={'Comisión_liq': 'IMPORTE SVA €'})
+                        # Fila total
+                        total_sva = df_s['Comisión_liq'].sum() if 'Comisión_liq' in df_s.columns else 0
+                        if not df_e.empty:
+                            total_row = {c: '' for c in df_e.columns}
+                            total_row[df_e.columns[-2] if len(df_e.columns) > 1 else df_e.columns[0]] = 'TOTAL'
+                            total_row['IMPORTE SVA €'] = round(total_sva, 2)
+                            df_e = pd.concat([df_e, pd.DataFrame([total_row])], ignore_index=True)
+                        return df_e
+
                     sheets_export = {
                         'Cruce Completo':   prep_df_export(df_resultado),
                         'Pagados':          df_pagados_export(pagados),
                         'Descomisionados':  df_descom_export(descomisionados),
                         'A Reclamar':       df_reclamar_export(df_a_reclamar),
                     }
+                    if not df_sva_resultado.empty:
+                        sheets_export['SVA Cruce'] = df_sva_export(df_sva_resultado)
+                        sheets_export['SVA Pagados'] = df_sva_export(
+                            df_sva_resultado[df_sva_resultado['Estado Liquidación']=='✅ PAGADO'])
+                        sva_reclamar = df_sva_resultado[
+                            ~df_sva_resultado['Estado Liquidación'].isin(['✅ PAGADO','🔴 DESCOMISIONADO'])]
+                        if not sva_reclamar.empty:
+                            sheets_export['SVA A Reclamar'] = df_sva_export(sva_reclamar)
 
                     if _writer_engine:
                         output = io.BytesIO()
