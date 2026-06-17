@@ -965,35 +965,110 @@ elif menu == "🔐 ZONA DIRECTIVOS":
         "🛠️ SOPORTE"
     ])
 
-    # ── FUNCIÓN REPOSITORIO DIRECTIVOS ──
+    # ══════════════════════════════════════════════════════
+    # ── GOOGLE DRIVE — ID raíz de BASETTE_DIRECTIVOS ──
+    # ══════════════════════════════════════════════════════
+    DRIVE_ROOT_ID = "1BC-HcnyFYnHZKM3BoOhKNkR4m7GSCVng"
+
+    # Mapa nombre de carpeta → ID de Drive
+    # La primera vez que se accede se cachea para no repetir llamadas
+    @st.cache_data(ttl=300, show_spinner=False)
+    def get_drive_folder_id(parent_id, folder_name):
+        """Devuelve el ID de una subcarpeta de Drive dado su padre y nombre."""
+        try:
+            url = (
+                f"https://www.googleapis.com/drive/v3/files"
+                f"?q='{parent_id}'+in+parents"
+                f"+and+mimeType='application/vnd.google-apps.folder'"
+                f"+and+name='{folder_name}'"
+                f"+and+trashed=false"
+                f"&fields=files(id,name)"
+                f"&key=AIzaSyD-9tSrke72PouQMnMX-a7eZSW0jkFMBWY"   # clave pública sólo lectura
+            )
+            import urllib.request, json
+            with urllib.request.urlopen(url, timeout=8) as r:
+                data = json.loads(r.read())
+            files = data.get("files", [])
+            return files[0]["id"] if files else None
+        except Exception:
+            return None
+
+    @st.cache_data(ttl=300, show_spinner=False)
+    def list_drive_files(folder_id):
+        """Lista archivos (no carpetas) dentro de un folder_id de Drive."""
+        if not folder_id:
+            return []
+        try:
+            url = (
+                f"https://www.googleapis.com/drive/v3/files"
+                f"?q='{folder_id}'+in+parents"
+                f"+and+mimeType!='application/vnd.google-apps.folder'"
+                f"+and+trashed=false"
+                f"&fields=files(id,name,mimeType,size)"
+                f"&orderBy=name"
+                f"&key=AIzaSyD-9tSrke72PouQMnMX-a7eZSW0jkFMBWY"
+            )
+            import urllib.request, json
+            with urllib.request.urlopen(url, timeout=8) as r:
+                data = json.loads(r.read())
+            return data.get("files", [])
+        except Exception:
+            return []
+
+    def drive_folder_id_by_path(path_parts):
+        """
+        Navega la jerarquía de Drive dado una lista de nombres de carpeta.
+        Ej: ["NOMINAS", "2026", "JUNIO"] → ID de esa subcarpeta.
+        """
+        current_id = DRIVE_ROOT_ID
+        for part in path_parts:
+            current_id = get_drive_folder_id(current_id, part)
+            if not current_id:
+                return None
+        return current_id
+
+    def mostrar_carpeta_drive(path_parts, icono="📄"):
+        """
+        Muestra los archivos de una carpeta de Drive como botones de abrir/descargar.
+        path_parts: lista de carpetas desde la raíz, ej. ["PERSONAL"]
+        """
+        folder_id = drive_folder_id_by_path(path_parts)
+        if not folder_id:
+            st.caption(f"🚫 Carpeta no encontrada en Drive: {' / '.join(path_parts)}")
+            return
+
+        archivos = list_drive_files(folder_id)
+        if not archivos:
+            st.info("📭 Carpeta vacía. Sube archivos a Drive para que aparezcan aquí.")
+            return
+
+        for f in archivos:
+            fid   = f["id"]
+            fname = f["name"]
+            # URL de descarga directa pública
+            dl_url   = f"https://drive.google.com/uc?export=download&id={fid}"
+            view_url = f"https://drive.google.com/file/d/{fid}/view"
+            size_kb  = int(f.get("size", 0)) // 1024 if f.get("size") else 0
+            size_str = f" · {size_kb} KB" if size_kb else ""
+
+            col_a, col_b = st.columns([4, 1])
+            with col_a:
+                st.markdown(
+                    f'<div style="background:#161b22; border:1px solid #30363d; border-radius:8px; '
+                    f'padding:8px 12px; margin-bottom:4px;">'
+                    f'<span style="color:white; font-size:0.9rem;">{icono} {fname}</span>'
+                    f'<span style="color:#8b949e; font-size:0.75rem;">{size_str}</span></div>',
+                    unsafe_allow_html=True
+                )
+            with col_b:
+                st.link_button("⬇️ Abrir", view_url, use_container_width=True)
+
+    # Alias para compatibilidad con el código existente
     def mostrar_carpeta_dir(ruta_base, nombre_carpeta, icono="📄"):
-        ruta = os.path.join(ruta_base, nombre_carpeta)
-        if os.path.exists(ruta):
-            archivos = [f for f in os.listdir(ruta) if os.path.isfile(os.path.join(ruta, f))]
-            if archivos:
-                for filename in sorted(archivos):
-                    ruta_archivo = os.path.join(ruta, filename)
-                    ext = filename.split('.')[-1].lower()
-                    mime_map = {
-                        "pdf": "application/pdf",
-                        "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                        "xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                        "jpg": "image/jpeg", "jpeg": "image/jpeg", "png": "image/png"
-                    }
-                    m_type = mime_map.get(ext, "application/octet-stream")
-                    with open(ruta_archivo, "rb") as f:
-                        st.download_button(
-                            label=f"{icono} {filename}",
-                            data=f.read(),
-                            file_name=filename,
-                            mime=m_type,
-                            key=f"dir_{ruta_base}_{nombre_carpeta}_{filename}".replace(" ", "_").replace("/", "_")
-                        )
-            else:
-                st.info("📭 Carpeta vacía. Sube archivos para que aparezcan aquí.")
-        else:
-            st.caption(f"🚫 Carpeta no encontrada: {ruta}")
-            st.info(f"Crea la carpeta `{ruta}` y sube los documentos.")
+        """Wrapper que traduce rutas locales a path_parts de Drive."""
+        # ruta_base siempre es "directivos" → ignoramos, partimos de DRIVE_ROOT_ID
+        parts = [p for p in nombre_carpeta.replace("\\", "/").split("/") if p]
+        mostrar_carpeta_drive(parts, icono)
 
     # ── TAB PERSONAL ──
     with tab_rrhh:
@@ -1037,7 +1112,7 @@ elif menu == "🔐 ZONA DIRECTIVOS":
 
         st.markdown("---")
         st.markdown('<div class="block-header">📂 DOCUMENTACIÓN DE PERSONAL</div>', unsafe_allow_html=True)
-        st.markdown("Coloca los contratos, expedientes y fichas en `directivos/PERSONAL/`")
+        st.markdown("Los archivos se leen desde Google Drive · Carpeta **PERSONAL**")
         mostrar_carpeta_dir("directivos", "PERSONAL", "📋")
 
     # ── TAB MARCOS RETRIBUTIVOS ──
@@ -1066,7 +1141,7 @@ elif menu == "🔐 ZONA DIRECTIVOS":
         st.markdown('<div class="block-header">💼 GESTIÓN DE NÓMINAS</div>', unsafe_allow_html=True)
         st.markdown("""
             <div style="background:#161b22; border-left:4px solid #FFD700; padding:15px; border-radius:8px; margin-bottom:20px;">
-                <p style="color:#8b949e; margin:0; font-size:0.85rem;">Sube las nóminas en <code>directivos/NOMINAS/AÑO/MES/</code> para organizarlas por periodo.</p>
+                <p style="color:#8b949e; margin:0; font-size:0.85rem;">Los archivos se leen desde Google Drive · Carpeta <b style="color:#FFD700;">NOMINAS / AÑO / MES</b></p>
             </div>
         """, unsafe_allow_html=True)
 
@@ -1076,28 +1151,14 @@ elif menu == "🔐 ZONA DIRECTIVOS":
         anio_nom = col_nom_sel1.selectbox("📅 Año", ["2026", "2025", "2024"], key="anio_nom")
         mes_nom  = col_nom_sel2.selectbox("📅 Mes", meses_nom, index=datetime.now().month - 1, key="mes_nom")
 
-        ruta_nom = os.path.join("directivos", "NOMINAS", anio_nom, mes_nom)
-        st.markdown(f"**Ruta:** `{ruta_nom}`")
-        if os.path.exists(ruta_nom):
-            archivos_nom = [f for f in os.listdir(ruta_nom) if os.path.isfile(os.path.join(ruta_nom, f))]
-            if archivos_nom:
-                for fn in sorted(archivos_nom):
-                    ext = fn.split('.')[-1].lower()
-                    m_type = "application/pdf" if ext == "pdf" else "application/octet-stream"
-                    with open(os.path.join(ruta_nom, fn), "rb") as fnom:
-                        st.download_button(f"💼 {fn}", fnom.read(), file_name=fn, mime=m_type,
-                                           key=f"nom_{anio_nom}_{mes_nom}_{fn}".replace(" ","_"))
-            else:
-                st.info(f"No hay nóminas en {mes_nom} {anio_nom}.")
-        else:
-            st.info(f"Carpeta no encontrada: `{ruta_nom}`. Créala y sube los archivos.")
+        mostrar_carpeta_drive(["NOMINAS", anio_nom, mes_nom], "💼")
 
     # ── TAB LIQUIDACIONES ──
     with tab_liq:
         st.markdown('<div class="block-header">📊 LIQUIDACIONES</div>', unsafe_allow_html=True)
         st.markdown("""
             <div style="background:#161b22; border-left:4px solid #FFD700; padding:15px; border-radius:8px; margin-bottom:20px;">
-                <p style="color:#8b949e; margin:0; font-size:0.85rem;">Liquidaciones de comisiones y ventas por comercial y periodo. Guarda los archivos en <code>directivos/LIQUIDACIONES/</code></p>
+                <p style="color:#8b949e; margin:0; font-size:0.85rem;">Liquidaciones de comisiones y ventas por comercial y periodo. Los archivos se leen desde Google Drive · Carpeta <b style="color:#FFD700;">LIQUIDACIONES</b></p>
             </div>
         """, unsafe_allow_html=True)
         col_liq1, col_liq2 = st.columns(2)
@@ -1117,7 +1178,7 @@ elif menu == "🔐 ZONA DIRECTIVOS":
         st.markdown('<div class="block-header">📁 DOCUMENTACIÓN DE EMPRESA</div>', unsafe_allow_html=True)
         st.markdown("""
             <div style="background:#161b22; border-left:4px solid #FFD700; padding:15px; border-radius:8px; margin-bottom:20px;">
-                <p style="color:#8b949e; margin:0; font-size:0.85rem;">Escrituras, certificados, seguros, licencias y cualquier documentación oficial de la empresa. Carpeta: <code>directivos/EMPRESA/</code></p>
+                <p style="color:#8b949e; margin:0; font-size:0.85rem;">Escrituras, certificados, seguros, licencias y documentación oficial. Los archivos se leen desde Google Drive · Carpeta <b style="color:#FFD700;">EMPRESA</b></p>
             </div>
         """, unsafe_allow_html=True)
         col_doc1, col_doc2 = st.columns(2)
