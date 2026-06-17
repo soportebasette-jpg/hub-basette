@@ -1190,9 +1190,35 @@ elif menu == "🔐 ZONA DIRECTIVOS":
                             meta['empresa'] = em
             return meta
 
+        def leer_excel_safe(f, **kwargs):
+            """Lee un Excel probando engines disponibles en orden."""
+            import importlib, subprocess, sys
+            engines_ok = []
+            for eng in ['openpyxl', 'xlrd']:
+                try:
+                    importlib.import_module(eng)
+                    engines_ok.append(eng)
+                except ImportError:
+                    pass
+            if not engines_ok:
+                subprocess.check_call([sys.executable, '-m', 'pip', 'install', 'openpyxl', '-q',
+                                       '--break-system-packages'], stderr=subprocess.DEVNULL)
+                engines_ok = ['openpyxl']
+            last_err = None
+            for eng in engines_ok:
+                try:
+                    return pd.read_excel(f, engine=eng, **kwargs)
+                except Exception as e:
+                    last_err = e
+                    try:
+                        f.seek(0)
+                    except Exception:
+                        pass
+            raise last_err
+
         def leer_liquidacion(uploaded_file):
             """Lee y limpia una liquidación de compañía (formato Naturgy y similares)."""
-            df_raw = pd.read_excel(uploaded_file, header=None)
+            df_raw = leer_excel_safe(uploaded_file, header=None)
             meta = extraer_meta_liquidacion(df_raw)
 
             # Detectar fila de cabecera buscando 'CIF/NIF' o 'CUPSElectricidad'
@@ -1334,7 +1360,7 @@ elif menu == "🔐 ZONA DIRECTIVOS":
                         st.error(f"❌ Error leyendo liquidación: {err}")
                         st.stop()
 
-                    df_con_raw = pd.read_excel(f_contratos)
+                    df_con_raw = leer_excel_safe(f_contratos)
                     df_con_raw.columns = df_con_raw.columns.str.strip()
 
                     # Detectar nombre compañía del archivo
@@ -1468,13 +1494,43 @@ elif menu == "🔐 ZONA DIRECTIVOS":
 
                     # ── DESCARGA EXCEL RESULTADO ──
                     st.markdown("---")
-                    import io
+                    import io, importlib, subprocess, sys as _sys
+                    # Asegurar xlsxwriter disponible, si no openpyxl
+                    _writer_engine = None
+                    for _eng in ['xlsxwriter', 'openpyxl']:
+                        try:
+                            importlib.import_module(_eng)
+                            _writer_engine = _eng
+                            break
+                        except ImportError:
+                            pass
+                    if _writer_engine is None:
+                        subprocess.check_call([_sys.executable, '-m', 'pip', 'install', 'openpyxl', '-q',
+                                               '--break-system-packages'], stderr=subprocess.DEVNULL)
+                        _writer_engine = 'openpyxl'
+
+                    def prep_df_export(df_in):
+                        """Convierte datetime a string para evitar problemas de timezone en xlsxwriter."""
+                        df_out = df_in.copy()
+                        for col in df_out.select_dtypes(include=['datetime64[ns]', 'datetimetz']).columns:
+                            df_out[col] = df_out[col].dt.strftime('%d/%m/%Y').fillna('-')
+                        # También convertir columnas object que puedan tener Timestamps
+                        for col in df_out.columns:
+                            try:
+                                df_out[col] = df_out[col].apply(
+                                    lambda x: x.strftime('%d/%m/%Y') if hasattr(x, 'strftime') else x
+                                )
+                            except Exception:
+                                pass
+                        return df_out
+
+                    df_a_reclamar = pd.concat([sin_match, pendientes]) if not sin_match.empty or not pendientes.empty else pd.DataFrame()
                     output = io.BytesIO()
-                    with pd.ExcelWriter(output, engine='openpyxl') as writer:
-                        df_resultado.to_excel(writer, sheet_name='Cruce Completo', index=False)
-                        pagados.to_excel(writer, sheet_name='Pagados', index=False)
-                        descomisionados.to_excel(writer, sheet_name='Descomisionados', index=False)
-                        pd.concat([sin_match, pendientes]).to_excel(writer, sheet_name='A Reclamar', index=False)
+                    with pd.ExcelWriter(output, engine=_writer_engine) as writer:
+                        prep_df_export(df_resultado).to_excel(writer, sheet_name='Cruce Completo', index=False)
+                        prep_df_export(pagados).to_excel(writer, sheet_name='Pagados', index=False)
+                        prep_df_export(descomisionados).to_excel(writer, sheet_name='Descomisionados', index=False)
+                        prep_df_export(df_a_reclamar).to_excel(writer, sheet_name='A Reclamar', index=False)
                     output.seek(0)
                     nombre_descarga = f"cruce_{compania_detectada.lower()}_{meta.get('mes','')}_{meta.get('anio','')}.xlsx"
                     st.download_button(
