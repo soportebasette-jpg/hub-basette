@@ -1134,22 +1134,385 @@ elif menu == "🔐 ZONA DIRECTIVOS":
 
     # ── TAB LIQUIDACIONES ──
     with tab_liq:
-        st.markdown('<div class="block-header">📊 LIQUIDACIONES</div>', unsafe_allow_html=True)
+        st.markdown('<div class="block-header">📊 LIQUIDACIONES AUTOMÁTICAS</div>', unsafe_allow_html=True)
+
+        # ══════════════════════════════════════════════════════
+        # ── FUNCIONES DE CRUCE DE LIQUIDACIONES ──
+        # ══════════════════════════════════════════════════════
+
+        def normalize_cup(cup):
+            """Normaliza CUP a 20 dígitos para comparación (si tiene 22, trunca)."""
+            if cup is None or (hasattr(cup, '__class__') and cup.__class__.__name__ == 'float'):
+                return None
+            import math
+            try:
+                if math.isnan(float(str(cup))):
+                    return None
+            except (ValueError, TypeError):
+                pass
+            s = str(cup).strip().upper()
+            if not s or s in ['NAN', 'NONE', '']:
+                return None
+            # Si tiene 22 chars, los primeros 20 son el CUP canónico
+            if len(s) == 22:
+                return s[:20]
+            return s
+
+        def extraer_meta_liquidacion(df_raw):
+            """Extrae metadatos del encabezado de la liquidación."""
+            meta = {'mes': '', 'anio': '', 'factura': '', 'nombre': '', 'empresa': ''}
+            for i in range(0, 12):
+                row = df_raw.iloc[i]
+                vals = row.tolist()
+                for j, v in enumerate(vals):
+                    sv = str(v).strip()
+                    if sv == 'Mes:' and j + 2 < len(vals):
+                        try:
+                            meta['mes'] = str(int(float(str(vals[j+2]))))
+                        except Exception:
+                            pass
+                    if sv == 'Año:' and j + 2 < len(vals):
+                        try:
+                            meta['anio'] = str(int(float(str(vals[j+2]))))
+                        except Exception:
+                            pass
+                    if sv == 'Nº Factura:' and j + 3 < len(vals):
+                        nf = str(vals[j+3]).strip()
+                        if nf not in ['nan', 'NaT', '']:
+                            meta['factura'] = nf
+                    if sv == 'Nombre:' and j + 6 < len(vals):
+                        nb = str(vals[j+6]).strip()
+                        if nb not in ['nan', 'NaT', '']:
+                            meta['nombre'] = nb
+                    if sv == 'Empresa:' and j + 6 < len(vals):
+                        em = str(vals[j+6]).strip()
+                        if em not in ['nan', 'NaT', '']:
+                            meta['empresa'] = em
+            return meta
+
+        def leer_liquidacion(uploaded_file):
+            """Lee y limpia una liquidación de compañía (formato Naturgy y similares)."""
+            df_raw = pd.read_excel(uploaded_file, header=None)
+            meta = extraer_meta_liquidacion(df_raw)
+
+            # Detectar fila de cabecera buscando 'CIF/NIF' o 'CUPSElectricidad'
+            header_row = None
+            for i in range(0, 20):
+                vals = [str(v) for v in df_raw.iloc[i].tolist()]
+                if any('CIF' in v or 'CUPS' in v.upper() or 'CONTRATO' in v.upper() for v in vals):
+                    header_row = i
+                    break
+
+            if header_row is None:
+                return None, meta, "No se encontró la cabecera de datos en el archivo."
+
+            rows = []
+            for i in range(header_row + 1, len(df_raw)):
+                row = df_raw.iloc[i]
+                cif = row.iloc[5]
+                if pd.isna(cif) or str(cif).strip() in ['nan', '', 'CIF/NIF']:
+                    continue
+                # Detectar Gas vs Luz por columna
+                cups_gas_raw = row.iloc[15]
+                cups_luz_raw = row.iloc[18]
+                producto = str(row.iloc[19]).strip() if pd.notna(row.iloc[19]) else ''
+                fecha_baja = row.iloc[14]
+                comision = row.iloc[27]
+                contrato_darwin = row.iloc[26]
+
+                rows.append({
+                    'CIF': str(cif).strip(),
+                    'Fecha Alta': row.iloc[11],
+                    'Fecha Baja': fecha_baja if pd.notna(fecha_baja) else None,
+                    'CUPS Gas Raw': str(cups_gas_raw).strip() if pd.notna(cups_gas_raw) else None,
+                    'CUPS Luz Raw': str(cups_luz_raw).strip() if pd.notna(cups_luz_raw) else None,
+                    'CUPS Gas Norm': normalize_cup(cups_gas_raw),
+                    'CUPS Luz Norm': normalize_cup(cups_luz_raw),
+                    'Producto': producto,
+                    'Tipo': 'GAS' if pd.notna(cups_gas_raw) and str(cups_gas_raw).strip() not in ['nan', ''] else 'LUZ',
+                    'Contrato Darwin': str(contrato_darwin).strip() if pd.notna(contrato_darwin) else '',
+                    'Comisión Liq': comision if pd.notna(comision) else 0,
+                    'Descomisionado': pd.notna(fecha_baja),
+                })
+            df = pd.DataFrame(rows)
+            return df, meta, None
+
+        def cruzar_con_contratos(df_liq, df_contratos):
+            """Cruza la liquidación con el Excel de contratos por CUP normalizado."""
+            # Normalizar CUPs en contratos
+            df_contratos = df_contratos.copy()
+            df_contratos['CUPS Luz Norm'] = df_contratos['CUPS Luz'].apply(normalize_cup)
+            df_contratos['CUPS Gas Norm'] = df_contratos['CUPS Gas'].apply(normalize_cup)
+
+            # Separar registros de luz y gas en la liquidación
+            df_luz = df_liq[df_liq['CUPS Luz Norm'].notna()].copy()
+            df_gas = df_liq[df_liq['CUPS Gas Norm'].notna()].copy()
+
+            cols_crm = ['ID', 'ID Contrato Externo', 'Cliente', 'Comercial', 'Estado',
+                        'Comercializadora', 'Tarifa', 'DNI Cliente', 'CUPS Luz Norm', 'Comisión']
+
+            # Merge LUZ
+            if not df_luz.empty:
+                crm_luz = df_contratos[df_contratos['CUPS Luz Norm'].notna()][
+                    [c for c in cols_crm if c != 'CUPS Gas Norm']
+                ].drop_duplicates('CUPS Luz Norm')
+                df_luz = pd.merge(df_luz, crm_luz, on='CUPS Luz Norm', how='left', suffixes=('_liq', '_crm'))
+                df_luz['CUP Cruce'] = df_luz['CUPS Luz Norm']
+            else:
+                df_luz['ID'] = None
+
+            # Merge GAS
+            cols_crm_gas = ['ID', 'ID Contrato Externo', 'Cliente', 'Comercial', 'Estado',
+                            'Comercializadora', 'Tarifa', 'DNI Cliente', 'CUPS Gas Norm', 'Comisión']
+            if not df_gas.empty:
+                crm_gas = df_contratos[df_contratos['CUPS Gas Norm'].notna()][
+                    [c for c in cols_crm_gas]
+                ].drop_duplicates('CUPS Gas Norm')
+                df_gas = pd.merge(df_gas, crm_gas, on='CUPS Gas Norm', how='left', suffixes=('_liq', '_crm'))
+                df_gas['CUP Cruce'] = df_gas['CUPS Gas Norm']
+            else:
+                df_gas['ID'] = None
+
+            # Unir
+            df_resultado = pd.concat([df_luz, df_gas], ignore_index=True)
+
+            # Clasificar cada registro
+            def clasificar(row):
+                if row.get('Descomisionado'):
+                    return '🔴 DESCOMISIONADO'
+                if pd.isna(row.get('ID')) or str(row.get('ID', '')).strip() in ['', 'nan']:
+                    return '⚠️ SIN MATCH EN CRM'
+                com_liq = float(row.get('Comisión_liq', 0) or 0)
+                if com_liq < 0:
+                    return '🔴 DESCOMISIONADO'
+                if com_liq > 0:
+                    return '✅ PAGADO'
+                return '❓ PENDIENTE REVISAR'
+
+            df_resultado['Estado Liquidación'] = df_resultado.apply(clasificar, axis=1)
+            return df_resultado
+
+        # ══════════════════════════════════════════════════════
+        # ── INTERFAZ ──
+        # ══════════════════════════════════════════════════════
+
         st.markdown("""
             <div style="background:#161b22; border-left:4px solid #FFD700; padding:15px; border-radius:8px; margin-bottom:20px;">
-                <p style="color:#8b949e; margin:0; font-size:0.85rem;">Liquidaciones de comisiones y ventas por comercial y periodo. Los archivos se leen desde Google Drive · Carpeta <b style="color:#FFD700;">LIQUIDACIONES</b></p>
+                <p style="color:#FFD700; font-weight:bold; margin:0 0 6px 0;">⚙️ CRUCE AUTOMÁTICO DE LIQUIDACIONES</p>
+                <p style="color:#8b949e; margin:0; font-size:0.85rem;">
+                    Sube la liquidación de la compañía (ej: <b>liqui_naturgy_abril.xlsx</b>) y el Excel de contratos.
+                    El sistema cruza por CUP (20 ó 22 dígitos), detecta lo pagado, lo descomisionado (gas y luz)
+                    y lo pendiente de reclamar.
+                </p>
             </div>
         """, unsafe_allow_html=True)
+
+        col_up1, col_up2 = st.columns(2)
+        with col_up1:
+            st.markdown('<p style="color:#d2ff00; font-weight:bold; font-size:1rem; margin-bottom:4px;">📄 Liquidación compañía</p>', unsafe_allow_html=True)
+            f_liquidacion = st.file_uploader(
+                "Sube la liquidación (.xlsx)",
+                type=['xlsx'],
+                key="liq_upload",
+                label_visibility="collapsed"
+            )
+        with col_up2:
+            st.markdown('<p style="color:#d2ff00; font-weight:bold; font-size:1rem; margin-bottom:4px;">📋 Contratos Energía (CRM)</p>', unsafe_allow_html=True)
+            f_contratos = st.file_uploader(
+                "Sube contratos_energia.xlsx",
+                type=['xlsx'],
+                key="con_upload",
+                label_visibility="collapsed"
+            )
+
+        if f_liquidacion and f_contratos:
+            with st.spinner("⏳ Procesando cruce de liquidación..."):
+                try:
+                    # Leer archivos
+                    df_liq_raw, meta, err = leer_liquidacion(f_liquidacion)
+                    if err:
+                        st.error(f"❌ Error leyendo liquidación: {err}")
+                        st.stop()
+
+                    df_con_raw = pd.read_excel(f_contratos)
+                    df_con_raw.columns = df_con_raw.columns.str.strip()
+
+                    # Detectar nombre compañía del archivo
+                    nombre_archivo = f_liquidacion.name.lower()
+                    companias_conocidas = ['naturgy', 'endesa', 'gana', 'iberdrola', 'total', 'repsol']
+                    compania_detectada = next((c.upper() for c in companias_conocidas if c in nombre_archivo), 'COMPAÑÍA')
+
+                    # Filtrar contratos solo de esa compañía si aplica
+                    if 'Comercializadora' in df_con_raw.columns and compania_detectada != 'COMPAÑÍA':
+                        df_con_filtrado = df_con_raw[
+                            df_con_raw['Comercializadora'].str.contains(compania_detectada, case=False, na=False)
+                        ].copy()
+                        n_total = len(df_con_raw)
+                        n_filtrado = len(df_con_filtrado)
+                    else:
+                        df_con_filtrado = df_con_raw.copy()
+                        n_total = n_filtrado = len(df_con_raw)
+
+                    # Cruce
+                    df_resultado = cruzar_con_contratos(df_liq_raw, df_con_filtrado)
+
+                    # ── HEADER RESUMEN ──
+                    meses_es = {'1':'Enero','2':'Febrero','3':'Marzo','4':'Abril','5':'Mayo','6':'Junio',
+                                '7':'Julio','8':'Agosto','9':'Septiembre','10':'Octubre','11':'Noviembre','12':'Diciembre'}
+                    mes_nombre = meses_es.get(meta.get('mes',''), meta.get('mes',''))
+                    st.markdown(f"""
+                        <div style="background:linear-gradient(135deg,#1a1a2e,#0f3460); border:2px solid #FFD700;
+                                    border-radius:12px; padding:18px 24px; margin:10px 0 20px 0;">
+                            <h3 style="color:#FFD700; margin:0 0 4px 0;">⚡ {compania_detectada} · {mes_nombre} {meta.get('anio','')}</h3>
+                            <p style="color:#8b949e; margin:0; font-size:0.82rem;">
+                                Factura: <b style="color:white;">{meta.get('factura','-')}</b> &nbsp;·&nbsp;
+                                Empresa: <b style="color:white;">{meta.get('nombre','-')}</b> &nbsp;·&nbsp;
+                                Registros liquidación: <b style="color:white;">{len(df_liq_raw)}</b> &nbsp;·&nbsp;
+                                Contratos {compania_detectada} en CRM: <b style="color:white;">{n_filtrado}</b>
+                            </p>
+                        </div>
+                    """, unsafe_allow_html=True)
+
+                    # ── KPIs ──
+                    pagados = df_resultado[df_resultado['Estado Liquidación'] == '✅ PAGADO']
+                    descomisionados = df_resultado[df_resultado['Estado Liquidación'] == '🔴 DESCOMISIONADO']
+                    sin_match = df_resultado[df_resultado['Estado Liquidación'] == '⚠️ SIN MATCH EN CRM']
+                    pendientes = df_resultado[df_resultado['Estado Liquidación'] == '❓ PENDIENTE REVISAR']
+
+                    pagados_luz = pagados[pagados['Tipo'] == 'LUZ']
+                    pagados_gas = pagados[pagados['Tipo'] == 'GAS']
+                    descom_luz = descomisionados[descomisionados['Tipo'] == 'LUZ']
+                    descom_gas = descomisionados[descomisionados['Tipo'] == 'GAS']
+
+                    total_cobrado = float(pagados['Comisión_liq'].sum()) if 'Comisión_liq' in pagados.columns else 0
+                    total_descom = abs(float(descomisionados['Comisión_liq'].sum())) if 'Comisión_liq' in descomisionados.columns else 0
+                    total_a_reclamar = float(sin_match['Comisión_liq'].sum()) + float(pendientes['Comisión_liq'].sum()) if 'Comisión_liq' in df_resultado.columns else 0
+
+                    k1, k2, k3, k4, k5 = st.columns(5)
+                    box_k = "border-radius:10px; padding:14px 8px; text-align:center; margin-bottom:10px;"
+                    k1.markdown(f'<div style="background:#0d2818; border:2px solid #7ee787; {box_k}"><p style="color:#7ee787; font-size:0.72rem; font-weight:bold; margin:0;">✅ PAGADOS</p><h2 style="color:white; margin:4px 0;">{len(pagados)}</h2><p style="color:#7ee787; font-size:0.75rem; margin:0;">💡{len(pagados_luz)} 🔥{len(pagados_gas)}</p><p style="color:#7ee787; font-size:0.8rem; margin:4px 0 0 0;font-weight:bold;">{total_cobrado:,.0f}€</p></div>', unsafe_allow_html=True)
+                    k2.markdown(f'<div style="background:#1a0a0a; border:2px solid #ff4b4b; {box_k}"><p style="color:#ff4b4b; font-size:0.72rem; font-weight:bold; margin:0;">🔴 DESCOMISIONADOS</p><h2 style="color:white; margin:4px 0;">{len(descomisionados)}</h2><p style="color:#ff4b4b; font-size:0.75rem; margin:0;">💡{len(descom_luz)} 🔥{len(descom_gas)}</p><p style="color:#ff4b4b; font-size:0.8rem; margin:4px 0 0 0;font-weight:bold;">-{total_descom:,.0f}€</p></div>', unsafe_allow_html=True)
+                    k3.markdown(f'<div style="background:#1a1000; border:2px solid #ffaa00; {box_k}"><p style="color:#ffaa00; font-size:0.72rem; font-weight:bold; margin:0;">⚠️ SIN MATCH CRM</p><h2 style="color:white; margin:4px 0;">{len(sin_match)}</h2><p style="color:#ffaa00; font-size:0.75rem; margin:0;">Verificar manualmente</p></div>', unsafe_allow_html=True)
+                    k4.markdown(f'<div style="background:#161b22; border:2px solid #8b949e; {box_k}"><p style="color:#8b949e; font-size:0.72rem; font-weight:bold; margin:0;">❓ PENDIENTE REVISAR</p><h2 style="color:white; margin:4px 0;">{len(pendientes)}</h2><p style="color:#8b949e; font-size:0.75rem; margin:0;"> </p></div>', unsafe_allow_html=True)
+                    k5.markdown(f'<div style="background:linear-gradient(135deg,#1e3a1e,#0a280a); border:2px solid #d2ff00; {box_k}"><p style="color:#d2ff00; font-size:0.72rem; font-weight:bold; margin:0;">💰 A RECLAMAR</p><h2 style="color:#d2ff00; margin:4px 0;">{len(sin_match)+len(pendientes)}</h2><p style="color:#d2ff00; font-size:0.8rem; margin:0;font-weight:bold;">{total_a_reclamar:,.0f}€</p></div>', unsafe_allow_html=True)
+
+                    st.markdown("<br>", unsafe_allow_html=True)
+
+                    # ── TABS DE DETALLE ──
+                    t_pagado, t_descom, t_reclamar, t_sinmatch, t_todo = st.tabs([
+                        f"✅ PAGADOS ({len(pagados)})",
+                        f"🔴 DESCOMISIONADOS ({len(descomisionados)})",
+                        f"💰 A RECLAMAR ({len(sin_match)+len(pendientes)})",
+                        f"⚠️ SIN MATCH ({len(sin_match)})",
+                        f"📋 COMPLETO ({len(df_resultado)})"
+                    ])
+
+                    # Columnas a mostrar
+                    cols_display = ['Tipo', 'CIF', 'Cliente', 'Comercial', 'Estado', 'CUP Cruce',
+                                    'Producto', 'Comisión_liq', 'Fecha Alta', 'Fecha Baja']
+                    cols_display = [c for c in cols_display if c in df_resultado.columns]
+
+                    def df_to_show(df_sub):
+                        """Prepara dataframe para mostrar."""
+                        df_s = df_sub[cols_display].copy()
+                        if 'Fecha Alta' in df_s.columns:
+                            df_s['Fecha Alta'] = pd.to_datetime(df_s['Fecha Alta'], errors='coerce').dt.strftime('%d/%m/%Y').fillna('-')
+                        if 'Fecha Baja' in df_s.columns:
+                            df_s['Fecha Baja'] = pd.to_datetime(df_s['Fecha Baja'], errors='coerce').dt.strftime('%d/%m/%Y').fillna('-')
+                        if 'Comisión_liq' in df_s.columns:
+                            df_s = df_s.rename(columns={'Comisión_liq': 'Comisión €'})
+                        return df_s.reset_index(drop=True)
+
+                    with t_pagado:
+                        st.markdown(f'<p style="color:#7ee787;">Total cobrado: <b>{total_cobrado:,.0f} €</b> — Luz: {len(pagados_luz)} suministros | Gas: {len(pagados_gas)} suministros</p>', unsafe_allow_html=True)
+                        if not pagados.empty:
+                            st.dataframe(df_to_show(pagados), use_container_width=True, height=400)
+                        else:
+                            st.info("No hay registros pagados.")
+
+                    with t_descom:
+                        st.markdown(f'<p style="color:#ff4b4b;">Total descomisionado: <b>-{total_descom:,.0f} €</b> — Luz: {len(descom_luz)} | Gas: {len(descom_gas)}</p>', unsafe_allow_html=True)
+                        if not descomisionados.empty:
+                            st.dataframe(df_to_show(descomisionados), use_container_width=True, height=400)
+                        else:
+                            st.success("✅ Sin descomisiones en esta liquidación.")
+
+                    with t_reclamar:
+                        df_reclamar = pd.concat([sin_match, pendientes], ignore_index=True)
+                        st.markdown(f'<p style="color:#d2ff00;">Importe total a reclamar: <b>{total_a_reclamar:,.0f} €</b></p>', unsafe_allow_html=True)
+                        if not df_reclamar.empty:
+                            st.dataframe(df_to_show(df_reclamar), use_container_width=True, height=400)
+                        else:
+                            st.success("✅ Todo está abonado o identificado.")
+
+                    with t_sinmatch:
+                        st.markdown('<p style="color:#ffaa00;">Estos CUPs de la liquidación no se encuentran en el Excel de contratos. Verificar si pertenecen a otra compañía o si faltan en el CRM.</p>', unsafe_allow_html=True)
+                        if not sin_match.empty:
+                            cols_sm = ['Tipo', 'CIF', 'CUP Cruce', 'Producto', 'Comisión_liq']
+                            cols_sm = [c for c in cols_sm if c in sin_match.columns]
+                            st.dataframe(sin_match[cols_sm].reset_index(drop=True), use_container_width=True)
+                        else:
+                            st.success("✅ Todos los CUPs están en el CRM.")
+
+                    with t_todo:
+                        cols_todo = cols_display + ['Estado Liquidación']
+                        cols_todo = [c for c in cols_todo if c in df_resultado.columns]
+                        df_todo_show = df_resultado[cols_todo].copy()
+                        if 'Fecha Alta' in df_todo_show.columns:
+                            df_todo_show['Fecha Alta'] = pd.to_datetime(df_todo_show['Fecha Alta'], errors='coerce').dt.strftime('%d/%m/%Y').fillna('-')
+                        if 'Fecha Baja' in df_todo_show.columns:
+                            df_todo_show['Fecha Baja'] = pd.to_datetime(df_todo_show['Fecha Baja'], errors='coerce').dt.strftime('%d/%m/%Y').fillna('-')
+                        if 'Comisión_liq' in df_todo_show.columns:
+                            df_todo_show = df_todo_show.rename(columns={'Comisión_liq': 'Comisión €'})
+                        st.dataframe(df_todo_show.reset_index(drop=True), use_container_width=True, height=500)
+
+                    # ── DESCARGA EXCEL RESULTADO ──
+                    st.markdown("---")
+                    import io
+                    output = io.BytesIO()
+                    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+                        df_resultado.to_excel(writer, sheet_name='Cruce Completo', index=False)
+                        pagados.to_excel(writer, sheet_name='Pagados', index=False)
+                        descomisionados.to_excel(writer, sheet_name='Descomisionados', index=False)
+                        pd.concat([sin_match, pendientes]).to_excel(writer, sheet_name='A Reclamar', index=False)
+                    output.seek(0)
+                    nombre_descarga = f"cruce_{compania_detectada.lower()}_{meta.get('mes','')}_{meta.get('anio','')}.xlsx"
+                    st.download_button(
+                        label=f"⬇️ DESCARGAR RESULTADO COMPLETO — {nombre_descarga}",
+                        data=output,
+                        file_name=nombre_descarga,
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        use_container_width=True
+                    )
+
+                except Exception as e:
+                    import traceback
+                    st.error(f"❌ Error en el cruce: {e}")
+                    st.code(traceback.format_exc())
+
+        else:
+            st.markdown("""
+                <div style="background:#0d1117; border:2px dashed #30363d; border-radius:12px; padding:40px; text-align:center; margin-top:20px;">
+                    <p style="color:#8b949e; font-size:1rem; margin:0;">
+                        👆 Sube la <b style="color:#d2ff00;">liquidación de la compañía</b> y el archivo de 
+                        <b style="color:#d2ff00;">contratos_energia.xlsx</b> para iniciar el cruce automático
+                    </p>
+                </div>
+            """, unsafe_allow_html=True)
+
+        # ── ARCHIVOS EN DRIVE ──
+        st.markdown("<br>", unsafe_allow_html=True)
+        st.markdown('<div class="block-header">📁 LIQUIDACIONES EN DRIVE</div>', unsafe_allow_html=True)
         col_liq1, col_liq2 = st.columns(2)
         with col_liq1:
-            with st.expander("📊 Liquidaciones Energía"):
+            with st.expander("⚡ Liquidaciones Energía"):
                 mostrar_carpeta_dir("directivos", "LIQUIDACIONES/ENERGIA", "⚡")
-            with st.expander("📊 Liquidaciones Telco"):
+            with st.expander("📶 Liquidaciones Telco"):
                 mostrar_carpeta_dir("directivos", "LIQUIDACIONES/TELCO", "📶")
         with col_liq2:
-            with st.expander("📊 Liquidaciones Alarmas"):
+            with st.expander("🛡️ Liquidaciones Alarmas"):
                 mostrar_carpeta_dir("directivos", "LIQUIDACIONES/ALARMAS", "🛡️")
-            with st.expander("📊 Liquidaciones Generales"):
+            with st.expander("📋 Liquidaciones Generales"):
                 mostrar_carpeta_dir("directivos", "LIQUIDACIONES/GENERAL", "📋")
 
     # ── TAB DOCS EMPRESA ──
