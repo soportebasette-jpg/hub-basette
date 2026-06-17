@@ -969,89 +969,69 @@ elif menu == "🔐 ZONA DIRECTIVOS":
     # ── GOOGLE DRIVE — ID raíz de BASETTE_DIRECTIVOS ──
     # ══════════════════════════════════════════════════════
     DRIVE_ROOT_ID = "1BC-HcnyFYnHZKM3BoOhKNkR4m7GSCVng"
+    DRIVE_API_KEY = "AIzaSyC3IZUOEtnV9jr8wuKqZ6163Cf8DDjj0Wk"
 
-    # Mapa nombre de carpeta → ID de Drive
-    # La primera vez que se accede se cachea para no repetir llamadas
-    @st.cache_data(ttl=300, show_spinner=False)
-    def get_drive_folder_id(parent_id, folder_name):
-        """Devuelve el ID de una subcarpeta de Drive dado su padre y nombre."""
-        try:
-            url = (
-                f"https://www.googleapis.com/drive/v3/files"
-                f"?q='{parent_id}'+in+parents"
-                f"+and+mimeType='application/vnd.google-apps.folder'"
-                f"+and+name='{folder_name}'"
-                f"+and+trashed=false"
-                f"&fields=files(id,name)"
-                f"&key=AIzaSyD-9tSrke72PouQMnMX-a7eZSW0jkFMBWY"   # clave pública sólo lectura
-            )
-            import urllib.request, json
-            with urllib.request.urlopen(url, timeout=8) as r:
-                data = json.loads(r.read())
-            files = data.get("files", [])
-            return files[0]["id"] if files else None
-        except Exception:
-            return None
+    import urllib.request, urllib.parse, json as _json
 
     @st.cache_data(ttl=300, show_spinner=False)
-    def list_drive_files(folder_id):
-        """Lista archivos (no carpetas) dentro de un folder_id de Drive."""
-        if not folder_id:
-            return []
+    def drive_list_folder(folder_id):
+        """Lista todo el contenido de una carpeta de Drive usando API Key."""
         try:
+            q      = urllib.parse.quote(f"'{folder_id}' in parents and trashed=false")
+            fields = urllib.parse.quote("files(id,name,mimeType,size)")
             url = (
                 f"https://www.googleapis.com/drive/v3/files"
-                f"?q='{folder_id}'+in+parents"
-                f"+and+mimeType!='application/vnd.google-apps.folder'"
-                f"+and+trashed=false"
-                f"&fields=files(id,name,mimeType,size)"
-                f"&orderBy=name"
-                f"&key=AIzaSyD-9tSrke72PouQMnMX-a7eZSW0jkFMBWY"
+                f"?q={q}&fields={fields}&orderBy=name&key={DRIVE_API_KEY}"
             )
-            import urllib.request, json
-            with urllib.request.urlopen(url, timeout=8) as r:
-                data = json.loads(r.read())
+            with urllib.request.urlopen(url, timeout=10) as r:
+                data = _json.loads(r.read())
             return data.get("files", [])
         except Exception:
             return []
 
-    def drive_folder_id_by_path(path_parts):
-        """
-        Navega la jerarquía de Drive dado una lista de nombres de carpeta.
-        Ej: ["NOMINAS", "2026", "JUNIO"] → ID de esa subcarpeta.
-        """
+    @st.cache_data(ttl=300, show_spinner=False)
+    def drive_find_subfolder(parent_id, name):
+        """Devuelve el ID de una subcarpeta por nombre (case-insensitive)."""
+        items = drive_list_folder(parent_id)
+        for item in items:
+            if (item.get("mimeType") == "application/vnd.google-apps.folder"
+                    and item.get("name", "").strip().upper() == name.strip().upper()):
+                return item["id"]
+        return None
+
+    @st.cache_data(ttl=300, show_spinner=False)
+    def drive_folder_id_by_path(path_tuple):
+        """Navega la jerarquía por nombres. path_tuple = ("NOMINAS","2026","JUNIO")"""
         current_id = DRIVE_ROOT_ID
-        for part in path_parts:
-            current_id = get_drive_folder_id(current_id, part)
+        for part in path_tuple:
+            current_id = drive_find_subfolder(current_id, part)
             if not current_id:
                 return None
         return current_id
 
     def mostrar_carpeta_drive(path_parts, icono="📄"):
-        """
-        Muestra los archivos de una carpeta de Drive como botones de abrir/descargar.
-        path_parts: lista de carpetas desde la raíz, ej. ["PERSONAL"]
-        """
-        folder_id = drive_folder_id_by_path(path_parts)
+        """Muestra archivos de una carpeta Drive con botón para abrirlos."""
+        folder_id = drive_folder_id_by_path(tuple(path_parts))
         if not folder_id:
             st.caption(f"🚫 Carpeta no encontrada en Drive: {' / '.join(path_parts)}")
+            st.info("Comprueba que la carpeta existe y que Drive está compartido como **Cualquiera con el enlace puede ver**.")
             return
 
-        archivos = list_drive_files(folder_id)
+        items    = drive_list_folder(folder_id)
+        archivos = [f for f in items if f.get("mimeType") != "application/vnd.google-apps.folder"]
+
         if not archivos:
             st.info("📭 Carpeta vacía. Sube archivos a Drive para que aparezcan aquí.")
             return
 
         for f in archivos:
-            fid   = f["id"]
-            fname = f["name"]
-            # URL de descarga directa pública
-            dl_url   = f"https://drive.google.com/uc?export=download&id={fid}"
-            view_url = f"https://drive.google.com/file/d/{fid}/view"
+            fid      = f["id"]
+            fname    = f["name"]
             size_kb  = int(f.get("size", 0)) // 1024 if f.get("size") else 0
             size_str = f" · {size_kb} KB" if size_kb else ""
+            view_url = f"https://drive.google.com/file/d/{fid}/view"
 
-            col_a, col_b = st.columns([4, 1])
+            col_a, col_b = st.columns([5, 1])
             with col_a:
                 st.markdown(
                     f'<div style="background:#161b22; border:1px solid #30363d; border-radius:8px; '
@@ -1063,14 +1043,13 @@ elif menu == "🔐 ZONA DIRECTIVOS":
             with col_b:
                 st.link_button("⬇️ Abrir", view_url, use_container_width=True)
 
-    # Alias para compatibilidad con el código existente
     def mostrar_carpeta_dir(ruta_base, nombre_carpeta, icono="📄"):
-        """Wrapper que traduce rutas locales a path_parts de Drive."""
-        # ruta_base siempre es "directivos" → ignoramos, partimos de DRIVE_ROOT_ID
+        """Wrapper de compatibilidad: traduce rutas locales a path_parts de Drive."""
         parts = [p for p in nombre_carpeta.replace("\\", "/").split("/") if p]
         mostrar_carpeta_drive(parts, icono)
 
-    # ── TAB PERSONAL ──
+
+        # ── TAB PERSONAL ──
     with tab_rrhh:
         st.markdown('<div class="block-header">👥 GESTIÓN DE PERSONAL</div>', unsafe_allow_html=True)
 
