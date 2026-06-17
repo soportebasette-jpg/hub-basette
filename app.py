@@ -1323,7 +1323,7 @@ elif menu == "🔐 ZONA DIRECTIVOS":
                 rows.append({
                     'CIF': str(cif).strip(),
                     'Fecha Alta': row.iloc[11],
-                    'Fecha Baja': fecha_baja if pd.notna(fecha_baja) else None,
+                    'Fecha Baja': fecha_baja if fecha_baja is not None else None,
                     'CUPS Gas Raw': str(cups_gas_raw).strip() if pd.notna(cups_gas_raw) else None,
                     'CUPS Luz Raw': str(cups_luz_raw).strip() if pd.notna(cups_luz_raw) else None,
                     'CUPS Gas Norm': normalize_cup(cups_gas_raw),
@@ -1331,7 +1331,7 @@ elif menu == "🔐 ZONA DIRECTIVOS":
                     'Producto': producto,
                     'Tipo': 'GAS' if pd.notna(cups_gas_raw) and str(cups_gas_raw).strip() not in ['nan', ''] else 'LUZ',
                     'Contrato Darwin': str(contrato_darwin).strip() if pd.notna(contrato_darwin) else '',
-                    'Comisión Liq': comision if pd.notna(comision) else 0,
+                    'Comisión_liq': comision if comision is not None else 0,
                     'Descomisionado': pd.notna(fecha_baja),
                 })
             df = pd.DataFrame(rows)
@@ -1378,15 +1378,26 @@ elif menu == "🔐 ZONA DIRECTIVOS":
 
             # Clasificar cada registro
             def clasificar(row):
-                if row.get('Descomisionado'):
+                try:
+                    com_liq = float(row.get('Comisión_liq', 0) or 0)
+                except (TypeError, ValueError):
+                    com_liq = 0
+                # Descomisionado: tiene fecha de baja O comisión negativa
+                if row.get('Descomisionado') or com_liq < 0:
                     return '🔴 DESCOMISIONADO'
-                if pd.isna(row.get('ID')) or str(row.get('ID', '')).strip() in ['', 'nan']:
+                # Sin match: no está en CRM (ID nulo o vacío)
+                id_val = row.get('ID')
+                sin_match = (id_val is None or
+                             (hasattr(id_val, '__class__') and
+                              id_val.__class__.__name__ == 'float' and
+                              id_val != id_val) or  # NaN check
+                             str(id_val).strip() in ['', 'nan', 'None'])
+                if sin_match:
                     return '⚠️ SIN MATCH EN CRM'
-                com_liq = float(row.get('Comisión_liq', 0) or 0)
-                if com_liq < 0:
-                    return '🔴 DESCOMISIONADO'
+                # Tiene match en CRM y comisión > 0: PAGADO
                 if com_liq > 0:
                     return '✅ PAGADO'
+                # Tiene match pero comisión 0: pendiente de revisar
                 return '❓ PENDIENTE REVISAR'
 
             df_resultado['Estado Liquidación'] = df_resultado.apply(clasificar, axis=1)
@@ -1569,10 +1580,10 @@ elif menu == "🔐 ZONA DIRECTIVOS":
 
                     # ── DESCARGA RESULTADO ──
                     st.markdown("---")
-                    import io, importlib, zipfile as _zf, csv as _csv
+                    import io, importlib, zipfile as _zf, struct as _struct
 
                     def prep_df_export(df_in):
-                        """Convierte datetime/Timestamp a string para exportar sin problemas."""
+                        """Convierte datetime/Timestamp a string para exportar."""
                         df_out = df_in.copy()
                         for col in df_out.columns:
                             try:
@@ -1583,12 +1594,184 @@ elif menu == "🔐 ZONA DIRECTIVOS":
                                 pass
                         return df_out
 
-                    def df_to_csv_bytes(df):
-                        buf = io.StringIO()
-                        prep_df_export(df).to_csv(buf, index=False, encoding='utf-8-sig')
-                        return buf.getvalue().encode('utf-8-sig')
+                    def hacer_xlsx_nativo(sheets_dict):
+                        """
+                        Genera un xlsx real (formato Office Open XML) usando solo stdlib.
+                        sheets_dict = {'NombreHoja': dataframe, ...}
+                        Soporta strings, números y celdas vacías. Sin estilos avanzados.
+                        """
+                        import zipfile as zf2, io as io2
+                        from xml.etree.ElementTree import Element, SubElement, tostring
 
-                    # Intentar escribir xlsx si hay engine disponible
+                        def esc(s):
+                            return str(s).replace('&','&amp;').replace('<','&lt;').replace('>','&gt;').replace('"','&quot;').replace("'",'&apos;')
+
+                        shared = []
+                        shared_map = {}
+                        def get_si(val):
+                            s = str(val)
+                            if s not in shared_map:
+                                shared_map[s] = len(shared)
+                                shared.append(s)
+                            return shared_map[s]
+
+                        # Pre-scan all data to build shared strings
+                        sheet_data = {}
+                        for sname, df in sheets_dict.items():
+                            df2p = prep_df_export(df).reset_index(drop=True)
+                            rows = [list(df2p.columns)]
+                            for _, row in df2p.iterrows():
+                                rows.append(list(row))
+                            for row in rows:
+                                for cell in row:
+                                    if cell is not None and str(cell) not in ['', 'nan', 'None']:
+                                        try:
+                                            float(str(cell).replace(',','.'))
+                                        except (ValueError, TypeError):
+                                            get_si(cell)
+                            sheet_data[sname] = rows
+
+                        buf = io2.BytesIO()
+                        with zf2.ZipFile(buf, 'w', zf2.ZIP_DEFLATED) as z:
+                            # [Content_Types].xml
+                            ct_parts = '''<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="xml" ContentType="application/xml"/>
+  <Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>
+  <Override PartName="/xl/sharedStrings.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sharedStrings+xml"/>
+  <Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>
+'''
+                            for i in range(len(sheet_data)):
+                                ct_parts += f'  <Override PartName="/xl/worksheets/sheet{i+1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>\n'
+                            ct_parts += '</Types>'
+                            z.writestr('[Content_Types].xml', ct_parts)
+
+                            # _rels/.rels
+                            z.writestr('_rels/.rels', '''<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>
+</Relationships>''')
+
+                            # xl/_rels/workbook.xml.rels
+                            wb_rels = '''<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId_ss" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/sharedStrings" Target="sharedStrings.xml"/>
+  <Relationship Id="rId_st" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
+'''
+                            for i, sname in enumerate(sheet_data):
+                                wb_rels += f'  <Relationship Id="rId{i+1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet{i+1}.xml"/>\n'
+                            wb_rels += '</Relationships>'
+                            z.writestr('xl/_rels/workbook.xml.rels', wb_rels)
+
+                            # xl/workbook.xml
+                            wb_xml = '''<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"
+          xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+  <sheets>
+'''
+                            for i, sname in enumerate(sheet_data):
+                                wb_xml += f'    <sheet name="{esc(sname)}" sheetId="{i+1}" r:id="rId{i+1}"/>\n'
+                            wb_xml += '  </sheets>\n</workbook>'
+                            z.writestr('xl/workbook.xml', wb_xml)
+
+                            # xl/styles.xml (mínimo)
+                            z.writestr('xl/styles.xml', '''<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+  <fonts><font><sz val="11"/><name val="Calibri"/></font></fonts>
+  <fills><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills>
+  <borders><border><left/><right/><top/><bottom/><diagonal/></border></borders>
+  <cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>
+  <cellXfs><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/></cellXfs>
+</styleSheet>''')
+
+                            # xl/sharedStrings.xml
+                            ss_xml = '''<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" count="''' + str(len(shared)) + '''" uniqueCount="''' + str(len(shared)) + '''">
+'''
+                            for s in shared:
+                                ss_xml += f'  <si><t xml:space="preserve">{esc(s)}</t></si>\n'
+                            ss_xml += '</sst>'
+                            z.writestr('xl/sharedStrings.xml', ss_xml)
+
+                            # xl/worksheets/sheetN.xml
+                            col_letters = ['A','B','C','D','E','F','G','H','I','J','K','L','M',
+                                           'N','O','P','Q','R','S','T','U','V','W','X','Y','Z',
+                                           'AA','AB','AC','AD','AE','AF','AG','AH','AI','AJ','AK','AL',
+                                           'AM','AN','AO','AP','AQ','AR','AS','AT','AU','AV','AW','AX']
+
+                            for si_idx, (sname, rows) in enumerate(sheet_data.items()):
+                                ws_xml = '''<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+  <sheetData>
+'''
+                                for r_idx, row in enumerate(rows):
+                                    ws_xml += f'    <row r="{r_idx+1}">\n'
+                                    for c_idx, cell in enumerate(row):
+                                        col = col_letters[c_idx] if c_idx < len(col_letters) else f'A{c_idx}'
+                                        ref = f'{col}{r_idx+1}'
+                                        if cell is None or str(cell) in ['', 'nan', 'None']:
+                                            ws_xml += f'      <c r="{ref}"/>\n'
+                                        else:
+                                            try:
+                                                num = float(str(cell).replace(',','.'))
+                                                ws_xml += f'      <c r="{ref}" t="n"><v>{num}</v></c>\n'
+                                            except (ValueError, TypeError):
+                                                si_n = shared_map.get(str(cell), 0)
+                                                ws_xml += f'      <c r="{ref}" t="s"><v>{si_n}</v></c>\n'
+                                    ws_xml += '    </row>\n'
+                                ws_xml += '  </sheetData>\n</worksheet>'
+                                z.writestr(f'xl/worksheets/sheet{si_idx+1}.xml', ws_xml)
+
+                        buf.seek(0)
+                        return buf.read()
+
+                    # ── Preparar DataFrames para exportar con columnas limpias y totales ──
+                    def df_pagados_export(df_p):
+                        """Pagados: columnas clave + importe abonado."""
+                        cols = ['Tipo', 'CIF', 'Cliente', 'Comercial', 'Estado', 'CUP Cruce',
+                                'Producto', 'Fecha Alta', 'Fecha Baja']
+                        cols = [c for c in cols if c in df_p.columns]
+                        df_e = prep_df_export(df_p[cols].copy())
+                        # Añadir importe abonado
+                        if 'Comisión_liq' in df_p.columns:
+                            df_e['IMPORTE ABONADO €'] = df_p['Comisión_liq'].values
+                        # Fila de total
+                        total = df_p['Comisión_liq'].sum() if 'Comisión_liq' in df_p.columns else 0
+                        total_row = {c: '' for c in df_e.columns}
+                        total_row[df_e.columns[-2] if len(df_e.columns) > 1 else df_e.columns[0]] = 'TOTAL'
+                        total_row['IMPORTE ABONADO €'] = round(total, 2)
+                        df_e = pd.concat([df_e, pd.DataFrame([total_row])], ignore_index=True)
+                        return df_e
+
+                    def df_descom_export(df_d):
+                        """Descomisionados: columnas clave + importe descomisión."""
+                        cols = ['Tipo', 'CIF', 'Cliente', 'Comercial', 'Estado', 'CUP Cruce',
+                                'Producto', 'Fecha Alta', 'Fecha Baja']
+                        cols = [c for c in cols if c in df_d.columns]
+                        df_e = prep_df_export(df_d[cols].copy())
+                        if 'Comisión_liq' in df_d.columns:
+                            df_e['IMPORTE DESCOMISIÓN €'] = df_d['Comisión_liq'].values
+                        total = df_d['Comisión_liq'].sum() if 'Comisión_liq' in df_d.columns else 0
+                        total_row = {c: '' for c in df_e.columns}
+                        total_row[df_e.columns[-2] if len(df_e.columns) > 1 else df_e.columns[0]] = 'TOTAL'
+                        total_row['IMPORTE DESCOMISIÓN €'] = round(total, 2)
+                        df_e = pd.concat([df_e, pd.DataFrame([total_row])], ignore_index=True)
+                        return df_e
+
+                    def df_reclamar_export(df_r):
+                        cols = ['Tipo', 'CIF', 'Cliente', 'Comercial', 'Estado', 'CUP Cruce',
+                                'Producto', 'Comisión_liq', 'Fecha Alta', 'Fecha Baja']
+                        cols = [c for c in cols if c in df_r.columns]
+                        df_e = prep_df_export(df_r[cols].copy())
+                        if 'Comisión_liq' in df_e.columns:
+                            df_e = df_e.rename(columns={'Comisión_liq': 'IMPORTE A RECLAMAR €'})
+                        return df_e
+
+                    nombre_base = f"cruce_{compania_detectada.lower()}_{meta.get('mes','')}_{meta.get('anio','')}"
+                    df_a_reclamar = pd.concat([sin_match, pendientes]) if (not sin_match.empty or not pendientes.empty) else pd.DataFrame()
+
+                    # Intentar engine xlsx instalado; si no, usar generador nativo
                     _writer_engine = None
                     for _eng in ['xlsxwriter', 'openpyxl']:
                         try:
@@ -1598,42 +1781,30 @@ elif menu == "🔐 ZONA DIRECTIVOS":
                         except ImportError:
                             pass
 
-                    nombre_base = f"cruce_{compania_detectada.lower()}_{meta.get('mes','')}_{meta.get('anio','')}"
-                    df_a_reclamar = pd.concat([sin_match, pendientes]) if (not sin_match.empty or not pendientes.empty) else pd.DataFrame()
+                    sheets_export = {
+                        'Cruce Completo':   prep_df_export(df_resultado),
+                        'Pagados':          df_pagados_export(pagados),
+                        'Descomisionados':  df_descom_export(descomisionados),
+                        'A Reclamar':       df_reclamar_export(df_a_reclamar),
+                    }
 
                     if _writer_engine:
-                        # Exportar xlsx multi-hoja
                         output = io.BytesIO()
                         with pd.ExcelWriter(output, engine=_writer_engine) as writer:
-                            prep_df_export(df_resultado).to_excel(writer, sheet_name='Cruce Completo', index=False)
-                            prep_df_export(pagados).to_excel(writer, sheet_name='Pagados', index=False)
-                            prep_df_export(descomisionados).to_excel(writer, sheet_name='Descomisionados', index=False)
-                            prep_df_export(df_a_reclamar).to_excel(writer, sheet_name='A Reclamar', index=False)
+                            for sname, df_s in sheets_export.items():
+                                df_s.to_excel(writer, sheet_name=sname, index=False)
                         output.seek(0)
-                        st.download_button(
-                            label=f"⬇️ DESCARGAR RESULTADO — {nombre_base}.xlsx",
-                            data=output,
-                            file_name=f"{nombre_base}.xlsx",
-                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                            use_container_width=True
-                        )
+                        xlsx_bytes = output.read()
                     else:
-                        # Fallback: ZIP con 4 CSVs (sin dependencias externas)
-                        zip_buf = io.BytesIO()
-                        with _zf.ZipFile(zip_buf, 'w', _zf.ZIP_DEFLATED) as zout:
-                            zout.writestr('cruce_completo.csv',    df_to_csv_bytes(df_resultado))
-                            zout.writestr('pagados.csv',           df_to_csv_bytes(pagados))
-                            zout.writestr('descomisionados.csv',   df_to_csv_bytes(descomisionados))
-                            zout.writestr('a_reclamar.csv',        df_to_csv_bytes(df_a_reclamar))
-                        zip_buf.seek(0)
-                        st.info("ℹ️ El servidor no tiene openpyxl/xlsxwriter. Descargando como ZIP con CSVs (ábrelos con Excel).")
-                        st.download_button(
-                            label=f"⬇️ DESCARGAR RESULTADO — {nombre_base}.zip",
-                            data=zip_buf,
-                            file_name=f"{nombre_base}.zip",
-                            mime="application/zip",
-                            use_container_width=True
-                        )
+                        xlsx_bytes = hacer_xlsx_nativo(sheets_export)
+
+                    st.download_button(
+                        label=f"⬇️ DESCARGAR RESULTADO EXCEL — {nombre_base}.xlsx",
+                        data=xlsx_bytes,
+                        file_name=f"{nombre_base}.xlsx",
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        use_container_width=True
+                    )
                 except Exception as e:
                     import traceback
                     st.error(f"❌ Error en el cruce: {e}")
