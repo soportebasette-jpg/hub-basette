@@ -1190,31 +1190,105 @@ elif menu == "🔐 ZONA DIRECTIVOS":
                             meta['empresa'] = em
             return meta
 
-        def leer_excel_safe(f, **kwargs):
-            """Lee un Excel probando engines disponibles en orden."""
-            import importlib, subprocess, sys
-            engines_ok = []
-            for eng in ['openpyxl', 'xlrd']:
-                try:
-                    importlib.import_module(eng)
-                    engines_ok.append(eng)
-                except ImportError:
-                    pass
-            if not engines_ok:
-                subprocess.check_call([sys.executable, '-m', 'pip', 'install', 'openpyxl', '-q',
-                                       '--break-system-packages'], stderr=subprocess.DEVNULL)
-                engines_ok = ['openpyxl']
-            last_err = None
-            for eng in engines_ok:
-                try:
-                    return pd.read_excel(f, engine=eng, **kwargs)
-                except Exception as e:
-                    last_err = e
-                    try:
-                        f.seek(0)
-                    except Exception:
-                        pass
-            raise last_err
+        def leer_excel_safe(f, header=0, sheet_name=0):
+            """
+            Lee un xlsx usando solo librerias estandar (zipfile + xml.etree).
+            No necesita openpyxl, xlrd ni ningun paquete externo.
+            """
+            import zipfile, io, re
+            from xml.etree import ElementTree as ET
+
+            raw = f.read() if hasattr(f, 'read') else f
+            buf = io.BytesIO(raw)
+            zf = zipfile.ZipFile(buf)
+
+            # Shared strings
+            shared_strings = []
+            if 'xl/sharedStrings.xml' in zf.namelist():
+                tree = ET.parse(zf.open('xl/sharedStrings.xml'))
+                ns = {'s': 'http://schemas.openxmlformats.org/spreadsheetml/2006/main'}
+                for si in tree.findall('.//s:si', ns):
+                    parts = si.findall('.//s:t', ns)
+                    shared_strings.append(''.join(p.text or '' for p in parts))
+
+            # Encontrar hoja
+            wb_tree = ET.parse(zf.open('xl/workbook.xml'))
+            wb_ns = {'w': 'http://schemas.openxmlformats.org/spreadsheetml/2006/main'}
+            sheets = wb_tree.findall('.//w:sheet', wb_ns)
+            sheet_el = sheets[sheet_name] if isinstance(sheet_name, int) else next(
+                (s for s in sheets if s.get('name') == sheet_name), sheets[0])
+
+            rels_tree = ET.parse(zf.open('xl/_rels/workbook.xml.rels'))
+            rels_ns = {'r': 'http://schemas.openxmlformats.org/package/2006/relationships'}
+            ns_rid = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships'
+            r_id = sheet_el.get(f'{{{ns_rid}}}id') or sheet_el.get('r:id')
+            sheet_file = 'xl/worksheets/sheet1.xml'
+            for rel in rels_tree.findall('r:Relationship', rels_ns):
+                if rel.get('Id') == r_id:
+                    t = rel.get('Target', '').lstrip('/')
+                    sheet_file = t if t.startswith('xl/') else 'xl/' + t
+                    break
+
+            # Parsear celdas
+            ws_tree = ET.parse(zf.open(sheet_file))
+            ws_ns = {'w': 'http://schemas.openxmlformats.org/spreadsheetml/2006/main'}
+
+            def col2idx(s):
+                v = 0
+                for ch in s:
+                    v = v * 26 + (ord(ch) - 64)
+                return v - 1
+
+            rows_data, max_col = {}, 0
+            for row_el in ws_tree.findall('.//w:row', ws_ns):
+                r_num = int(row_el.get('r', 0))
+                for c_el in row_el.findall('w:c', ws_ns):
+                    ref = c_el.get('r', '')
+                    m = re.match(r'([A-Z]+)', ref)
+                    if not m:
+                        continue
+                    col_idx = col2idx(m.group(1))
+                    max_col = max(max_col, col_idx)
+                    t_attr = c_el.get('t', '')
+                    v_el = c_el.find('w:v', ws_ns)
+                    val = None
+                    # Inline strings usan <is><t> en vez de <v>
+                    is_el = c_el.find('w:is', ws_ns)
+                    if is_el is not None:
+                        t_parts = is_el.findall('.//w:t', ws_ns)
+                        val = ''.join(p.text or '' for p in t_parts)
+                    elif v_el is not None and v_el.text is not None:
+                        if t_attr == 's':
+                            i_s = int(v_el.text)
+                            val = shared_strings[i_s] if i_s < len(shared_strings) else ''
+                        elif t_attr in ('str', 'b', 'e'):
+                            val = v_el.text
+                        else:
+                            try:
+                                fv = float(v_el.text)
+                                val = int(fv) if fv == int(fv) else fv
+                            except (ValueError, OverflowError):
+                                val = v_el.text
+                    rows_data.setdefault(r_num, {})[col_idx] = val
+
+            if not rows_data:
+                return pd.DataFrame()
+
+            n_cols = max_col + 1
+            records = [[rows_data[r].get(c) for c in range(n_cols)]
+                       for r in sorted(rows_data.keys())]
+            df = pd.DataFrame(records)
+
+            if header is None:
+                return df
+
+            if isinstance(header, int) and header < len(df):
+                col_names = [str(v) if v is not None else f'col_{i}'
+                             for i, v in enumerate(df.iloc[header].tolist())]
+                df.columns = col_names
+                df = df.iloc[header + 1:].reset_index(drop=True)
+            return df
+
 
         def leer_liquidacion(uploaded_file):
             """Lee y limpia una liquidación de compañía (formato Naturgy y similares)."""
@@ -1492,29 +1566,14 @@ elif menu == "🔐 ZONA DIRECTIVOS":
                             df_todo_show = df_todo_show.rename(columns={'Comisión_liq': 'Comisión €'})
                         st.dataframe(df_todo_show.reset_index(drop=True), use_container_width=True, height=500)
 
-                    # ── DESCARGA EXCEL RESULTADO ──
+
+                    # ── DESCARGA RESULTADO ──
                     st.markdown("---")
-                    import io, importlib, subprocess, sys as _sys
-                    # Asegurar xlsxwriter disponible, si no openpyxl
-                    _writer_engine = None
-                    for _eng in ['xlsxwriter', 'openpyxl']:
-                        try:
-                            importlib.import_module(_eng)
-                            _writer_engine = _eng
-                            break
-                        except ImportError:
-                            pass
-                    if _writer_engine is None:
-                        subprocess.check_call([_sys.executable, '-m', 'pip', 'install', 'openpyxl', '-q',
-                                               '--break-system-packages'], stderr=subprocess.DEVNULL)
-                        _writer_engine = 'openpyxl'
+                    import io, importlib, zipfile as _zf, csv as _csv
 
                     def prep_df_export(df_in):
-                        """Convierte datetime a string para evitar problemas de timezone en xlsxwriter."""
+                        """Convierte datetime/Timestamp a string para exportar sin problemas."""
                         df_out = df_in.copy()
-                        for col in df_out.select_dtypes(include=['datetime64[ns]', 'datetimetz']).columns:
-                            df_out[col] = df_out[col].dt.strftime('%d/%m/%Y').fillna('-')
-                        # También convertir columnas object que puedan tener Timestamps
                         for col in df_out.columns:
                             try:
                                 df_out[col] = df_out[col].apply(
@@ -1524,23 +1583,57 @@ elif menu == "🔐 ZONA DIRECTIVOS":
                                 pass
                         return df_out
 
-                    df_a_reclamar = pd.concat([sin_match, pendientes]) if not sin_match.empty or not pendientes.empty else pd.DataFrame()
-                    output = io.BytesIO()
-                    with pd.ExcelWriter(output, engine=_writer_engine) as writer:
-                        prep_df_export(df_resultado).to_excel(writer, sheet_name='Cruce Completo', index=False)
-                        prep_df_export(pagados).to_excel(writer, sheet_name='Pagados', index=False)
-                        prep_df_export(descomisionados).to_excel(writer, sheet_name='Descomisionados', index=False)
-                        prep_df_export(df_a_reclamar).to_excel(writer, sheet_name='A Reclamar', index=False)
-                    output.seek(0)
-                    nombre_descarga = f"cruce_{compania_detectada.lower()}_{meta.get('mes','')}_{meta.get('anio','')}.xlsx"
-                    st.download_button(
-                        label=f"⬇️ DESCARGAR RESULTADO COMPLETO — {nombre_descarga}",
-                        data=output,
-                        file_name=nombre_descarga,
-                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                        use_container_width=True
-                    )
+                    def df_to_csv_bytes(df):
+                        buf = io.StringIO()
+                        prep_df_export(df).to_csv(buf, index=False, encoding='utf-8-sig')
+                        return buf.getvalue().encode('utf-8-sig')
 
+                    # Intentar escribir xlsx si hay engine disponible
+                    _writer_engine = None
+                    for _eng in ['xlsxwriter', 'openpyxl']:
+                        try:
+                            importlib.import_module(_eng)
+                            _writer_engine = _eng
+                            break
+                        except ImportError:
+                            pass
+
+                    nombre_base = f"cruce_{compania_detectada.lower()}_{meta.get('mes','')}_{meta.get('anio','')}"
+                    df_a_reclamar = pd.concat([sin_match, pendientes]) if (not sin_match.empty or not pendientes.empty) else pd.DataFrame()
+
+                    if _writer_engine:
+                        # Exportar xlsx multi-hoja
+                        output = io.BytesIO()
+                        with pd.ExcelWriter(output, engine=_writer_engine) as writer:
+                            prep_df_export(df_resultado).to_excel(writer, sheet_name='Cruce Completo', index=False)
+                            prep_df_export(pagados).to_excel(writer, sheet_name='Pagados', index=False)
+                            prep_df_export(descomisionados).to_excel(writer, sheet_name='Descomisionados', index=False)
+                            prep_df_export(df_a_reclamar).to_excel(writer, sheet_name='A Reclamar', index=False)
+                        output.seek(0)
+                        st.download_button(
+                            label=f"⬇️ DESCARGAR RESULTADO — {nombre_base}.xlsx",
+                            data=output,
+                            file_name=f"{nombre_base}.xlsx",
+                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                            use_container_width=True
+                        )
+                    else:
+                        # Fallback: ZIP con 4 CSVs (sin dependencias externas)
+                        zip_buf = io.BytesIO()
+                        with _zf.ZipFile(zip_buf, 'w', _zf.ZIP_DEFLATED) as zout:
+                            zout.writestr('cruce_completo.csv',    df_to_csv_bytes(df_resultado))
+                            zout.writestr('pagados.csv',           df_to_csv_bytes(pagados))
+                            zout.writestr('descomisionados.csv',   df_to_csv_bytes(descomisionados))
+                            zout.writestr('a_reclamar.csv',        df_to_csv_bytes(df_a_reclamar))
+                        zip_buf.seek(0)
+                        st.info("ℹ️ El servidor no tiene openpyxl/xlsxwriter. Descargando como ZIP con CSVs (ábrelos con Excel).")
+                        st.download_button(
+                            label=f"⬇️ DESCARGAR RESULTADO — {nombre_base}.zip",
+                            data=zip_buf,
+                            file_name=f"{nombre_base}.zip",
+                            mime="application/zip",
+                            use_container_width=True
+                        )
                 except Exception as e:
                     import traceback
                     st.error(f"❌ Error en el cruce: {e}")
