@@ -1470,8 +1470,8 @@ elif menu == "🔐 ZONA DIRECTIVOS":
 
                     # ── SVA: extraer de la misma liquidación (filas con producto SVA) ──
                     # Productos de energía pura vs SVA
-                    PRODUCTOS_ENERGIA = {'TARIFA POR USO LUZ', 'PLAN FIJO LUZ 24H',
-                                         'TARIFA POR USO GAS', 'TARIFA PLANA GAS'}
+                    PRODUCTOS_ENERGIA = {'TARIFA POR USO LUZ', 'PLAN FIJO LUZ 24H', 'PLAN FIJO LUZ',
+                                         'TARIFA POR USO GAS', 'TARIFA PLANA GAS', 'PLAN FIJO GAS'}
                     def es_sva(producto):
                         return (producto is not None and
                                 str(producto).strip() != '' and
