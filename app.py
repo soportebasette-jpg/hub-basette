@@ -204,7 +204,7 @@ with st.sidebar:
     st.markdown("---")
     menu = st.sidebar.radio(
     "Navegación",
-    ["🚀 CRM", "📊 PRECIOS", "⚡ COMPARADOR ENERGÍA", "📶 COMPARADOR TELCO", "📢 ANUNCIOS Y PLAN AMIGO", "📈 DASHBOARD Y RANKING", "📂 REPOSITORIO", "🕒 CONTROL LABORAL", "🔐 ZONA DIRECTIVOS"]
+    ["🚀 CRM", "📊 PRECIOS", "🔍 COMPARADORES", "📢 ANUNCIOS Y PLAN AMIGO", "📈 DASHBOARD Y RANKING", "📂 REPOSITORIO", "🕒 CONTROL LABORAL", "🔐 ZONA DIRECTIVOS"]
 )
 
 # --- CRM ---
@@ -340,27 +340,19 @@ elif menu == "📊 PRECIOS":
             st.image("tarifas_visuales/3d.jpg", use_container_width=True)
         st.markdown('<div style="background-color: #d2ff00; color: black; padding: 10px; border-radius: 5px; font-weight: bold; text-align: center; font-size: 1.5rem;">PRIMEROS 12 MESES POR 24.20€</div>', unsafe_allow_html=True)
 
-# --- COMPARADOR ENERGÍA ---
-elif menu == "⚡ COMPARADOR ENERGÍA":
-    st.markdown('<div class="block-header">⚡ COMPARADOR DE ENERGÍA</div>', unsafe_allow_html=True)
+# --- COMPARADORES ---
+elif menu == "🔍 COMPARADORES":
+    st.markdown('<div class="block-header">🔍 COMPARADORES</div>', unsafe_allow_html=True)
     st.markdown("""
         <div style="background:#161b22; border:2px solid #d2ff00; border-radius:15px; padding:30px; text-align:center; margin-bottom:30px;">
-            <h2 style="color:#d2ff00; margin-bottom:10px;">🔗 Comparador de Luz y Gas</h2>
-            <p style="color:#8b949e; font-size:1rem; margin-bottom:20px;">Accede a la herramienta de comparación de tarifas de energía para encontrar la mejor oferta para tu cliente.</p>
+            <h2 style="color:#d2ff00; margin-bottom:10px;">🔗 Herramientas de Comparación</h2>
+            <p style="color:#8b949e; font-size:1rem; margin-bottom:20px;">Accede a las herramientas de comparación de tarifas para encontrar la mejor oferta para tu cliente.</p>
         </div>
     """, unsafe_allow_html=True)
-    st.link_button("⚡ ABRIR COMPARADOR DE ENERGÍA", "https://soportebasette-jpg.github.io/Tecomparotodo/", use_container_width=True)
-
-# --- COMPARADOR TELCO ---
-elif menu == "📶 COMPARADOR TELCO":
-    st.markdown('<div class="block-header">📶 COMPARADOR DE TELECOMUNICACIONES</div>', unsafe_allow_html=True)
-    st.markdown("""
-        <div style="background:#161b22; border:2px solid #d2ff00; border-radius:15px; padding:30px; text-align:center; margin-bottom:30px;">
-            <h2 style="color:#d2ff00; margin-bottom:10px;">🔗 Comparador de Telco</h2>
-            <p style="color:#8b949e; font-size:1rem; margin-bottom:20px;">Accede a la herramienta de comparación de tarifas de telecomunicaciones para encontrar la mejor oferta de fibra y móvil para tu cliente.</p>
-        </div>
-    """, unsafe_allow_html=True)
-    st.link_button("📶 ABRIR COMPARADOR DE TELCO", "https://soportebasette-jpg.github.io/Tecomparotodo-telco/telco.html", use_container_width=True)
+    st.link_button("⚡🔥 COMPARADOR FACTURAS LUZ Y GAS", "https://soportebasette-jpg.github.io/comparador_facturas/", use_container_width=True)
+    st.link_button("📶 COMPARADOR TARIFAS TELECO", "https://soportebasette-jpg.github.io/Tecomparotodo-telco/telco.html", use_container_width=True)
+    st.link_button("🛡️ COMPARADOR TARIFAS ALARMAS", "https://soportebasette-jpg.github.io/Tecomparotodo-alarmas/alarmas.html", use_container_width=True)
+    st.link_button("⚡ COMPARADOR TARIFAS ENERGÍA", "https://soportebasette-jpg.github.io/Tecomparotodo/", use_container_width=True)
 # --- ANUNCIOS Y PLAN AMIGO ---
 elif menu == "📢 ANUNCIOS Y PLAN AMIGO":
     st.header("📢 Anuncios y Plan Amigo")
