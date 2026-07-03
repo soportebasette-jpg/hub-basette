@@ -349,10 +349,10 @@ elif menu == "🔍 COMPARADORES":
             <p style="color:#8b949e; font-size:1rem; margin-bottom:20px;">Accede a las herramientas de comparación de tarifas para encontrar la mejor oferta para tu cliente.</p>
         </div>
     """, unsafe_allow_html=True)
-    st.link_button("⚡🔥 COMPARADOR FACTURAS LUZ Y GAS", "https://soportebasette-jpg.github.io/comparador_facturas/", use_container_width=True)
-    st.link_button("📶 COMPARADOR TARIFAS TELECO", "https://soportebasette-jpg.github.io/Tecomparotodo-telco/telco.html", use_container_width=True)
-    st.link_button("🛡️ COMPARADOR TARIFAS ALARMAS", "https://soportebasette-jpg.github.io/Tecomparotodo-alarmas/alarmas.html", use_container_width=True)
-    st.link_button("⚡ COMPARADOR TARIFAS ENERGÍA", "https://soportebasette-jpg.github.io/Tecomparotodo/", use_container_width=True)
+    st.link_button("🧾 COMPARADOR FACTURAS LUZ Y GAS", "https://facturasenergia.tecomparotodo.es/", use_container_width=True)
+    st.link_button("📶 COMPARADOR TARIFAS TELECO", "https://tarifastelco.tecomparotodo.es/", use_container_width=True)
+    st.link_button("🔒 COMPARADOR TARIFAS ALARMAS", "https://tarifasalarmas.tecomparotodo.es/", use_container_width=True)
+    st.link_button("⚡ COMPARADOR TARIFAS ENERGÍA", "https://tarifasenergia.tecomparotodo.es/", use_container_width=True)
 # --- ANUNCIOS Y PLAN AMIGO ---
 elif menu == "📢 ANUNCIOS Y PLAN AMIGO":
     st.header("📢 Anuncios y Plan Amigo")
@@ -948,11 +948,12 @@ elif menu == "🔐 ZONA DIRECTIVOS":
             st.rerun()
 
     # ── TABS PRINCIPALES ──
-    tab_rrhh, tab_ret, tab_nom, tab_liq, tab_docs, tab_sop = st.tabs([
+    tab_rrhh, tab_ret, tab_nom, tab_liq, tab_cruces, tab_docs, tab_sop = st.tabs([
         "👥 PERSONAL",
         "💰 MARCOS RETRIBUTIVOS",
         "💼 NÓMINAS",
         "📊 LIQUIDACIONES",
+        "🔀 CRUCES CIAS",
         "📁 DOCS EMPRESA",
         "🛠️ SOPORTE"
     ])
@@ -1952,6 +1953,219 @@ elif menu == "🔐 ZONA DIRECTIVOS":
                 mostrar_carpeta_dir("directivos", "LIQUIDACIONES/GENERAL", "📋")
 
     # ── TAB DOCS EMPRESA ──
+    # ══════════════════════════════════════════════════════
+    # ── TAB CRUCES CIAS ──
+    # ══════════════════════════════════════════════════════
+    with tab_cruces:
+        st.markdown('<div class="block-header">🔀 CRUCES CON COMPAÑÍAS</div>', unsafe_allow_html=True)
+        st.markdown("""
+            <div style="background:#161b22; border-left:4px solid #FFD700; padding:15px; border-radius:8px; margin-bottom:20px;">
+                <p style="color:#8b949e; margin:0; font-size:0.85rem;">
+                    Cruce de nuestras ventas con los archivos de cada compañía para detectar discrepancias,
+                    contratos no reconocidos y estados incorrectos.
+                </p>
+            </div>
+        """, unsafe_allow_html=True)
+
+        cia_tab_gana, cia_tab_naturgy, cia_tab_total = st.tabs([
+            "⚡ GANA ENERGÍA", "🔥 NATURGY", "🌍 TOTAL ENERGIES"
+        ])
+
+        # ─────────────────────────────────────────────────────
+        # ── GANA ENERGÍA — CRUCE COMPLETO ──
+        # ─────────────────────────────────────────────────────
+        with cia_tab_gana:
+            st.markdown('<div class="block-header" style="font-size:1rem;">⚡ CRUCE GANA ENERGÍA</div>', unsafe_allow_html=True)
+            st.markdown("""
+                <div style="background:#0d1117; border-left:4px solid #22c55e; padding:12px; border-radius:8px; margin-bottom:16px;">
+                    <p style="color:#8b949e; margin:0; font-size:0.82rem;">
+                        Sube <b style="color:#22c55e;">nuestras ventas</b> (export CRM con CUPS) y el archivo de
+                        <b style="color:#22c55e;">Gana Energía</b>. El sistema cruza por CUP (20 ó 22 dígitos) y
+                        muestra qué contratos están en Gana, cuáles no aparecen y las discrepancias de estado.
+                    </p>
+                </div>
+            """, unsafe_allow_html=True)
+
+            gc1, gc2 = st.columns(2)
+            with gc1:
+                st.markdown('<p style="color:#22c55e; font-weight:bold; font-size:0.95rem; margin-bottom:4px;">📋 Nuestras Ventas (CRM)</p>', unsafe_allow_html=True)
+                f_gana_nuestras = st.file_uploader("Nuestras ventas", type=['xlsx'], key="gana_nuestras", label_visibility="collapsed")
+            with gc2:
+                st.markdown('<p style="color:#22c55e; font-weight:bold; font-size:0.95rem; margin-bottom:4px;">⚡ Archivo Gana Energía</p>', unsafe_allow_html=True)
+                f_gana_cia = st.file_uploader("Archivo Gana", type=['xlsx'], key="gana_cia", label_visibility="collapsed")
+
+            if f_gana_nuestras and f_gana_cia:
+                with st.spinner("⏳ Cruzando datos con Gana Energía..."):
+                    try:
+                        def norm_cup(cup):
+                            if cup is None: return None
+                            s = str(cup).strip().upper()
+                            if not s or s in ['NAN','NONE','']: return None
+                            return s[:20] if len(s) == 22 else s
+
+                        # Leer con parser nativo (sin openpyxl)
+                        df_nuestras = leer_excel_safe(f_gana_nuestras, header=0)
+                        df_nuestras.columns = [str(c).strip() for c in df_nuestras.columns]
+
+                        # Filtrar solo contratos Gana
+                        if 'Comercializadora' in df_nuestras.columns:
+                            df_gana_nuestras = df_nuestras[
+                                df_nuestras['Comercializadora'].apply(
+                                    lambda x: 'gana' in str(x).lower()
+                                )
+                            ].copy()
+                        else:
+                            df_gana_nuestras = df_nuestras.copy()
+
+                        # Normalizar CUPs propios
+                        if 'CUPS Luz' in df_gana_nuestras.columns:
+                            df_gana_nuestras = df_gana_nuestras.copy()
+                            df_gana_nuestras['CUP_Luz_N'] = df_gana_nuestras['CUPS Luz'].apply(norm_cup)
+                        if 'CUPS Gas' in df_gana_nuestras.columns:
+                            df_gana_nuestras['CUP_Gas_N'] = df_gana_nuestras['CUPS Gas'].apply(norm_cup)
+
+                        # Leer archivo Gana CIA con parser nativo
+                        df_gana_cia = leer_excel_safe(f_gana_cia, header=0)
+                        df_gana_cia.columns = [str(c).strip() for c in df_gana_cia.columns]
+
+                        # Detectar columna CUP en archivo Gana
+                        def find_cup_col(df):
+                            for col in df.columns:
+                                if any(k in str(col).upper() for k in ['CUP','CUPS','SUMINISTRO','PUNTO']):
+                                    non_null = df[col].dropna()
+                                    if not non_null.empty and str(non_null.iloc[0]).upper().startswith('ES'):
+                                        return col
+                            for col in df.columns:
+                                non_null = df[col].dropna()
+                                if not non_null.empty and str(non_null.iloc[0]).upper().startswith('ES0'):
+                                    return col
+                            return None
+
+                        cup_col_cia = find_cup_col(df_gana_cia)
+
+                        if cup_col_cia:
+                            df_gana_cia['CUP_N'] = df_gana_cia[cup_col_cia].apply(norm_cup)
+                            cups_gana = set(df_gana_cia['CUP_N'].dropna())
+
+                            if 'CUP_Luz_N' in df_gana_nuestras.columns:
+                                df_gana_nuestras['Estado Cruce (Luz)'] = df_gana_nuestras['CUP_Luz_N'].apply(
+                                    lambda c: '✅ En Gana' if c in cups_gana else ('—' if c is None else '❌ No en Gana')
+                                )
+                            if 'CUP_Gas_N' in df_gana_nuestras.columns:
+                                df_gana_nuestras['Estado Cruce (Gas)'] = df_gana_nuestras['CUP_Gas_N'].apply(
+                                    lambda c: '✅ En Gana' if c in cups_gana else ('—' if c is None else '❌ No en Gana')
+                                )
+
+                            luz_en = (df_gana_nuestras.get('Estado Cruce (Luz)', pd.Series()) == '✅ En Gana').sum()
+                            luz_no = (df_gana_nuestras.get('Estado Cruce (Luz)', pd.Series()) == '❌ No en Gana').sum()
+                            gas_en = (df_gana_nuestras.get('Estado Cruce (Gas)', pd.Series()) == '✅ En Gana').sum()
+                            gas_no = (df_gana_nuestras.get('Estado Cruce (Gas)', pd.Series()) == '❌ No en Gana').sum()
+
+                            st.markdown("---")
+                            kga, kgb, kgc, kgd, kge = st.columns(5)
+                            box_g = "border-radius:10px; padding:14px 8px; text-align:center; margin-bottom:10px;"
+                            kga.markdown(f'<div style="background:#0d2818; border:2px solid #22c55e; {box_g}"><p style="color:#22c55e; font-size:0.7rem; font-weight:bold; margin:0;">💡 LUZ EN GANA</p><h2 style="color:white; margin:4px 0;">{luz_en}</h2></div>', unsafe_allow_html=True)
+                            kgb.markdown(f'<div style="background:#1a0a0a; border:2px solid #ff4b4b; {box_g}"><p style="color:#ff4b4b; font-size:0.7rem; font-weight:bold; margin:0;">💡 LUZ NO EN GANA</p><h2 style="color:white; margin:4px 0;">{luz_no}</h2></div>', unsafe_allow_html=True)
+                            kgc.markdown(f'<div style="background:#0d2818; border:2px solid #22c55e; {box_g}"><p style="color:#22c55e; font-size:0.7rem; font-weight:bold; margin:0;">🔥 GAS EN GANA</p><h2 style="color:white; margin:4px 0;">{gas_en}</h2></div>', unsafe_allow_html=True)
+                            kgd.markdown(f'<div style="background:#1a0a0a; border:2px solid #ff4b4b; {box_g}"><p style="color:#ff4b4b; font-size:0.7rem; font-weight:bold; margin:0;">🔥 GAS NO EN GANA</p><h2 style="color:white; margin:4px 0;">{gas_no}</h2></div>', unsafe_allow_html=True)
+                            kge.markdown(f'<div style="background:#161b22; border:2px solid #8b949e; {box_g}"><p style="color:#8b949e; font-size:0.7rem; font-weight:bold; margin:0;">📋 TOTAL GANA CRM</p><h2 style="color:white; margin:4px 0;">{len(df_gana_nuestras)}</h2></div>', unsafe_allow_html=True)
+
+                            cols_show = ['ID','Cliente','Comercial','Estado','CUPS Luz','CUPS Gas',
+                                         'Estado Cruce (Luz)','Estado Cruce (Gas)','Comisión','Tarifa']
+                            cols_show = [c for c in cols_show if c in df_gana_nuestras.columns]
+
+                            gt1, gt2, gt3 = st.tabs([
+                                f"❌ NO EN GANA ({luz_no + gas_no})",
+                                f"✅ EN GANA ({luz_en + gas_en})",
+                                f"📋 COMPLETO ({len(df_gana_nuestras)})"
+                            ])
+
+                            with gt1:
+                                st.markdown('<p style="color:#ff4b4b;">Contratos nuestros con Gana que no aparecen en el archivo de la compañía — reclamar o verificar.</p>', unsafe_allow_html=True)
+                                mask_no = (
+                                    (df_gana_nuestras.get('Estado Cruce (Luz)', pd.Series(dtype=str)) == '❌ No en Gana') |
+                                    (df_gana_nuestras.get('Estado Cruce (Gas)', pd.Series(dtype=str)) == '❌ No en Gana')
+                                )
+                                df_no = df_gana_nuestras[mask_no][cols_show]
+                                if not df_no.empty:
+                                    st.dataframe(df_no.reset_index(drop=True), use_container_width=True, height=420)
+                                    st.download_button("⬇️ Descargar NO EN GANA",
+                                        hacer_xlsx_nativo({'No en Gana': df_no}),
+                                        file_name="gana_no_encontrados.xlsx",
+                                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                                        use_container_width=True)
+                                else:
+                                    st.success("✅ Todos los contratos aparecen en el archivo de Gana.")
+
+                            with gt2:
+                                st.markdown('<p style="color:#22c55e;">Contratos que hemos cruzado correctamente en el archivo de Gana.</p>', unsafe_allow_html=True)
+                                mask_si = (
+                                    (df_gana_nuestras.get('Estado Cruce (Luz)', pd.Series(dtype=str)) == '✅ En Gana') |
+                                    (df_gana_nuestras.get('Estado Cruce (Gas)', pd.Series(dtype=str)) == '✅ En Gana')
+                                )
+                                df_si = df_gana_nuestras[mask_si][cols_show]
+                                st.dataframe(df_si.reset_index(drop=True), use_container_width=True, height=420)
+
+                            with gt3:
+                                df_comp = df_gana_nuestras[cols_show].copy()
+                                st.dataframe(df_comp.reset_index(drop=True), use_container_width=True, height=420)
+                                st.download_button("⬇️ Descargar cruce completo",
+                                    hacer_xlsx_nativo({'Cruce Completo': df_comp}),
+                                    file_name="gana_cruce_completo.xlsx",
+                                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                                    use_container_width=True)
+                        else:
+                            st.warning("⚠️ No se encontró columna de CUPS en el archivo de Gana. Verifica el formato.")
+
+                    except Exception as _eg:
+                        import traceback
+                        st.error(f"❌ Error en cruce Gana: {_eg}")
+                        st.code(traceback.format_exc())
+            else:
+                st.markdown("""
+                    <div style="background:#0d1117; border:2px dashed #30363d; border-radius:12px; padding:30px; text-align:center; margin-top:10px;">
+                        <p style="color:#8b949e; margin:0;">👆 Sube los dos archivos para iniciar el cruce con Gana Energía</p>
+                    </div>
+                """, unsafe_allow_html=True)
+
+        # ─────────────────────────────────────────────────────
+        # ── NATURGY — PRÓXIMAMENTE ──
+        # ─────────────────────────────────────────────────────
+        with cia_tab_naturgy:
+            st.markdown('<div class="block-header" style="font-size:1rem;">🔥 CRUCE NATURGY</div>', unsafe_allow_html=True)
+            cn1, cn2 = st.columns(2)
+            with cn1:
+                st.markdown('<p style="color:#FFD700; font-weight:bold; font-size:0.95rem; margin-bottom:4px;">📋 Nuestras Ventas (CRM)</p>', unsafe_allow_html=True)
+                st.file_uploader("Nuestras ventas Naturgy", type=['xlsx'], key="naturgy_nuestras", label_visibility="collapsed")
+            with cn2:
+                st.markdown('<p style="color:#FFD700; font-weight:bold; font-size:0.95rem; margin-bottom:4px;">🔥 Archivo Naturgy</p>', unsafe_allow_html=True)
+                st.file_uploader("Archivo Naturgy", type=['xlsx'], key="naturgy_cia", label_visibility="collapsed")
+            st.markdown("""
+                <div style="background:#0d1117; border:2px dashed #30363d; border-radius:12px; padding:40px; text-align:center; margin-top:20px;">
+                    <p style="color:#FFD700; font-size:1.2rem; margin:0 0 8px 0;">🔥 NATURGY</p>
+                    <p style="color:#8b949e; margin:0; font-size:0.9rem;">Lógica de cruce en construcción — próximamente disponible.</p>
+                </div>
+            """, unsafe_allow_html=True)
+
+        # ─────────────────────────────────────────────────────
+        # ── TOTAL ENERGIES — PRÓXIMAMENTE ──
+        # ─────────────────────────────────────────────────────
+        with cia_tab_total:
+            st.markdown('<div class="block-header" style="font-size:1rem;">🌍 CRUCE TOTAL ENERGIES</div>', unsafe_allow_html=True)
+            ct1, ct2 = st.columns(2)
+            with ct1:
+                st.markdown('<p style="color:#3b82f6; font-weight:bold; font-size:0.95rem; margin-bottom:4px;">📋 Nuestras Ventas (CRM)</p>', unsafe_allow_html=True)
+                st.file_uploader("Nuestras ventas Total", type=['xlsx'], key="total_nuestras", label_visibility="collapsed")
+            with ct2:
+                st.markdown('<p style="color:#3b82f6; font-weight:bold; font-size:0.95rem; margin-bottom:4px;">🌍 Archivo Total Energies</p>', unsafe_allow_html=True)
+                st.file_uploader("Archivo Total Energies", type=['xlsx'], key="total_cia", label_visibility="collapsed")
+            st.markdown("""
+                <div style="background:#0d1117; border:2px dashed #30363d; border-radius:12px; padding:40px; text-align:center; margin-top:20px;">
+                    <p style="color:#3b82f6; font-size:1.2rem; margin:0 0 8px 0;">🌍 TOTAL ENERGIES</p>
+                    <p style="color:#8b949e; margin:0; font-size:0.9rem;">Lógica de cruce en construcción — próximamente disponible.</p>
+                </div>
+            """, unsafe_allow_html=True)
+
     with tab_docs:
         st.markdown('<div class="block-header">📁 DOCUMENTACIÓN DE EMPRESA</div>', unsafe_allow_html=True)
         st.markdown("""
