@@ -2498,33 +2498,34 @@ elif menu == "🔐 ZONA DIRECTIVOS":
 
                         df_cia['CUP_16'] = df_cia[cup_col].apply(norm16)
 
-                        # ── CRUCE 1: Gana CIA ← merge → nuestro CRM (por Luz y Gas) ──
+                        # ── CRUCE 1: Gana CIA ← merge → nuestro CRM ──
+                        # Estrategia: merge individual por CUP, luego combinar tomando
+                        # el primer match encontrado (Luz tiene prioridad sobre Gas)
                         cols_crm_merge = ['ID','ID Contrato Externo','Cliente','Comercial',
                                           'Estado','Tarifa','Comisión','CUPS Luz','CUPS Gas']
                         cols_crm_merge = [c for c in cols_crm_merge if c in df_crm.columns]
 
-                        # Merge por Luz
-                        df_m_luz = pd.merge(
-                            df_cia, df_crm[['CUP_Luz_16'] + cols_crm_merge].rename(columns={'CUP_Luz_16':'CUP_16'}),
-                            on='CUP_16', how='left', suffixes=('','_crm')
-                        )
-                        # Merge por Gas (para los que no cruzaron por Luz)
-                        df_m_gas = pd.merge(
-                            df_cia[df_m_luz['ID'].isna()[[True]*len(df_cia)][[True]*len(df_cia)]],
-                            df_crm[['CUP_Gas_16'] + cols_crm_merge].rename(columns={'CUP_Gas_16':'CUP_16'}).dropna(subset=['CUP_16']),
-                            on='CUP_16', how='left', suffixes=('','_crm')
-                        ) if 'CUP_Gas_16' in df_crm.columns else pd.DataFrame()
+                        # Tabla lookup: CUP_16 → datos CRM (tanto Luz como Gas en una sola tabla)
+                        lookup_rows = []
+                        if 'CUP_Luz_16' in df_crm.columns:
+                            tmp = df_crm[df_crm['CUP_Luz_16'].notna()][['CUP_Luz_16'] + cols_crm_merge].copy()
+                            tmp = tmp.rename(columns={'CUP_Luz_16': 'CUP_16'})
+                            lookup_rows.append(tmp)
+                        if 'CUP_Gas_16' in df_crm.columns:
+                            tmp = df_crm[df_crm['CUP_Gas_16'].notna()][['CUP_Gas_16'] + cols_crm_merge].copy()
+                            tmp = tmp.rename(columns={'CUP_Gas_16': 'CUP_16'})
+                            lookup_rows.append(tmp)
 
-                        # Combinar: usar resultado luz, completar con gas donde ID sea NaN
-                        df_merged = df_m_luz.copy()
-                        no_match_mask = df_merged['ID'].isna()
-                        if not df_m_gas.empty and no_match_mask.any():
-                            gas_idx = df_merged[no_match_mask].index
-                            for col in cols_crm_merge:
-                                if col in df_m_gas.columns:
-                                    vals = df_m_gas.set_index(df_m_gas.index)[col] if len(df_m_gas) == no_match_mask.sum() else pd.Series()
-                                    if len(vals) == no_match_mask.sum():
-                                        df_merged.loc[no_match_mask, col] = vals.values
+                        if lookup_rows:
+                            df_lookup = pd.concat(lookup_rows, ignore_index=True).drop_duplicates('CUP_16')
+                        else:
+                            df_lookup = pd.DataFrame(columns=['CUP_16'] + cols_crm_merge)
+
+                        # Merge único sobre df_cia
+                        df_merged = pd.merge(
+                            df_cia, df_lookup,
+                            on='CUP_16', how='left', suffixes=('', '_crm')
+                        )
 
                         # Estado Cruce
                         df_merged['ESTADO CRUCE'] = df_merged['ID'].apply(
