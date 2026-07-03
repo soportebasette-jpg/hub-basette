@@ -2560,13 +2560,15 @@ elif menu == "🔐 ZONA DIRECTIVOS":
                         k3.markdown(f'<div style="background:#1a0a1a; border:2px solid #a78bfa; {box_g}"><p style="color:#a78bfa; font-size:0.7rem; font-weight:bold; margin:0;">⚠️ NUESTROS NO EN GANA</p><h2 style="color:white; margin:4px 0;">{n_no_gana}</h2></div>', unsafe_allow_html=True)
                         k4.markdown(f'<div style="background:#161b22; border:2px solid #8b949e; {box_g}"><p style="color:#8b949e; font-size:0.7rem; font-weight:bold; margin:0;">📋 TOTAL EN GANA</p><h2 style="color:white; margin:4px 0;">{len(df_cia)}</h2></div>', unsafe_allow_html=True)
 
-                        # ── Columnas resultado principal (formato archivo Gana + datos CRM) ──
-                        cia_cols    = [c for c in df_cia.columns if c != 'CUP_16']
-                        crm_add     = [c for c in ['ID','ID Contrato Externo','Cliente','Comercial',
-                                                    'Estado','Tarifa','Comisión','CUPS Luz','CUPS Gas']
+                        # ── Columnas resultado principal ──
+                        # Primero las columnas CRM clave (siempre visibles), luego las de Gana
+                        crm_priority = ['ESTADO CRUCE','Comercial','CUPS Luz','CUPS Gas',
+                                        'ID','Cliente','Estado','Tarifa','Comisión','ID Contrato Externo']
+                        cia_cols     = [c for c in df_cia.columns if c != 'CUP_16']
+                        crm_add      = [c for c in crm_priority
                                         if c in df_merged.columns and c not in cia_cols]
-                        cols_result = cia_cols + crm_add + ['ESTADO CRUCE']
-                        cols_result = [c for c in cols_result if c in df_merged.columns]
+                        cols_result  = crm_add + cia_cols
+                        cols_result  = [c for c in cols_result if c in df_merged.columns]
 
                         # Columnas para nuestros no en Gana
                         cols_nuestros = [c for c in ['ID','ID Contrato Externo','Cliente','Comercial',
