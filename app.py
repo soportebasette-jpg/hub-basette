@@ -354,7 +354,7 @@ if not st.session_state["password_correct"]:
         if os.path.exists(LOGO_PRINCIPAL): st.image(LOGO_PRINCIPAL)
         pwd = st.text_input("Introduce Clave Comercial:", type="password")
         if st.button("ACCEDER AL HUB"):
-            if pwd == "Ventas2026*":
+            if pwd == st.secrets["CLAVE_COMERCIAL"]:
                 st.session_state["password_correct"] = True
                 st.rerun()
             else: st.error("Clave incorrecta")
@@ -1086,7 +1086,7 @@ elif menu == "🔐 ZONA DIRECTIVOS":
         with col_dir:
             pwd_dir = st.text_input("🔑 Clave Directivos:", type="password", key="pwd_dir_input")
             if st.button("ACCEDER A ZONA DIRECTIVOS", use_container_width=True):
-                if pwd_dir == "Directivos2026*":
+                if pwd_dir == st.secrets["CLAVE_DIRECTIVOS"]:
                     st.session_state["dir_auth"] = True
                     st.rerun()
                 else:
@@ -1124,7 +1124,7 @@ elif menu == "🔐 ZONA DIRECTIVOS":
     # ── GOOGLE DRIVE — ID raíz de BASETTE_DIRECTIVOS ──
     # ══════════════════════════════════════════════════════
     DRIVE_ROOT_ID = "1BC-HcnyFYnHZKM3BoOhKNkR4m7GSCVng"
-    DRIVE_API_KEY = "AIzaSyC3IZUOEtnV9jr8wuKqZ6163Cf8DDjj0Wk"
+    DRIVE_API_KEY = st.secrets["DRIVE_API_KEY"]
 
     import urllib.request, urllib.parse, json as _json
 
