@@ -108,6 +108,40 @@ st.markdown("""
         background-color: #161b22 !important;
         color: white !important;
     }
+
+    /* ── TABS VISIBLES ── */
+    button[data-baseweb="tab"] {
+        background-color: #1c2128 !important;
+        color: #c9d1d9 !important;
+        border-radius: 6px 6px 0 0 !important;
+        font-weight: 600 !important;
+        font-size: 0.82rem !important;
+        border: 1px solid #30363d !important;
+        border-bottom: none !important;
+        margin-right: 3px !important;
+        padding: 8px 14px !important;
+    }
+    button[data-baseweb="tab"]:hover {
+        background-color: #2d333b !important;
+        color: #d2ff00 !important;
+    }
+    button[data-baseweb="tab"][aria-selected="true"] {
+        background-color: #d2ff00 !important;
+        color: #000000 !important;
+        border-color: #d2ff00 !important;
+        font-weight: 900 !important;
+    }
+    div[data-baseweb="tab-list"] {
+        background-color: #0d1117 !important;
+        border-bottom: 2px solid #30363d !important;
+        gap: 2px !important;
+    }
+    div[data-baseweb="tab-highlight"] {
+        background-color: transparent !important;
+    }
+    div[data-baseweb="tab-border"] {
+        background-color: transparent !important;
+    }
     </style>
     """, unsafe_allow_html=True)
 
@@ -354,7 +388,7 @@ if not st.session_state["password_correct"]:
         if os.path.exists(LOGO_PRINCIPAL): st.image(LOGO_PRINCIPAL)
         pwd = st.text_input("Introduce Clave Comercial:", type="password")
         if st.button("ACCEDER AL HUB"):
-            if pwd == st.secrets["CLAVE_COMERCIAL"]:
+            if pwd == "Ventas2026*":
                 st.session_state["password_correct"] = True
                 st.rerun()
             else: st.error("Clave incorrecta")
@@ -1086,7 +1120,7 @@ elif menu == "🔐 ZONA DIRECTIVOS":
         with col_dir:
             pwd_dir = st.text_input("🔑 Clave Directivos:", type="password", key="pwd_dir_input")
             if st.button("ACCEDER A ZONA DIRECTIVOS", use_container_width=True):
-                if pwd_dir == st.secrets["CLAVE_DIRECTIVOS"]:
+                if pwd_dir == "Directivos2026*":
                     st.session_state["dir_auth"] = True
                     st.rerun()
                 else:
@@ -1124,7 +1158,7 @@ elif menu == "🔐 ZONA DIRECTIVOS":
     # ── GOOGLE DRIVE — ID raíz de BASETTE_DIRECTIVOS ──
     # ══════════════════════════════════════════════════════
     DRIVE_ROOT_ID = "1BC-HcnyFYnHZKM3BoOhKNkR4m7GSCVng"
-    DRIVE_API_KEY = st.secrets["DRIVE_API_KEY"]
+    DRIVE_API_KEY = "AIzaSyC3IZUOEtnV9jr8wuKqZ6163Cf8DDjj0Wk"
 
     import urllib.request, urllib.parse, json as _json
 
@@ -2409,17 +2443,9 @@ elif menu == "🔐 ZONA DIRECTIVOS":
         # ─────────────────────────────────────────────────────
         # ── GANA ENERGÍA — CRUCE COMPLETO ──
         # ─────────────────────────────────────────────────────
+
         with cia_tab_gana:
             st.markdown('<div class="block-header" style="font-size:1rem;">⚡ CRUCE GANA ENERGÍA</div>', unsafe_allow_html=True)
-            st.markdown("""
-                <div style="background:#0d1117; border-left:4px solid #22c55e; padding:12px; border-radius:8px; margin-bottom:16px;">
-                    <p style="color:#8b949e; margin:0; font-size:0.82rem;">
-                        Sube <b style="color:#22c55e;">nuestras ventas</b> (export CRM con CUPS) y el archivo de
-                        <b style="color:#22c55e;">Gana Energía</b>. El sistema cruza por CUP (20 ó 22 dígitos) y
-                        muestra qué contratos están en Gana, cuáles no aparecen y las discrepancias de estado.
-                    </p>
-                </div>
-            """, unsafe_allow_html=True)
 
             gc1, gc2 = st.columns(2)
             with gc1:
@@ -2432,225 +2458,338 @@ elif menu == "🔐 ZONA DIRECTIVOS":
             if f_gana_nuestras and f_gana_cia:
                 with st.spinner("⏳ Cruzando datos con Gana Energía..."):
                     try:
-                        # ── Funciones de normalización ──
                         def norm16(cup):
-                            """Normaliza CUP a 16 chars comparables (Gana enmascara los últimos 4 con ****)."""
                             if cup is None: return None
                             s = str(cup).strip().upper().replace('*', '')
-                            if len(s) >= 22: s = s[:20]  # truncar de 22 a 20
+                            if len(s) >= 22: s = s[:20]
                             return s[:16] if len(s) >= 16 else s
 
                         def fmt_f(val):
-                            """Convierte cualquier valor a dd/mm/yyyy."""
                             if val is None or str(val).strip() in ['','nan','None','NaT']: return ''
                             s = str(val).strip()
-                            # Ya en dd/mm/yyyy
                             if len(s) >= 10 and s[2] == '/': return s[:10]
-                            # yyyy-mm-dd (con o sin hora)
                             if len(s) >= 10 and s[4] == '-':
                                 try:
-                                    from datetime import datetime
-                                    return datetime.strptime(s[:10], '%Y-%m-%d').strftime('%d/%m/%Y')
+                                    from datetime import datetime as _dt
+                                    return _dt.strptime(s[:10], '%Y-%m-%d').strftime('%d/%m/%Y')
                                 except: return s[:10]
-                            # Serial numérico de Excel
                             try:
-                                from datetime import date, timedelta
-                                return (date(1899,12,30) + timedelta(days=int(float(s)))).strftime('%d/%m/%Y')
+                                from datetime import date as _d, timedelta as _td
+                                return (_d(1899,12,30)+_td(days=int(float(s)))).strftime('%d/%m/%Y')
                             except: return s
 
-                        # ── Leer nuestras ventas (CRM export) ──
+                        def mes_anio(fecha_str):
+                            try: return fecha_str[3:5] + '/' + fecha_str[6:10]
+                            except: return ''
+
+                        def _safe_xlsx(sheets):
+                            clean = {}
+                            for k, v in sheets.items():
+                                clean[k] = v if (isinstance(v, pd.DataFrame) and not v.empty) else pd.DataFrame({'(sin datos)': ['No hay registros']})
+                            return hacer_xlsx_nativo(clean)
+
                         df_crm_full = leer_excel_safe(f_gana_nuestras, header=0)
                         df_crm_full.columns = [str(c).strip() for c in df_crm_full.columns]
+                        ESTADOS_EXCLUIR_GANA = {
+                            'Error - Contrato mal generado',
+                            'Firmado - Anulado CS',
+                            'Firmado - Anulado',
+                            'Sin Firmar - Anulado',
+                            'Sin Firmar',
+                        }
 
-                        # Filtrar solo contratos Gana
                         if 'Comercializadora' in df_crm_full.columns:
-                            df_crm = df_crm_full[
-                                df_crm_full['Comercializadora'].apply(lambda x: 'gana' in str(x).lower())
-                            ].copy()
+                            df_crm = df_crm_full[df_crm_full['Comercializadora'].apply(lambda x: 'gana' in str(x).lower())].copy()
                         else:
                             df_crm = df_crm_full.copy()
 
-                        # Normalizar CUPs a 16 chars
-                        if 'CUPS Luz' in df_crm.columns:
-                            df_crm['CUP_Luz_16'] = df_crm['CUPS Luz'].apply(norm16)
-                        if 'CUPS Gas' in df_crm.columns:
-                            df_crm['CUP_Gas_16'] = df_crm['CUPS Gas'].apply(norm16)
+                        # Excluir estados que no deben aparecer en el cruce con Gana
+                        if 'Estado' in df_crm.columns:
+                            df_crm = df_crm[~df_crm['Estado'].isin(ESTADOS_EXCLUIR_GANA)].copy()
 
-                        # ── Leer archivo Gana CIA ──
+                        for fc in ['Fecha Creación','Fecha Activación']:
+                            if fc in df_crm.columns: df_crm[fc] = df_crm[fc].apply(fmt_f)
+
+                        if 'CUPS Luz' in df_crm.columns: df_crm['CUP_Luz_16'] = df_crm['CUPS Luz'].apply(norm16)
+                        if 'CUPS Gas' in df_crm.columns: df_crm['CUP_Gas_16'] = df_crm['CUPS Gas'].apply(norm16)
+
+                        fechas_disponibles = []
+                        if 'Fecha Creación' in df_crm.columns:
+                            df_crm['_mes_anio'] = df_crm['Fecha Creación'].apply(mes_anio)
+                            fechas_disponibles = sorted([f for f in df_crm['_mes_anio'].unique() if f], reverse=True)
+                        sel_fecha = st.selectbox("🗓️ Filtrar por mes/año de creación:", ['Todos'] + fechas_disponibles, key="gana_fecha_sel")
+                        if sel_fecha != 'Todos' and '_mes_anio' in df_crm.columns:
+                            df_crm = df_crm[df_crm['_mes_anio'] == sel_fecha].copy()
+
                         df_cia = leer_excel_safe(f_gana_cia, header=0)
                         df_cia.columns = [str(c).strip() for c in df_cia.columns]
-
-                        # Detectar columna CUPS en archivo Gana
                         cup_col = None
                         for col in df_cia.columns:
                             nn = df_cia[col].dropna()
                             if not nn.empty and str(nn.iloc[0]).upper().startswith('ES0'):
-                                cup_col = col
-                                break
+                                cup_col = col; break
                         if not cup_col:
-                            st.warning("⚠️ No se encontró columna CUPS en el archivo de Gana.")
-                            st.stop()
+                            st.warning("⚠️ No se encontró columna CUPS en el archivo de Gana."); st.stop()
 
-                        # Formatear fechas en archivo Gana
-                        fecha_cols_cia = [c for c in df_cia.columns if 'FECHA' in str(c).upper() or 'DATE' in str(c).upper()]
-                        for fc in fecha_cols_cia:
+                        for fc in [c for c in df_cia.columns if 'FECHA' in str(c).upper()]:
                             df_cia[fc] = df_cia[fc].apply(fmt_f)
-
                         df_cia['CUP_16'] = df_cia[cup_col].apply(norm16)
 
-                        # ── CRUCE 1: Gana CIA ← merge → nuestro CRM ──
-                        # Estrategia: merge individual por CUP, luego combinar tomando
-                        # el primer match encontrado (Luz tiene prioridad sobre Gas)
-                        cols_crm_merge = ['ID','ID Contrato Externo','Cliente','Comercial',
-                                          'Estado','Tarifa','Comisión','CUPS Luz','CUPS Gas']
-                        cols_crm_merge = [c for c in cols_crm_merge if c in df_crm.columns]
-
-                        # Tabla lookup: CUP_16 → datos CRM (tanto Luz como Gas en una sola tabla)
+                        cols_crm_merge = [c for c in ['ID','ID Contrato Externo','Cliente','Comercial','Estado','Tarifa','Comisión','CUPS Luz','CUPS Gas','Fecha Creación','Fecha Activación'] if c in df_crm.columns]
                         lookup_rows = []
                         if 'CUP_Luz_16' in df_crm.columns:
-                            tmp = df_crm[df_crm['CUP_Luz_16'].notna()][['CUP_Luz_16'] + cols_crm_merge].copy()
-                            tmp = tmp.rename(columns={'CUP_Luz_16': 'CUP_16'})
-                            lookup_rows.append(tmp)
+                            t = df_crm[df_crm['CUP_Luz_16'].notna()][['CUP_Luz_16']+cols_crm_merge].rename(columns={'CUP_Luz_16':'CUP_16'})
+                            lookup_rows.append(t)
                         if 'CUP_Gas_16' in df_crm.columns:
-                            tmp = df_crm[df_crm['CUP_Gas_16'].notna()][['CUP_Gas_16'] + cols_crm_merge].copy()
-                            tmp = tmp.rename(columns={'CUP_Gas_16': 'CUP_16'})
-                            lookup_rows.append(tmp)
+                            t = df_crm[df_crm['CUP_Gas_16'].notna()][['CUP_Gas_16']+cols_crm_merge].rename(columns={'CUP_Gas_16':'CUP_16'})
+                            lookup_rows.append(t)
+                        df_lookup = pd.concat(lookup_rows, ignore_index=True).drop_duplicates('CUP_16') if lookup_rows else pd.DataFrame(columns=['CUP_16']+cols_crm_merge)
+                        df_merged = pd.merge(df_cia, df_lookup, on='CUP_16', how='left', suffixes=('','_crm'))
+                        df_merged['ESTADO CRUCE'] = df_merged['ID'].apply(lambda x: '✅ En CRM' if (x is not None and str(x) not in ['','nan','None']) else '❌ No en CRM')
 
-                        if lookup_rows:
-                            df_lookup = pd.concat(lookup_rows, ignore_index=True).drop_duplicates('CUP_16')
-                        else:
-                            df_lookup = pd.DataFrame(columns=['CUP_16'] + cols_crm_merge)
-
-                        # Merge único sobre df_cia
-                        df_merged = pd.merge(
-                            df_cia, df_lookup,
-                            on='CUP_16', how='left', suffixes=('', '_crm')
-                        )
-
-                        # Estado Cruce
-                        df_merged['ESTADO CRUCE'] = df_merged['ID'].apply(
-                            lambda x: '✅ En CRM' if (x is not None and str(x) not in ['','nan','None']) else '❌ No en CRM'
-                        )
-
-                        # ── CRUCE 2: Nuestro CRM → no en Gana CIA ──
                         cups_gana_16 = set(df_cia['CUP_16'].dropna())
-                        if 'CUP_Luz_16' in df_crm.columns:
-                            df_crm['en_gana'] = df_crm['CUP_Luz_16'].apply(lambda c: c in cups_gana_16 if c else False)
-                        if 'CUP_Gas_16' in df_crm.columns:
-                            df_crm['en_gana_gas'] = df_crm['CUP_Gas_16'].apply(lambda c: c in cups_gana_16 if c else False)
-                        df_nuestros_no_gana = df_crm[
-                            ~df_crm.get('en_gana', pd.Series(False, index=df_crm.index)) &
-                            ~df_crm.get('en_gana_gas', pd.Series(False, index=df_crm.index))
-                        ].copy()
-                        # Formatear fechas en nuestros
-                        for fc in ['Fecha Creación','Fecha Activación']:
-                            if fc in df_nuestros_no_gana.columns:
-                                df_nuestros_no_gana[fc] = df_nuestros_no_gana[fc].apply(fmt_f)
+                        df_crm['_en_g'] = df_crm.get('CUP_Luz_16', pd.Series(dtype=str)).apply(lambda c: c in cups_gana_16 if c else False)
+                        df_crm['_en_g2'] = df_crm.get('CUP_Gas_16', pd.Series(dtype=str)).apply(lambda c: c in cups_gana_16 if c else False)
+                        df_no_gana = df_crm[~df_crm['_en_g'] & ~df_crm['_en_g2']].copy()
 
-                        # ── KPIs ──
-                        n_en_crm   = (df_merged['ESTADO CRUCE'] == '✅ En CRM').sum()
-                        n_no_crm   = (df_merged['ESTADO CRUCE'] == '❌ No en CRM').sum()
-                        n_no_gana  = len(df_nuestros_no_gana)
+                        n_en_crm  = (df_merged['ESTADO CRUCE']=='✅ En CRM').sum()
+                        n_no_crm  = (df_merged['ESTADO CRUCE']=='❌ No en CRM').sum()
+                        n_no_gana = len(df_no_gana)
 
                         st.markdown("---")
                         k1, k2, k3, k4 = st.columns(4)
-                        box_g = "border-radius:10px; padding:14px 8px; text-align:center; margin-bottom:10px;"
-                        k1.markdown(f'<div style="background:#0d2818; border:2px solid #22c55e; {box_g}"><p style="color:#22c55e; font-size:0.7rem; font-weight:bold; margin:0;">✅ GANA CON MATCH CRM</p><h2 style="color:white; margin:4px 0;">{n_en_crm}</h2></div>', unsafe_allow_html=True)
-                        k2.markdown(f'<div style="background:#1a0a0a; border:2px solid #ff4b4b; {box_g}"><p style="color:#ff4b4b; font-size:0.7rem; font-weight:bold; margin:0;">❌ GANA SIN CRM</p><h2 style="color:white; margin:4px 0;">{n_no_crm}</h2></div>', unsafe_allow_html=True)
-                        k3.markdown(f'<div style="background:#1a0a1a; border:2px solid #a78bfa; {box_g}"><p style="color:#a78bfa; font-size:0.7rem; font-weight:bold; margin:0;">⚠️ NUESTROS NO EN GANA</p><h2 style="color:white; margin:4px 0;">{n_no_gana}</h2></div>', unsafe_allow_html=True)
-                        k4.markdown(f'<div style="background:#161b22; border:2px solid #8b949e; {box_g}"><p style="color:#8b949e; font-size:0.7rem; font-weight:bold; margin:0;">📋 TOTAL EN GANA</p><h2 style="color:white; margin:4px 0;">{len(df_cia)}</h2></div>', unsafe_allow_html=True)
+                        bg = "border-radius:10px; padding:14px 8px; text-align:center; margin-bottom:10px;"
+                        k1.markdown(f'<div style="background:#0d2818;border:2px solid #22c55e;{bg}"><p style="color:#22c55e;font-size:0.7rem;font-weight:bold;margin:0;">✅ GANA CON MATCH CRM</p><h2 style="color:white;margin:4px 0;">{n_en_crm}</h2></div>', unsafe_allow_html=True)
+                        k2.markdown(f'<div style="background:#1a0a0a;border:2px solid #ff4b4b;{bg}"><p style="color:#ff4b4b;font-size:0.7rem;font-weight:bold;margin:0;">❌ GANA SIN CRM</p><h2 style="color:white;margin:4px 0;">{n_no_crm}</h2></div>', unsafe_allow_html=True)
+                        k3.markdown(f'<div style="background:#1a0a1a;border:2px solid #a78bfa;{bg}"><p style="color:#a78bfa;font-size:0.7rem;font-weight:bold;margin:0;">⚠️ NUESTROS NO EN GANA</p><h2 style="color:white;margin:4px 0;">{n_no_gana}</h2></div>', unsafe_allow_html=True)
+                        k4.markdown(f'<div style="background:#161b22;border:2px solid #8b949e;{bg}"><p style="color:#8b949e;font-size:0.7rem;font-weight:bold;margin:0;">📋 TOTAL EN GANA</p><h2 style="color:white;margin:4px 0;">{len(df_cia)}</h2></div>', unsafe_allow_html=True)
 
-                        # ── Columnas resultado principal ──
-                        # Primero las columnas CRM clave (siempre visibles), luego las de Gana
-                        crm_priority = ['ESTADO CRUCE','Comercial','CUPS Luz','CUPS Gas',
-                                        'ID','Cliente','Estado','Tarifa','Comisión','ID Contrato Externo']
-                        cia_cols     = [c for c in df_cia.columns if c != 'CUP_16']
-                        crm_add      = [c for c in crm_priority
-                                        if c in df_merged.columns and c not in cia_cols]
-                        cols_result  = crm_add + cia_cols
-                        cols_result  = [c for c in cols_result if c in df_merged.columns]
+                        crm_priority = ['ESTADO CRUCE','Comercial','CUPS Luz','CUPS Gas','Fecha Creación','Fecha Activación','ID','Cliente','Estado','Tarifa','Comisión','ID Contrato Externo']
+                        cia_cols = [c for c in df_cia.columns if c != 'CUP_16']
+                        crm_add  = [c for c in crm_priority if c in df_merged.columns and c not in cia_cols]
+                        cols_result = [c for c in crm_add + cia_cols if c in df_merged.columns]
+                        cols_nuestros = [c for c in ['ID','ID Contrato Externo','Cliente','Comercial','Estado','Comercializadora','Tarifa','Fecha Creación','Fecha Activación','CUPS Luz','CUPS Gas','Comisión'] if c in df_no_gana.columns]
 
-                        # Columnas para nuestros no en Gana
-                        cols_nuestros = [c for c in ['ID','ID Contrato Externo','Cliente','Comercial',
-                                                      'Estado','Comercializadora','Tarifa',
-                                                      'Fecha Creación','Fecha Activación',
-                                                      'CUPS Luz','CUPS Gas','Comisión']
-                                          if c in df_nuestros_no_gana.columns]
-
-                        gt1, gt2, gt3 = st.tabs([
-                            f"📋 GANA COMPLETO ({len(df_cia)})",
-                            f"❌ GANA SIN CRM ({n_no_crm})",
-                            f"⚠️ NUESTROS NO EN GANA ({n_no_gana})"
-                        ])
+                        gt1, gt2, gt3 = st.tabs([f"📋 GANA COMPLETO ({len(df_cia)})", f"❌ GANA SIN CRM ({n_no_crm})", f"⚠️ NUESTROS NO EN GANA ({n_no_gana})"])
 
                         with gt1:
-                            st.markdown('<p style="color:#8b949e; font-size:0.83rem;">Todos los contratos del archivo de Gana con el cruce contra nuestro CRM. Columnas de Gana + datos del CRM donde hay match.</p>', unsafe_allow_html=True)
-                            df_show1 = df_merged[cols_result].reset_index(drop=True)
-                            st.dataframe(df_show1, use_container_width=True, height=460)
+                            df_s1 = df_merged[cols_result].reset_index(drop=True)
+                            st.dataframe(df_s1, use_container_width=True, height=460)
                             st.download_button("⬇️ Descargar CRUCE COMPLETO GANA",
-                                hacer_xlsx_nativo({
-                                    'Gana Completo':    df_show1,
-                                    'Gana sin CRM':     df_merged[df_merged['ESTADO CRUCE']=='❌ No en CRM'][cols_result].reset_index(drop=True),
-                                    'Nuestros no Gana': df_nuestros_no_gana[cols_nuestros].reset_index(drop=True),
-                                }),
-                                file_name="gana_cruce_completo.xlsx",
-                                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                                use_container_width=True)
+                                _safe_xlsx({'Gana Completo': df_s1, 'Gana sin CRM': df_merged[df_merged['ESTADO CRUCE']=='❌ No en CRM'][cols_result].reset_index(drop=True), 'Nuestros no Gana': df_no_gana[cols_nuestros].reset_index(drop=True)}),
+                                file_name="gana_cruce_completo.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
 
                         with gt2:
-                            st.markdown('<p style="color:#ff4b4b; font-size:0.83rem;">Contratos en el archivo de Gana que <b>no tienen match en nuestro CRM</b> — verificar si son nuestros o de otro agente.</p>', unsafe_allow_html=True)
-                            df_show2 = df_merged[df_merged['ESTADO CRUCE']=='❌ No en CRM'][cols_result].reset_index(drop=True)
-                            st.dataframe(df_show2, use_container_width=True, height=460)
-                            if not df_show2.empty:
-                                st.download_button("⬇️ Descargar GANA SIN CRM",
-                                    hacer_xlsx_nativo({'Gana sin CRM': df_show2}),
-                                    file_name="gana_sin_crm.xlsx",
-                                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                                    use_container_width=True)
+                            df_s2 = df_merged[df_merged['ESTADO CRUCE']=='❌ No en CRM'][cols_result].reset_index(drop=True)
+                            st.dataframe(df_s2, use_container_width=True, height=460)
+                            st.download_button("⬇️ Descargar GANA SIN CRM", _safe_xlsx({'Gana sin CRM': df_s2}),
+                                file_name="gana_sin_crm.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
 
                         with gt3:
-                            st.markdown('<p style="color:#a78bfa; font-size:0.83rem;">Contratos nuestros con Gana Energía que <b>no aparecen en el archivo de Gana</b> — reclamar o verificar alta.</p>', unsafe_allow_html=True)
-                            df_show3 = df_nuestros_no_gana[cols_nuestros].reset_index(drop=True)
-                            st.dataframe(df_show3, use_container_width=True, height=460)
-                            if not df_show3.empty:
-                                st.download_button("⬇️ Descargar NUESTROS NO EN GANA",
-                                    hacer_xlsx_nativo({'Nuestros no en Gana': df_show3}),
-                                    file_name="gana_nuestros_no_encontrados.xlsx",
-                                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                                    use_container_width=True)
+                            df_s3 = df_no_gana[cols_nuestros].reset_index(drop=True)
+                            st.dataframe(df_s3, use_container_width=True, height=460)
+                            st.download_button("⬇️ Descargar NUESTROS NO EN GANA", _safe_xlsx({'Nuestros no en Gana': df_s3}),
+                                file_name="gana_nuestros_no_encontrados.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
 
                     except Exception as _eg:
                         import traceback
                         st.error(f"❌ Error en cruce Gana: {_eg}")
                         st.code(traceback.format_exc())
-                st.markdown("""
-                    <div style="background:#0d1117; border:2px dashed #30363d; border-radius:12px; padding:30px; text-align:center; margin-top:10px;">
-                        <p style="color:#8b949e; margin:0;">👆 Sube los dos archivos para iniciar el cruce con Gana Energía</p>
-                    </div>
-                """, unsafe_allow_html=True)
+            else:
+                st.markdown('<div style="background:#0d1117;border:2px dashed #30363d;border-radius:12px;padding:30px;text-align:center;margin-top:10px;"><p style="color:#8b949e;margin:0;">👆 Sube los dos archivos para iniciar el cruce con Gana Energía</p></div>', unsafe_allow_html=True)
 
-        # ─────────────────────────────────────────────────────
-        # ── NATURGY — PRÓXIMAMENTE ──
-        # ─────────────────────────────────────────────────────
         with cia_tab_naturgy:
             st.markdown('<div class="block-header" style="font-size:1rem;">🔥 CRUCE NATURGY</div>', unsafe_allow_html=True)
+
             cn1, cn2 = st.columns(2)
             with cn1:
                 st.markdown('<p style="color:#FFD700; font-weight:bold; font-size:0.95rem; margin-bottom:4px;">📋 Nuestras Ventas (CRM)</p>', unsafe_allow_html=True)
-                st.file_uploader("Nuestras ventas Naturgy", type=['xlsx'], key="naturgy_nuestras", label_visibility="collapsed")
+                f_nat_crm = st.file_uploader("Nuestras ventas Naturgy", type=['xlsx'], key="naturgy_nuestras", label_visibility="collapsed")
             with cn2:
-                st.markdown('<p style="color:#FFD700; font-weight:bold; font-size:0.95rem; margin-bottom:4px;">🔥 Archivo Naturgy</p>', unsafe_allow_html=True)
-                st.file_uploader("Archivo Naturgy", type=['xlsx'], key="naturgy_cia", label_visibility="collapsed")
-            st.markdown("""
-                <div style="background:#0d1117; border:2px dashed #30363d; border-radius:12px; padding:40px; text-align:center; margin-top:20px;">
-                    <p style="color:#FFD700; font-size:1.2rem; margin:0 0 8px 0;">🔥 NATURGY</p>
-                    <p style="color:#8b949e; margin:0; font-size:0.9rem;">Lógica de cruce en construcción — próximamente disponible.</p>
-                </div>
-            """, unsafe_allow_html=True)
+                st.markdown('<p style="color:#FFD700; font-weight:bold; font-size:0.95rem; margin-bottom:4px;">🔥 Extracción Naturgy (exportedDataorders)</p>', unsafe_allow_html=True)
+                f_nat_ext = st.file_uploader("Extracción Naturgy", type=['xlsx'], key="naturgy_cia", label_visibility="collapsed")
 
-        # ─────────────────────────────────────────────────────
-        # ── TOTAL ENERGIES — PRÓXIMAMENTE ──
-        # ─────────────────────────────────────────────────────
+            if f_nat_crm and f_nat_ext:
+                with st.spinner("⏳ Cruzando datos con Naturgy..."):
+                    try:
+                        def norm_id_nat(val):
+                            if val is None or str(val).strip() in ['','nan','None']: return None
+                            try: return str(int(float(str(val).strip())))
+                            except: return str(val).strip()
+
+                        def fmt_fn(val):
+                            if val is None or str(val).strip() in ['','nan','None','NaT']: return ''
+                            s = str(val).strip()
+                            if len(s) >= 10 and s[2] == '/': return s[:10]
+                            if len(s) >= 10 and s[4] == '-':
+                                try:
+                                    from datetime import datetime as _dt2
+                                    return _dt2.strptime(s[:10], '%Y-%m-%d').strftime('%d/%m/%Y')
+                                except: return s[:10]
+                            try:
+                                from datetime import date as _d2, timedelta as _td2
+                                return (_d2(1899,12,30)+_td2(days=int(float(s)))).strftime('%d/%m/%Y')
+                            except: return s
+
+                        def mes_anio_n(fecha_str):
+                            try: return fecha_str[3:5] + '/' + fecha_str[6:10]
+                            except: return ''
+
+                        def _safe_nat(sheets):
+                            clean = {}
+                            for k, v in sheets.items():
+                                clean[k] = v if (isinstance(v, pd.DataFrame) and not v.empty) else pd.DataFrame({'(sin datos)': ['No hay registros']})
+                            return hacer_xlsx_nativo(clean)
+
+                        df_nc = leer_excel_safe(f_nat_crm, header=0)
+                        df_nc.columns = [str(c).strip() for c in df_nc.columns]
+                        if 'Comercializadora' in df_nc.columns:
+                            df_nc = df_nc[df_nc['Comercializadora'].str.contains('Naturgy', case=False, na=False)].copy()
+                        for fc in ['Fecha Creación','Fecha Activación']:
+                            if fc in df_nc.columns: df_nc[fc] = df_nc[fc].apply(fmt_fn)
+                        # Normalizar CUPs CRM a 20 chars
+                        def norm20_nat(cup):
+                            if cup is None or str(cup).strip() in ['','nan','None']: return None
+                            s = str(cup).strip().upper()
+                            return s[:20] if len(s) >= 20 else s
+
+                        if 'CUPS Luz' in df_nc.columns: df_nc['luz_20'] = df_nc['CUPS Luz'].apply(norm20_nat)
+                        if 'CUPS Gas' in df_nc.columns: df_nc['gas_20'] = df_nc['CUPS Gas'].apply(norm20_nat)
+
+                        # Filtro de fecha
+                        fechas_n = []
+                        if 'Fecha Creación' in df_nc.columns:
+                            df_nc['_mes'] = df_nc['Fecha Creación'].apply(mes_anio_n)
+                            fechas_n = sorted([f for f in df_nc['_mes'].unique() if f], reverse=True)
+                        sel_fn = st.selectbox("🗓️ Filtrar por mes/año de creación:", ['Todos']+fechas_n, key="nat_fecha_sel")
+                        if sel_fn != 'Todos' and '_mes' in df_nc.columns:
+                            df_nc = df_nc[df_nc['_mes'] == sel_fn].copy()
+
+                        # Leer extracción Naturgy
+                        df_ne = leer_excel_safe(f_nat_ext, header=0)
+                        df_ne.columns = [str(c).strip() for c in df_ne.columns]
+                        for fc in ['responseDtm','fechaFirma','fechaUltimoCambioEstado']:
+                            if fc in df_ne.columns: df_ne[fc] = df_ne[fc].apply(fmt_fn)
+                        if 'responseDtm' in df_ne.columns:
+                            df_ne['Mes'] = df_ne['responseDtm'].apply(mes_anio_n)
+
+                        # Normalizar CUPs Naturgy a 20 chars
+                        if 'idCupsEle' in df_ne.columns: df_ne['cup_ele_20'] = df_ne['idCupsEle'].apply(norm20_nat)
+                        if 'idCupsGas' in df_ne.columns: df_ne['cup_gas_20'] = df_ne['idCupsGas'].apply(norm20_nat)
+
+                        cups_crm_luz = set(df_nc['luz_20'].dropna()) if 'luz_20' in df_nc.columns else set()
+                        cups_crm_gas = set(df_nc['gas_20'].dropna()) if 'gas_20' in df_nc.columns else set()
+                        cups_crm_all = cups_crm_luz | cups_crm_gas
+                        cups_nat_ele = set(df_ne['cup_ele_20'].dropna()) if 'cup_ele_20' in df_ne.columns else set()
+                        cups_nat_gas = set(df_ne['cup_gas_20'].dropna()) if 'cup_gas_20' in df_ne.columns else set()
+                        cups_nat_all = cups_nat_ele | cups_nat_gas
+
+                        # ── Cruce Completo: merge por Luz, luego por Gas para los sin luz ──
+                        cols_ne_base = [c for c in ['idCupsEle','idCupsGas','codigoVendedor','eleContratar','gasContratar','tarifaGas','tarifaEle','sveContratar','responseDtm','Mes','estado'] if c in df_ne.columns]
+
+                        # Merge por Luz (cup_ele_20 = luz_20)
+                        df_m_luz = pd.merge(
+                            df_nc[df_nc['luz_20'].notna()],
+                            df_ne[['cup_ele_20']+cols_ne_base].rename(columns={'cup_ele_20':'luz_20'}),
+                            on='luz_20', how='inner'
+                        )
+                        df_m_luz['Código Vendedor Luz'] = df_m_luz.get('codigoVendedor', pd.Series(dtype=str))
+                        df_m_luz['Código Vendedor Gas'] = ''
+
+                        # Merge por Gas para contratos sin luz en Naturgy
+                        cups_ya = set(df_m_luz['luz_20'].dropna()) if not df_m_luz.empty else set()
+                        df_nc_solo_gas = df_nc[df_nc['gas_20'].notna() & (~df_nc['luz_20'].isin(cups_ya) if 'luz_20' in df_nc.columns else True)].copy()
+                        df_m_gas = pd.merge(
+                            df_nc_solo_gas,
+                            df_ne[['cup_gas_20']+cols_ne_base].rename(columns={'cup_gas_20':'gas_20'}),
+                            on='gas_20', how='inner'
+                        ) if not df_nc_solo_gas.empty else pd.DataFrame()
+                        if not df_m_gas.empty:
+                            df_m_gas['Código Vendedor Luz'] = ''
+                            df_m_gas['Código Vendedor Gas'] = df_m_gas.get('codigoVendedor', pd.Series(dtype=str))
+
+                        df_cruce = pd.concat([df_m_luz, df_m_gas], ignore_index=True)
+                        df_cruce_out = df_cruce.rename(columns={
+                            'Comercial':'Comercial (CONTRATOS CRM BASETTE)',
+                            'idCupsEle':'idCupsEle (EXPORTADO NATURGY)',
+                            'idCupsGas':'idCupsGas (EXPORTADO NATURGY)',
+                            'codigoVendedor':'Código Vendedor (EXPORTADO NATURGY)',
+                            'eleContratar':'Tarifa Ele (eleContratar)',
+                            'gasContratar':'Tarifa Gas (gasContratar)',
+                            'tarifaGas':'Detalle Tarifa Gas (tarifaGas)',
+                            'tarifaEle':'Detalle Tarifa Ele (tarifaEle)',
+                            'sveContratar':'Mantenimiento Ele (sveContratar)',
+                            'responseDtm':'Fecha (responseDtm)',
+                            'estado':'Estado'
+                        })
+                        ord_cruce = [c for c in ['Comercial (CONTRATOS CRM BASETTE)','idCupsEle (EXPORTADO NATURGY)','idCupsGas (EXPORTADO NATURGY)','Código Vendedor (EXPORTADO NATURGY)','Código Vendedor Luz','Código Vendedor Gas','Tarifa Ele (eleContratar)','Tarifa Gas (gasContratar)','Detalle Tarifa Gas (tarifaGas)','Detalle Tarifa Ele (tarifaEle)','Mantenimiento Ele (sveContratar)','Fecha (responseDtm)','Mes','Estado'] if c in df_cruce_out.columns]
+                        df_cruce_out = df_cruce_out[ord_cruce].reset_index(drop=True)
+
+                        # ── Faltan en CRM: en Naturgy pero sus CUPs no están en nuestro CRM ──
+                        df_nat_sin_crm = df_ne[
+                            (~df_ne['cup_ele_20'].isin(cups_crm_all) if 'cup_ele_20' in df_ne.columns else True) &
+                            (~df_ne['cup_gas_20'].isin(cups_crm_all) if 'cup_gas_20' in df_ne.columns else True)
+                        ].copy()
+                        # Posible Vendedor: buscar codigoVendedor en nuestro CRM
+                        vendor_map = {}
+                        if 'codigoVendedor' in df_ne.columns:
+                            # Match codigoVendedor from CRM merge - cross with cruce data
+                            for _, r in df_cruce.dropna(subset=['codigoVendedor' if 'codigoVendedor' in df_cruce.columns else 'Código Vendedor (EXPORTADO NATURGY)']).iterrows():
+                                cv = str(r.get('codigoVendedor', r.get('Código Vendedor (EXPORTADO NATURGY)','')))
+                                cm = str(r.get('Comercial', r.get('Comercial (CONTRATOS CRM BASETTE)','')))
+                                if cv and cm: vendor_map[cv] = cm
+                        if 'codigoVendedor' in df_nat_sin_crm.columns:
+                            df_nat_sin_crm['Posible Vendedor'] = df_nat_sin_crm['codigoVendedor'].apply(lambda x: vendor_map.get(str(x),''))
+                        cols_fcrm = [c for c in ['Posible Vendedor','idCupsEle','idCupsGas','codigoVendedor','eleContratar','estado','responseDtm','Mes'] if c in df_nat_sin_crm.columns]
+                        df_falta_crm_out = df_nat_sin_crm[cols_fcrm].rename(columns={'codigoVendedor':'Código Vendedor','eleContratar':'Tarifa Ele','estado':'Estado','responseDtm':'Fecha (responseDtm)'}).reset_index(drop=True)
+
+                        # ── Faltan en Naturgy: nuestros CUPs NO en Naturgy ──
+                        df_crm_sin_nat = df_nc[
+                            (~df_nc['luz_20'].isin(cups_nat_all) if 'luz_20' in df_nc.columns else True) &
+                            (~df_nc['gas_20'].isin(cups_nat_all) if 'gas_20' in df_nc.columns else True)
+                        ].copy()
+                        # Añadir Código Vendedor Luz y Gas desde la extracción (para contratos que SÍ cruzaron por el otro CUP)
+                        df_crm_sin_nat['Código Vendedor Luz'] = ''
+                        df_crm_sin_nat['Código Vendedor Gas'] = ''
+                        df_crm_sin_nat['Mes'] = df_crm_sin_nat.get('Fecha Creación', pd.Series(dtype=str)).apply(mes_anio_n)
+                        cols_fnat = [c for c in ['Comercial','DNI Cliente','CUPS Luz','CUPS Gas','Código Vendedor Luz','Código Vendedor Gas','Tarifa','Estado','Fecha Creación','Mes'] if c in df_crm_sin_nat.columns]
+                        df_falta_nat_out = df_crm_sin_nat[cols_fnat].rename(columns={'Fecha Creación':'Fecha Creación (CRM)'}).reset_index(drop=True)
+
+                        n_cruce = len(df_cruce_out); n_falta_crm = len(df_falta_crm_out); n_falta_nat = len(df_falta_nat_out)
+                        st.markdown("---")
+                        kn1, kn2, kn3, kn4 = st.columns(4)
+                        bg2 = "border-radius:10px; padding:14px 8px; text-align:center; margin-bottom:10px;"
+                        kn1.markdown(f'<div style="background:#0d2818;border:2px solid #FFD700;{bg2}"><p style="color:#FFD700;font-size:0.7rem;font-weight:bold;margin:0;">🔥 CRUCE COMPLETO</p><h2 style="color:white;margin:4px 0;">{n_cruce}</h2></div>', unsafe_allow_html=True)
+                        kn2.markdown(f'<div style="background:#1a0a0a;border:2px solid #ff4b4b;{bg2}"><p style="color:#ff4b4b;font-size:0.7rem;font-weight:bold;margin:0;">❌ FALTAN EN CRM</p><h2 style="color:white;margin:4px 0;">{n_falta_crm}</h2></div>', unsafe_allow_html=True)
+                        kn3.markdown(f'<div style="background:#1a0a1a;border:2px solid #a78bfa;{bg2}"><p style="color:#a78bfa;font-size:0.7rem;font-weight:bold;margin:0;">⚠️ FALTAN EN NATURGY</p><h2 style="color:white;margin:4px 0;">{n_falta_nat}</h2></div>', unsafe_allow_html=True)
+                        kn4.markdown(f'<div style="background:#161b22;border:2px solid #8b949e;{bg2}"><p style="color:#8b949e;font-size:0.7rem;font-weight:bold;margin:0;">📋 TOTAL CRM NATURGY</p><h2 style="color:white;margin:4px 0;">{len(df_nc)}</h2></div>', unsafe_allow_html=True)
+
+                        nt1, nt2, nt3 = st.tabs([f"🔗 CRUCE COMPLETO ({n_cruce})", f"❌ FALTAN EN CONTRATOS CRM ({n_falta_crm})", f"⚠️ FALTAN EN EXPORTADO NATURGY ({n_falta_nat})"])
+
+                        with nt1:
+                            st.markdown('<p style="color:#FFD700;font-size:0.83rem;">Contratos presentes en nuestro CRM y en la extracción de Naturgy.</p>', unsafe_allow_html=True)
+                            st.dataframe(df_cruce_out, use_container_width=True, height=460)
+                            st.download_button("⬇️ Descargar CRUCE COMPLETO NATURGY",
+                                _safe_nat({'Cruce Completo': df_cruce_out, 'Faltan en CONTRATOS CRM': df_falta_crm_out, 'Faltan en EXPORTADO NATURGY': df_falta_nat_out}),
+                                file_name="naturgy_cruce_completo.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
+                        with nt2:
+                            st.markdown('<p style="color:#ff4b4b;font-size:0.83rem;">En la extracción de Naturgy pero <b>no en nuestro CRM</b> — verificar altas no registradas.</p>', unsafe_allow_html=True)
+                            st.dataframe(df_falta_crm_out, use_container_width=True, height=460)
+                            st.download_button("⬇️ Descargar FALTAN EN CRM", _safe_nat({'Faltan en CONTRATOS CRM': df_falta_crm_out}),
+                                file_name="naturgy_faltan_en_crm.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
+                        with nt3:
+                            st.markdown('<p style="color:#a78bfa;font-size:0.83rem;">Contratos nuestros de Naturgy que <b>no aparecen en la extracción</b> — reclamar o verificar.</p>', unsafe_allow_html=True)
+                            st.dataframe(df_falta_nat_out, use_container_width=True, height=460)
+                            st.download_button("⬇️ Descargar FALTAN EN NATURGY", _safe_nat({'Faltan en EXPORTADO NATURGY': df_falta_nat_out}),
+                                file_name="naturgy_faltan_en_extraccion.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
+
+                    except Exception as _en:
+                        import traceback
+                        st.error(f"❌ Error en cruce Naturgy: {_en}")
+                        st.code(traceback.format_exc())
+            else:
+                st.markdown('<div style="background:#0d1117;border:2px dashed #30363d;border-radius:12px;padding:30px;text-align:center;margin-top:10px;"><p style="color:#8b949e;margin:0;">👆 Sube el export CRM de Naturgy y la extracción de Naturgy para iniciar el cruce</p></div>', unsafe_allow_html=True)
+
         with cia_tab_total:
             st.markdown('<div class="block-header" style="font-size:1rem;">🌍 CRUCE TOTAL ENERGIES</div>', unsafe_allow_html=True)
             ct1, ct2 = st.columns(2)
@@ -2660,12 +2799,7 @@ elif menu == "🔐 ZONA DIRECTIVOS":
             with ct2:
                 st.markdown('<p style="color:#3b82f6; font-weight:bold; font-size:0.95rem; margin-bottom:4px;">🌍 Archivo Total Energies</p>', unsafe_allow_html=True)
                 st.file_uploader("Archivo Total Energies", type=['xlsx'], key="total_cia", label_visibility="collapsed")
-            st.markdown("""
-                <div style="background:#0d1117; border:2px dashed #30363d; border-radius:12px; padding:40px; text-align:center; margin-top:20px;">
-                    <p style="color:#3b82f6; font-size:1.2rem; margin:0 0 8px 0;">🌍 TOTAL ENERGIES</p>
-                    <p style="color:#8b949e; margin:0; font-size:0.9rem;">Lógica de cruce en construcción — próximamente disponible.</p>
-                </div>
-            """, unsafe_allow_html=True)
+            st.markdown('<div style="background:#0d1117;border:2px dashed #30363d;border-radius:12px;padding:40px;text-align:center;margin-top:20px;"><p style="color:#3b82f6;font-size:1.2rem;margin:0 0 8px 0;">🌍 TOTAL ENERGIES</p><p style="color:#8b949e;margin:0;font-size:0.9rem;">Lógica de cruce en construcción — próximamente disponible.</p></div>', unsafe_allow_html=True)
 
     with tab_docs:
         st.markdown('<div class="block-header">📁 DOCUMENTACIÓN DE EMPRESA</div>', unsafe_allow_html=True)
