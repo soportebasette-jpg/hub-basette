@@ -108,16 +108,14 @@ st.markdown("""
         background-color: #161b22 !important;
         color: white !important;
     }
+    /* Tab buttons styling */
     button[data-baseweb="tab"] {
         background-color: #1c2128 !important;
         color: #c9d1d9 !important;
         border-radius: 6px 6px 0 0 !important;
         font-weight: 600 !important;
-        font-size: 0.82rem !important;
         border: 1px solid #30363d !important;
-        border-bottom: none !important;
-        margin-right: 3px !important;
-        padding: 8px 14px !important;
+        padding: 6px 12px !important;
     }
     button[data-baseweb="tab"]:hover {
         background-color: #2d333b !important;
@@ -126,16 +124,20 @@ st.markdown("""
     button[data-baseweb="tab"][aria-selected="true"] {
         background-color: #d2ff00 !important;
         color: #000000 !important;
-        border-color: #d2ff00 !important;
         font-weight: 900 !important;
     }
-    div[data-baseweb="tab-list"] {
-        background-color: #0d1117 !important;
-        border-bottom: 2px solid #30363d !important;
-        gap: 2px !important;
+    div[data-baseweb="tab-highlight"],
+    div[data-baseweb="tab-border"] {
+        background-color: transparent !important;
+        height: 0 !important;
     }
-    div[data-baseweb="tab-highlight"] { background-color: transparent !important; }
-    div[data-baseweb="tab-border"] { background-color: transparent !important; }
+    /* Make sure inactive tab panels stay hidden */
+    div[role="tabpanel"][aria-hidden="true"] {
+        display: none !important;
+    }
+    div[data-baseweb="tab-panel"] {
+        padding-top: 16px !important;
+    }
     </style>
     """, unsafe_allow_html=True)
 
@@ -1489,33 +1491,69 @@ elif menu == "🔐 ZONA DIRECTIVOS":
             if header_row is None:
                 return None, meta, "No se encontró la cabecera de datos en el archivo."
 
+            # Mapear columnas por nombre desde la fila header
+            header_vals = [str(v).strip() for v in df_raw.iloc[header_row].tolist()]
+            def col_idx(names):
+                """Devuelve el índice de la primera columna que contenga alguno de los nombres."""
+                for name in names:
+                    for j, h in enumerate(header_vals):
+                        if name.upper() in h.upper():
+                            return j
+                return None
+
+            idx_cif       = col_idx(['CIF/NIF', 'CIF', 'NIF'])
+            idx_gas       = col_idx(['CUPSGas', 'CUPS Gas', 'Gas'])
+            idx_luz       = col_idx(['CUPSElectricidad', 'CUPS Luz', 'Electri'])
+            idx_producto  = col_idx(['Producto', 'Grupo Tarifa'])
+            idx_fbaja     = col_idx(['Fecha Baja', 'FechaBaja', 'Baja'])
+            idx_falta     = col_idx(['Fecha', 'Alta'])
+            idx_comision  = col_idx(['Comision', 'Comisión'])
+            idx_contrato  = col_idx(['Contrato Darwin', 'Darwin', 'Contrato'])
+
+            # Fallback a posiciones fijas si no se detectan por nombre
+            if idx_cif      is None: idx_cif      = 5
+            if idx_gas      is None: idx_gas      = 15
+            if idx_luz      is None: idx_luz      = 18
+            if idx_producto is None: idx_producto = 19
+            if idx_fbaja    is None: idx_fbaja    = 14
+            if idx_falta    is None: idx_falta    = 11
+            if idx_comision is None: idx_comision = 27
+            if idx_contrato is None: idx_contrato = 26
+
+            n_cols = len(df_raw.columns)
+
+            def safe_iloc(row, idx):
+                """Acceso seguro a columna por índice."""
+                if idx is None or idx >= n_cols: return None
+                v = row.iloc[idx]
+                return None if (v is None or str(v).strip() in ['nan','None','']) else v
+
             rows = []
             for i in range(header_row + 1, len(df_raw)):
                 row = df_raw.iloc[i]
-                cif = row.iloc[5]
-                if pd.isna(cif) or str(cif).strip() in ['nan', '', 'CIF/NIF']:
+                cif = safe_iloc(row, idx_cif)
+                if cif is None or str(cif).strip() in ['nan', '', 'CIF/NIF']:
                     continue
-                # Detectar Gas vs Luz por columna
-                cups_gas_raw = row.iloc[15]
-                cups_luz_raw = row.iloc[18]
-                producto = str(row.iloc[19]).strip() if pd.notna(row.iloc[19]) else ''
-                fecha_baja = row.iloc[14]
-                comision = row.iloc[27]
-                contrato_darwin = row.iloc[26]
+                cups_gas_raw  = safe_iloc(row, idx_gas)
+                cups_luz_raw  = safe_iloc(row, idx_luz)
+                producto      = str(safe_iloc(row, idx_producto) or '').strip()
+                fecha_baja    = safe_iloc(row, idx_fbaja)
+                comision      = safe_iloc(row, idx_comision)
+                contrato_darwin = safe_iloc(row, idx_contrato)
 
                 rows.append({
                     'CIF': str(cif).strip(),
-                    'Fecha Alta': row.iloc[11],
-                    'Fecha Baja': fecha_baja if fecha_baja is not None else None,
-                    'CUPS Gas Raw': str(cups_gas_raw).strip() if pd.notna(cups_gas_raw) else None,
-                    'CUPS Luz Raw': str(cups_luz_raw).strip() if pd.notna(cups_luz_raw) else None,
+                    'Fecha Alta': safe_iloc(row, idx_falta),
+                    'Fecha Baja': fecha_baja,
+                    'CUPS Gas Raw': str(cups_gas_raw).strip() if cups_gas_raw is not None else None,
+                    'CUPS Luz Raw': str(cups_luz_raw).strip() if cups_luz_raw is not None else None,
                     'CUPS Gas Norm': normalize_cup(cups_gas_raw),
                     'CUPS Luz Norm': normalize_cup(cups_luz_raw),
                     'Producto': producto,
-                    'Tipo': 'GAS' if pd.notna(cups_gas_raw) and str(cups_gas_raw).strip() not in ['nan', ''] else 'LUZ',
-                    'Contrato Darwin': str(contrato_darwin).strip() if pd.notna(contrato_darwin) else '',
+                    'Tipo': 'GAS' if cups_gas_raw is not None and str(cups_gas_raw).strip() not in ['nan', ''] else 'LUZ',
+                    'Contrato Darwin': str(contrato_darwin).strip() if contrato_darwin is not None else '',
                     'Comisión_liq': comision if comision is not None else 0,
-                    'Descomisionado': pd.notna(fecha_baja),
+                    'Descomisionado': fecha_baja is not None,
                 })
             df = pd.DataFrame(rows)
             return df, meta, None
@@ -2592,10 +2630,12 @@ elif menu == "🔐 ZONA DIRECTIVOS":
                             df_crm['en_gana'] = df_crm['CUP_Luz_16'].apply(lambda c: c in cups_gana_16 if c else False)
                         if 'CUP_Gas_16' in df_crm.columns:
                             df_crm['en_gana_gas'] = df_crm['CUP_Gas_16'].apply(lambda c: c in cups_gana_16 if c else False)
-                        df_nuestros_no_gana = df_crm[
-                            ~df_crm.get('en_gana', pd.Series(False, index=df_crm.index)) &
-                            ~df_crm.get('en_gana_gas', pd.Series(False, index=df_crm.index))
-                        ].copy()
+                        mask_en_gana = pd.Series(False, index=df_crm.index)
+                        if 'en_gana' in df_crm.columns:
+                            mask_en_gana = mask_en_gana | df_crm['en_gana'].fillna(False)
+                        if 'en_gana_gas' in df_crm.columns:
+                            mask_en_gana = mask_en_gana | df_crm['en_gana_gas'].fillna(False)
+                        df_nuestros_no_gana = df_crm[~mask_en_gana].copy()
                         # Formatear fechas en nuestros
                         for fc in ['Fecha Creación','Fecha Activación']:
                             if fc in df_nuestros_no_gana.columns:
@@ -2696,200 +2736,230 @@ elif menu == "🔐 ZONA DIRECTIVOS":
             st.markdown("""
                 <div style="background:#0d1117; border-left:4px solid #FFD700; padding:12px; border-radius:8px; margin-bottom:16px;">
                     <p style="color:#c9d1d9; margin:0; font-size:0.82rem;">
-                        Sube <b style="color:#FFD700;">nuestras ventas</b> (export CRM) y la <b style="color:#FFD700;">extracción de Naturgy</b>
-                        (exportedDataorders). El sistema cruza por CUP (20 chars) y genera las 3 pestañas:
-                        Cruce Completo · Faltan en CRM · Faltan en Naturgy.
+                        Sube <b style="color:#FFD700;">nuestras ventas</b> (export CRM) y la
+                        <b style="color:#FFD700;">extracción de Naturgy</b> (exportedDataorders).
+                        Cruce por CUP (20 chars). Genera: Cruce Completo · Faltan en CRM · Faltan en Naturgy.
                     </p>
                 </div>
             """, unsafe_allow_html=True)
 
             cn1, cn2 = st.columns(2)
             with cn1:
-                st.markdown('<p style="color:#FFD700; font-weight:bold; font-size:0.95rem; margin-bottom:4px;">📋 Nuestras Ventas (CRM)</p>', unsafe_allow_html=True)
+                st.markdown('<p style="color:#FFD700;font-weight:bold;font-size:0.95rem;margin-bottom:4px;">📋 Nuestras Ventas (CRM)</p>', unsafe_allow_html=True)
                 f_nat_crm = st.file_uploader("Nuestras ventas Naturgy", type=['xlsx'], key="naturgy_nuestras", label_visibility="collapsed")
             with cn2:
-                st.markdown('<p style="color:#FFD700; font-weight:bold; font-size:0.95rem; margin-bottom:4px;">🔥 Extracción Naturgy (exportedDataorders)</p>', unsafe_allow_html=True)
+                st.markdown('<p style="color:#FFD700;font-weight:bold;font-size:0.95rem;margin-bottom:4px;">🔥 Extracción Naturgy (exportedDataorders)</p>', unsafe_allow_html=True)
                 f_nat_ext = st.file_uploader("Extracción Naturgy", type=['xlsx'], key="naturgy_cia", label_visibility="collapsed")
 
             if f_nat_crm and f_nat_ext:
                 with st.spinner("⏳ Cruzando datos con Naturgy..."):
                     try:
-                        def norm20_nat(cup):
+                        # ── Utilidades ──
+                        def n20(cup):
                             if cup is None or str(cup).strip() in ['','nan','None']: return None
                             s = str(cup).strip().upper()
                             return s[:20] if len(s) >= 20 else s
 
-                        def fmt_fn(val):
+                        def ffn(val):
                             if val is None or str(val).strip() in ['','nan','None','NaT']: return ''
                             s = str(val).strip()
                             if len(s) >= 10 and s[2] == '/': return s[:10]
                             if len(s) >= 10 and s[4] == '-':
                                 try:
-                                    from datetime import datetime as _dt2
-                                    return _dt2.strptime(s[:10], '%Y-%m-%d').strftime('%d/%m/%Y')
+                                    from datetime import datetime as _dt
+                                    return _dt.strptime(s[:10], '%Y-%m-%d').strftime('%d/%m/%Y')
                                 except: return s[:10]
                             try:
-                                from datetime import date as _d2, timedelta as _td2
-                                return (_d2(1899,12,30)+_td2(days=int(float(s)))).strftime('%d/%m/%Y')
+                                from datetime import date as _d, timedelta as _td
+                                return (_d(1899,12,30)+_td(days=int(float(s)))).strftime('%d/%m/%Y')
                             except: return s
 
-                        def mes_anio_n(fecha_str):
-                            try: return fecha_str[3:5] + '/' + fecha_str[6:10]
+                        def mes_anio_n(s):
+                            try: return s[3:5]+'/'+s[6:10]
                             except: return ''
 
-                        def _safe_nat(sheets):
-                            clean = {}
-                            for k, v in sheets.items():
-                                clean[k] = v if (isinstance(v, pd.DataFrame) and not v.empty) else pd.DataFrame({'(sin datos)': ['No hay registros']})
-                            return hacer_xlsx_nativo(clean)
+                        def _safe(sheets):
+                            return hacer_xlsx_nativo({
+                                k: v if (isinstance(v, pd.DataFrame) and not v.empty)
+                                   else pd.DataFrame({'(sin datos)': ['No hay registros']})
+                                for k, v in sheets.items()
+                            })
 
                         # ── Leer CRM ──
-                        df_nc = leer_excel_safe(f_nat_crm, header=0)
-                        df_nc.columns = [str(c).strip() for c in df_nc.columns]
+                        df_nc_all = leer_excel_safe(f_nat_crm, header=0)
+                        df_nc_all.columns = [str(c).strip() for c in df_nc_all.columns]
                         for fc in ['Fecha Creación','Fecha Activación']:
-                            if fc in df_nc.columns: df_nc[fc] = df_nc[fc].apply(fmt_fn)
+                            if fc in df_nc_all.columns:
+                                df_nc_all[fc] = df_nc_all[fc].apply(ffn)
 
-                        # Filtrar Naturgy
-                        if 'Comercializadora' in df_nc.columns:
-                            df_nc_nat = df_nc[df_nc['Comercializadora'].str.contains('Naturgy', case=False, na=False)].copy()
+                        # Filtrar sólo contratos Naturgy
+                        if 'Comercializadora' in df_nc_all.columns:
+                            df_nc = df_nc_all[df_nc_all['Comercializadora'].str.contains('Naturgy', case=False, na=False)].copy()
                         else:
-                            df_nc_nat = df_nc.copy()
+                            df_nc = df_nc_all.copy()
 
-                        # Filtro de fecha
-                        fechas_n = []
-                        if 'Fecha Creación' in df_nc_nat.columns:
-                            df_nc_nat['_mes'] = df_nc_nat['Fecha Creación'].apply(mes_anio_n)
-                            fechas_n = sorted([f for f in df_nc_nat['_mes'].unique() if f], reverse=True)
+                        # Filtro por mes/año
+                        if 'Fecha Creación' in df_nc.columns:
+                            df_nc['_mes'] = df_nc['Fecha Creación'].apply(mes_anio_n)
+                            fechas_n = sorted([f for f in df_nc['_mes'].unique() if f], reverse=True)
+                        else:
+                            fechas_n = []
                         sel_fn = st.selectbox("🗓️ Filtrar por mes/año de creación:", ['Todos']+fechas_n, key="nat_fecha_sel")
-                        if sel_fn != 'Todos' and '_mes' in df_nc_nat.columns:
-                            df_nc_nat = df_nc_nat[df_nc_nat['_mes'] == sel_fn].copy()
+                        if sel_fn != 'Todos' and '_mes' in df_nc.columns:
+                            df_nc = df_nc[df_nc['_mes'] == sel_fn].copy()
 
                         # Normalizar CUPs CRM
-                        if 'CUPS Luz' in df_nc_nat.columns: df_nc_nat['luz_20'] = df_nc_nat['CUPS Luz'].apply(norm20_nat)
-                        if 'CUPS Gas' in df_nc_nat.columns: df_nc_nat['gas_20'] = df_nc_nat['CUPS Gas'].apply(norm20_nat)
+                        df_nc['luz_20'] = df_nc['CUPS Luz'].apply(n20) if 'CUPS Luz' in df_nc.columns else None
+                        df_nc['gas_20'] = df_nc['CUPS Gas'].apply(n20) if 'CUPS Gas' in df_nc.columns else None
 
-                        # ── Leer extracción Naturgy ──
+                        # ── Leer Naturgy ──
                         df_ne = leer_excel_safe(f_nat_ext, header=0)
                         df_ne.columns = [str(c).strip() for c in df_ne.columns]
                         for fc in ['responseDtm','fechaFirma','fechaUltimoCambioEstado']:
-                            if fc in df_ne.columns: df_ne[fc] = df_ne[fc].apply(fmt_fn)
+                            if fc in df_ne.columns: df_ne[fc] = df_ne[fc].apply(ffn)
                         if 'responseDtm' in df_ne.columns:
                             df_ne['Mes'] = df_ne['responseDtm'].apply(mes_anio_n)
-                        if 'idCupsEle' in df_ne.columns: df_ne['cup_ele_20'] = df_ne['idCupsEle'].apply(norm20_nat)
-                        if 'idCupsGas' in df_ne.columns: df_ne['cup_gas_20'] = df_ne['idCupsGas'].apply(norm20_nat)
+                        df_ne['cup_ele_20'] = df_ne['idCupsEle'].apply(n20) if 'idCupsEle' in df_ne.columns else None
+                        df_ne['cup_gas_20'] = df_ne['idCupsGas'].apply(n20) if 'idCupsGas' in df_ne.columns else None
 
-                        # ── Filtrar Naturgy: excluir estados malos y sin CUP ──
-                        ESTADOS_EXCLUIR_NAT = {'Scoring rechazado', 'Pedidos incompletos'}
-                        df_ne_work = df_ne[
-                            ~df_ne['estado'].isin(ESTADOS_EXCLUIR_NAT) &
-                            (df_ne['cup_ele_20'].notna() | df_ne['cup_gas_20'].notna())
+                        cups_crm_luz = set(df_nc['luz_20'].dropna()) if 'luz_20' in df_nc.columns else set()
+                        cups_crm_gas = set(df_nc['gas_20'].dropna()) if 'gas_20' in df_nc.columns else set()
+                        cups_crm_all = cups_crm_luz | cups_crm_gas
+
+                        # ── Columnas CRM a incluir en el cruce ──
+                        cols_crm = [c for c in ['ID','Comercial','DNI Cliente','CUPS Luz','CUPS Gas','Estado','Tarifa','Fecha Creación'] if c in df_nc.columns]
+                        cols_nat = [c for c in ['idCupsEle','idCupsGas','codigoVendedor','eleContratar','gasContratar','tarifaGas','tarifaEle','sveContratar','responseDtm','Mes','estado'] if c in df_ne.columns]
+
+                        # ── CRUCE COMPLETO: CRM → Naturgy por CUP Luz, luego Gas ──
+                        df_crm_luz = df_nc[df_nc['luz_20'].notna()][cols_crm + ['luz_20']]
+                        df_ne_ele  = df_ne[df_ne['cup_ele_20'].notna()][cols_nat + ['cup_ele_20']]
+                        df_m_luz = pd.merge(df_crm_luz, df_ne_ele,
+                                            left_on='luz_20', right_on='cup_ele_20', how='inner')
+
+                        ids_matched = set(df_m_luz['ID'].dropna()) if 'ID' in df_m_luz.columns else set()
+                        df_crm_gas = df_nc[df_nc['gas_20'].notna() & ~df_nc['ID'].isin(ids_matched)][cols_crm + ['gas_20']]
+                        df_ne_gas  = df_ne[df_ne['cup_gas_20'].notna()][cols_nat + ['cup_gas_20']]
+                        df_m_gas = pd.merge(df_crm_gas, df_ne_gas,
+                                            left_on='gas_20', right_on='cup_gas_20', how='inner') if not df_crm_gas.empty else pd.DataFrame()
+
+                        df_cruce = pd.concat([df_m_luz, df_m_gas], ignore_index=True)
+
+                        # Renombrar a columnas de la plantilla
+                        df_cruce_out = df_cruce.rename(columns={
+                            'Comercial':       'Comercial (CONTRATOS CRM BASETTE)',
+                            'idCupsEle':       'idCupsEle (EXPORTADO NATURGY)',
+                            'idCupsGas':       'idCupsGas (EXPORTADO NATURGY)',
+                            'codigoVendedor':  'Código Vendedor (EXPORTADO NATURGY)',
+                            'eleContratar':    'Tarifa Ele (eleContratar)',
+                            'gasContratar':    'Tarifa Gas (gasContratar)',
+                            'tarifaGas':       'Detalle Tarifa Gas (tarifaGas)',
+                            'tarifaEle':       'Detalle Tarifa Ele (tarifaEle)',
+                            'sveContratar':    'Mantenimiento Ele (sveContratar)',
+                            'responseDtm':     'Fecha (responseDtm)',
+                            'estado':          'Estado',
+                        })
+                        ord_out = [c for c in [
+                            'Comercial (CONTRATOS CRM BASETTE)','idCupsEle (EXPORTADO NATURGY)',
+                            'idCupsGas (EXPORTADO NATURGY)','Código Vendedor (EXPORTADO NATURGY)',
+                            'Tarifa Ele (eleContratar)','Tarifa Gas (gasContratar)',
+                            'Detalle Tarifa Gas (tarifaGas)','Detalle Tarifa Ele (tarifaEle)',
+                            'Mantenimiento Ele (sveContratar)','Fecha (responseDtm)','Mes','Estado'
+                        ] if c in df_cruce_out.columns]
+                        df_cruce_out = df_cruce_out[ord_out].reset_index(drop=True)
+
+                        # ── FALTAN EN CONTRATOS CRM ──
+                        # Naturgy rows cuyo CUP no está en nuestro CRM Naturgy
+                        df_falta_crm = df_ne[
+                            (~df_ne['cup_ele_20'].isin(cups_crm_all)) &
+                            (~df_ne['cup_gas_20'].isin(cups_crm_all))
                         ].copy()
-
-                        # ── Lookup CUP → Comercial usando TODO el CRM ──
-                        cup_to_com = {}
-                        for _, r in df_nc.iterrows():
-                            luz = norm20_nat(r.get('CUPS Luz'))
-                            gas = norm20_nat(r.get('CUPS Gas'))
-                            com = r.get('Comercial','')
-                            if luz: cup_to_com[luz] = com
-                            if gas: cup_to_com[gas] = com
-
-                        def get_com_nat(row):
-                            c = cup_to_com.get(row.get('cup_ele_20')) or cup_to_com.get(row.get('cup_gas_20'))
-                            return c if c else 'No Encontrado'
-
-                        df_ne_work['Comercial (CONTRATOS CRM BASETTE)'] = df_ne_work.apply(get_com_nat, axis=1)
-
-                        # ── Cruce Completo = todos los Naturgy filtrados + Comercial ──
-                        cols_nat_show = [c for c in ['Comercial (CONTRATOS CRM BASETTE)','idCupsEle','idCupsGas','codigoVendedor','eleContratar','gasContratar','tarifaGas','tarifaEle','sveContratar','responseDtm','Mes','estado'] if c in df_ne_work.columns]
-                        df_cruce_out = df_ne_work[cols_nat_show].rename(columns={
-                            'idCupsEle':'idCupsEle (EXPORTADO NATURGY)',
-                            'idCupsGas':'idCupsGas (EXPORTADO NATURGY)',
-                            'codigoVendedor':'Código Vendedor (EXPORTADO NATURGY)',
-                            'eleContratar':'Tarifa Ele (eleContratar)',
-                            'gasContratar':'Tarifa Gas (gasContratar)',
-                            'tarifaGas':'Detalle Tarifa Gas (tarifaGas)',
-                            'tarifaEle':'Detalle Tarifa Ele (tarifaEle)',
-                            'sveContratar':'Mantenimiento Ele (sveContratar)',
-                            'responseDtm':'Fecha (responseDtm)',
-                            'estado':'Estado'
-                        }).reset_index(drop=True)
-
-                        # ── Faltan en CRM = 'No Encontrado' ──
-                        df_falta_crm_out = df_ne_work[df_ne_work['Comercial (CONTRATOS CRM BASETTE)']=='No Encontrado'].copy()
-                        # Posible Vendedor: buscar codigoVendedor en el cruce encontrado
+                        # Posible Vendedor: codigoVendedor → Comercial mapeado desde el cruce
                         vendor_map = {}
-                        for _, r in df_ne_work[df_ne_work['Comercial (CONTRATOS CRM BASETTE)']!='No Encontrado'].iterrows():
+                        for _, r in df_cruce.iterrows():
                             cv = str(r.get('codigoVendedor',''))
-                            cm = str(r.get('Comercial (CONTRATOS CRM BASETTE)',''))
-                            if cv and cv != 'nan': vendor_map[cv] = cm
-                        if 'codigoVendedor' in df_falta_crm_out.columns:
-                            df_falta_crm_out['Posible Vendedor'] = df_falta_crm_out['codigoVendedor'].apply(lambda x: vendor_map.get(str(x),'No Encontrado'))
-                        df_falta_crm_out = df_falta_crm_out.rename(columns={'Comercial (CONTRATOS CRM BASETTE)':'Comercial'})
-                        cols_fcrm = [c for c in ['Comercial','idCupsEle','idCupsGas','codigoVendedor','Posible Vendedor','eleContratar','estado','responseDtm','Mes'] if c in df_falta_crm_out.columns]
-                        df_falta_crm_out = df_falta_crm_out[cols_fcrm].rename(columns={'codigoVendedor':'Código Vendedor','eleContratar':'Tarifa Ele','estado':'Estado','responseDtm':'Fecha (responseDtm)'}).reset_index(drop=True)
+                            cm = str(r.get('Comercial',''))
+                            if cv and cv not in ['nan','']: vendor_map[cv] = cm
+                        if 'codigoVendedor' in df_falta_crm.columns:
+                            df_falta_crm['Posible Vendedor'] = df_falta_crm['codigoVendedor'].apply(
+                                lambda x: vendor_map.get(str(x), 'No Encontrado'))
+                        else:
+                            df_falta_crm['Posible Vendedor'] = 'No Encontrado'
+                        cols_fcrm = [c for c in ['Posible Vendedor','idCupsEle','idCupsGas','codigoVendedor','eleContratar','estado','responseDtm','Mes'] if c in df_falta_crm.columns]
+                        df_falta_crm_out = df_falta_crm[cols_fcrm].rename(columns={
+                            'codigoVendedor': 'Código Vendedor',
+                            'eleContratar':   'Tarifa Ele',
+                            'estado':         'Estado',
+                            'responseDtm':    'Fecha (responseDtm)'
+                        }).reset_index(drop=True)
+                        # Añadir columna Comercial = 'No Encontrado' (igual que la plantilla)
+                        df_falta_crm_out.insert(0, 'Comercial', 'No Encontrado')
 
-                        # ── Faltan en Naturgy = CRM Naturgy contracts NOT in matched cups ──
-                        cups_matched_ele = set(df_ne_work[df_ne_work['Comercial (CONTRATOS CRM BASETTE)']!='No Encontrado']['cup_ele_20'].dropna())
-                        cups_matched_gas = set(df_ne_work[df_ne_work['Comercial (CONTRATOS CRM BASETTE)']!='No Encontrado']['cup_gas_20'].dropna())
-                        cups_matched_all = cups_matched_ele | cups_matched_gas
-
-                        df_crm_sin_nat = df_nc_nat[
-                            (~df_nc_nat.get('luz_20', pd.Series(dtype=str)).isin(cups_matched_all)) &
-                            (~df_nc_nat.get('gas_20', pd.Series(dtype=str)).isin(cups_matched_all))
+                        # ── FALTAN EN EXPORTADO NATURGY ──
+                        # CRM Naturgy contracts cuyo CUP no apareció en el cruce
+                        cups_matched_luz = set(df_m_luz['luz_20'].dropna()) if not df_m_luz.empty else set()
+                        cups_matched_gas = set(df_m_gas['gas_20'].dropna()) if not df_m_gas.empty else set()
+                        df_falta_nat = df_nc[
+                            (~df_nc['luz_20'].isin(cups_matched_luz)) &
+                            (~df_nc['gas_20'].isin(cups_matched_gas))
                         ].copy()
-
                         # Código Vendedor Luz/Gas: buscar en Naturgy por CUP
-                        cup_vendor_nat = {}
+                        cup_vendor = {}
                         for _, r in df_ne.iterrows():
-                            if r.get('cup_ele_20'): cup_vendor_nat[r['cup_ele_20']] = str(r.get('codigoVendedor','No Encontrado'))
-                            if r.get('cup_gas_20'): cup_vendor_nat[r['cup_gas_20']] = str(r.get('codigoVendedor','No Encontrado'))
-
-                        df_crm_sin_nat['Código Vendedor Luz'] = df_crm_sin_nat.get('luz_20', pd.Series(dtype=str)).apply(lambda c: cup_vendor_nat.get(c, 'No Encontrado') if c else '-')
-                        df_crm_sin_nat['Código Vendedor Gas'] = df_crm_sin_nat.get('gas_20', pd.Series(dtype=str)).apply(lambda c: cup_vendor_nat.get(c, 'No Encontrado') if c else '-')
-                        df_crm_sin_nat['Mes'] = df_crm_sin_nat.get('Fecha Creación', pd.Series(dtype=str)).apply(mes_anio_n)
-                        cols_fnat = [c for c in ['Comercial','DNI Cliente','CUPS Luz','CUPS Gas','Código Vendedor Luz','Código Vendedor Gas','Tarifa','Estado','Fecha Creación','Mes'] if c in df_crm_sin_nat.columns]
-                        df_falta_nat_out = df_crm_sin_nat[cols_fnat].rename(columns={'Fecha Creación':'Fecha Creación (CRM)'}).reset_index(drop=True)
+                            if r.get('cup_ele_20'): cup_vendor[r['cup_ele_20']] = str(r.get('codigoVendedor','No Encontrado'))
+                            if r.get('cup_gas_20'): cup_vendor[r['cup_gas_20']] = str(r.get('codigoVendedor','No Encontrado'))
+                        df_falta_nat['Código Vendedor Luz'] = df_falta_nat['luz_20'].apply(
+                            lambda c: cup_vendor.get(c, 'No Encontrado') if c else '-')
+                        df_falta_nat['Código Vendedor Gas'] = df_falta_nat['gas_20'].apply(
+                            lambda c: cup_vendor.get(c, 'No Encontrado') if c else '-')
+                        df_falta_nat['Mes'] = df_falta_nat.get('Fecha Creación', pd.Series(dtype=str)).apply(mes_anio_n)
+                        cols_fnat = [c for c in ['Comercial','DNI Cliente','CUPS Luz','CUPS Gas','Código Vendedor Luz','Código Vendedor Gas','Tarifa','Estado','Fecha Creación','Mes'] if c in df_falta_nat.columns]
+                        df_falta_nat_out = df_falta_nat[cols_fnat].rename(
+                            columns={'Fecha Creación': 'Fecha Creación (CRM)'}).reset_index(drop=True)
 
                         # ── KPIs ──
-                        n_cruce   = len(df_cruce_out)
-                        n_fcrm    = len(df_falta_crm_out)
-                        n_fnat    = len(df_falta_nat_out)
-
+                        n_c = len(df_cruce_out); n_fc = len(df_falta_crm_out); n_fn = len(df_falta_nat_out)
                         st.markdown("---")
                         kn1, kn2, kn3, kn4 = st.columns(4)
-                        bg2 = "border-radius:10px; padding:14px 8px; text-align:center; margin-bottom:10px;"
-                        kn1.markdown(f'<div style="background:#0d2818;border:2px solid #FFD700;{bg2}"><p style="color:#FFD700;font-size:0.7rem;font-weight:bold;margin:0;">🔥 CRUCE COMPLETO</p><h2 style="color:white;margin:4px 0;">{n_cruce}</h2></div>', unsafe_allow_html=True)
-                        kn2.markdown(f'<div style="background:#1a0a0a;border:2px solid #ff4b4b;{bg2}"><p style="color:#ff4b4b;font-size:0.7rem;font-weight:bold;margin:0;">❌ FALTAN EN CRM</p><h2 style="color:white;margin:4px 0;">{n_fcrm}</h2></div>', unsafe_allow_html=True)
-                        kn3.markdown(f'<div style="background:#1a0a1a;border:2px solid #a78bfa;{bg2}"><p style="color:#a78bfa;font-size:0.7rem;font-weight:bold;margin:0;">⚠️ FALTAN EN NATURGY</p><h2 style="color:white;margin:4px 0;">{n_fnat}</h2></div>', unsafe_allow_html=True)
-                        kn4.markdown(f'<div style="background:#161b22;border:2px solid #8b949e;{bg2}"><p style="color:#8b949e;font-size:0.7rem;font-weight:bold;margin:0;">📋 TOTAL CRM NATURGY</p><h2 style="color:white;margin:4px 0;">{len(df_nc_nat)}</h2></div>', unsafe_allow_html=True)
+                        bg = "border-radius:10px;padding:14px 8px;text-align:center;margin-bottom:10px;"
+                        kn1.markdown(f'<div style="background:#0d2818;border:2px solid #FFD700;{bg}"><p style="color:#FFD700;font-size:0.7rem;font-weight:bold;margin:0;">🔥 CRUCE COMPLETO</p><h2 style="color:white;margin:4px 0;">{n_c}</h2></div>', unsafe_allow_html=True)
+                        kn2.markdown(f'<div style="background:#1a0a0a;border:2px solid #ff4b4b;{bg}"><p style="color:#ff4b4b;font-size:0.7rem;font-weight:bold;margin:0;">❌ FALTAN EN CRM</p><h2 style="color:white;margin:4px 0;">{n_fc}</h2></div>', unsafe_allow_html=True)
+                        kn3.markdown(f'<div style="background:#1a0a1a;border:2px solid #a78bfa;{bg}"><p style="color:#a78bfa;font-size:0.7rem;font-weight:bold;margin:0;">⚠️ FALTAN EN NATURGY</p><h2 style="color:white;margin:4px 0;">{n_fn}</h2></div>', unsafe_allow_html=True)
+                        kn4.markdown(f'<div style="background:#161b22;border:2px solid #8b949e;{bg}"><p style="color:#8b949e;font-size:0.7rem;font-weight:bold;margin:0;">📋 TOTAL CRM NATURGY</p><h2 style="color:white;margin:4px 0;">{len(df_nc)}</h2></div>', unsafe_allow_html=True)
 
                         nt1, nt2, nt3 = st.tabs([
-                            f"🔗 CRUCE COMPLETO ({n_cruce})",
-                            f"❌ FALTAN EN CONTRATOS CRM ({n_fcrm})",
-                            f"⚠️ FALTAN EN EXPORTADO NATURGY ({n_fnat})"
+                            f"🔗 CRUCE COMPLETO ({n_c})",
+                            f"❌ FALTAN EN CONTRATOS CRM ({n_fc})",
+                            f"⚠️ FALTAN EN EXPORTADO NATURGY ({n_fn})"
                         ])
 
                         with nt1:
-                            st.markdown('<p style="color:#FFD700;font-size:0.83rem;">Todos los contratos de Naturgy filtrados, con el Comercial identificado del CRM.</p>', unsafe_allow_html=True)
+                            st.markdown('<p style="color:#FFD700;font-size:0.83rem;">Contratos de nuestro CRM Naturgy que cruzaron con la extracción, por CUP de luz o gas.</p>', unsafe_allow_html=True)
                             st.dataframe(df_cruce_out, use_container_width=True, height=460)
                             st.download_button("⬇️ Descargar CRUCE COMPLETO NATURGY",
-                                _safe_nat({'Cruce Completo': df_cruce_out, 'Faltan en CONTRATOS CRM': df_falta_crm_out, 'Faltan en EXPORTADO NATURGY': df_falta_nat_out}),
-                                file_name="naturgy_cruce_completo.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
+                                _safe({'Cruce Completo': df_cruce_out,
+                                       'Faltan en CONTRATOS CRM': df_falta_crm_out,
+                                       'Faltan en EXPORTADO NATURGY': df_falta_nat_out}),
+                                file_name="naturgy_cruce_completo.xlsx",
+                                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                                use_container_width=True)
 
                         with nt2:
-                            st.markdown('<p style="color:#ff4b4b;font-size:0.83rem;">En la extracción de Naturgy pero <b>no en nuestro CRM</b>. Posible Vendedor estimado por codigoVendedor.</p>', unsafe_allow_html=True)
+                            st.markdown('<p style="color:#ff4b4b;font-size:0.83rem;">En la extracción de Naturgy pero <b>ningún CUP está en nuestro CRM</b>. "Posible Vendedor" estimado por codigoVendedor.</p>', unsafe_allow_html=True)
                             st.dataframe(df_falta_crm_out, use_container_width=True, height=460)
                             st.download_button("⬇️ Descargar FALTAN EN CRM",
-                                _safe_nat({'Faltan en CONTRATOS CRM': df_falta_crm_out}),
-                                file_name="naturgy_faltan_en_crm.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
+                                _safe({'Faltan en CONTRATOS CRM': df_falta_crm_out}),
+                                file_name="naturgy_faltan_en_crm.xlsx",
+                                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                                use_container_width=True)
 
                         with nt3:
-                            st.markdown('<p style="color:#a78bfa;font-size:0.83rem;">Contratos nuestros de Naturgy que <b>no aparecen en la extracción</b> — reclamar o verificar.</p>', unsafe_allow_html=True)
+                            st.markdown('<p style="color:#a78bfa;font-size:0.83rem;">Contratos nuestros de Naturgy cuyo CUP <b>no aparece en la extracción</b> — verificar o reclamar.</p>', unsafe_allow_html=True)
                             st.dataframe(df_falta_nat_out, use_container_width=True, height=460)
                             st.download_button("⬇️ Descargar FALTAN EN NATURGY",
-                                _safe_nat({'Faltan en EXPORTADO NATURGY': df_falta_nat_out}),
-                                file_name="naturgy_faltan_en_extraccion.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
+                                _safe({'Faltan en EXPORTADO NATURGY': df_falta_nat_out}),
+                                file_name="naturgy_faltan_en_extraccion.xlsx",
+                                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                                use_container_width=True)
 
                     except Exception as _en:
                         import traceback
