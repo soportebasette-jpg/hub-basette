@@ -108,35 +108,14 @@ st.markdown("""
         background-color: #161b22 !important;
         color: white !important;
     }
-    /* Tab buttons styling */
-    button[data-baseweb="tab"] {
-        background-color: #1c2128 !important;
-        color: #c9d1d9 !important;
-        border-radius: 6px 6px 0 0 !important;
-        font-weight: 600 !important;
-        border: 1px solid #30363d !important;
-        padding: 6px 12px !important;
-    }
-    button[data-baseweb="tab"]:hover {
-        background-color: #2d333b !important;
+    /* Tabs: solo estilo visual en el botón activo, sin tocar visibilidad de paneles */
+    button[data-baseweb="tab"][aria-selected="true"] p {
         color: #d2ff00 !important;
-    }
-    button[data-baseweb="tab"][aria-selected="true"] {
-        background-color: #d2ff00 !important;
-        color: #000000 !important;
         font-weight: 900 !important;
     }
-    div[data-baseweb="tab-highlight"],
-    div[data-baseweb="tab-border"] {
-        background-color: transparent !important;
-        height: 0 !important;
-    }
-    /* Make sure inactive tab panels stay hidden */
-    div[role="tabpanel"][aria-hidden="true"] {
-        display: none !important;
-    }
-    div[data-baseweb="tab-panel"] {
-        padding-top: 16px !important;
+    button[data-baseweb="tab"] p {
+        color: #c9d1d9 !important;
+        font-weight: 600 !important;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -2564,9 +2543,15 @@ elif menu == "🔐 ZONA DIRECTIVOS":
                         if 'Fecha Creación' in df_crm.columns:
                             df_crm['_mes_anio'] = df_crm['Fecha Creación'].apply(mes_anio_g)
                             fechas_g = sorted([f for f in df_crm['_mes_anio'].unique() if f], reverse=True)
-                        sel_fg = st.selectbox("🗓️ Filtrar por mes/año de creación:", ['Todos']+fechas_g, key="gana_fecha_sel")
-                        if sel_fg != 'Todos' and '_mes_anio' in df_crm.columns:
-                            df_crm = df_crm[df_crm['_mes_anio'] == sel_fg].copy()
+                        sel_fg = st.multiselect(
+                            "🗓️ Filtrar por mes/año de creación (puedes elegir varios):",
+                            options=fechas_g,
+                            default=[],
+                            key="gana_fecha_sel",
+                            placeholder="Sin filtro — mostrando todos los meses"
+                        )
+                        if sel_fg and '_mes_anio' in df_crm.columns:
+                            df_crm = df_crm[df_crm['_mes_anio'].isin(sel_fg)].copy()
 
                         # ── Leer archivo Gana CIA ──
                         df_cia = leer_excel_safe(f_gana_cia, header=0)
@@ -2804,9 +2789,15 @@ elif menu == "🔐 ZONA DIRECTIVOS":
                             fechas_n = sorted([f for f in df_nc['_mes'].unique() if f], reverse=True)
                         else:
                             fechas_n = []
-                        sel_fn = st.selectbox("🗓️ Filtrar por mes/año de creación:", ['Todos']+fechas_n, key="nat_fecha_sel")
-                        if sel_fn != 'Todos' and '_mes' in df_nc.columns:
-                            df_nc = df_nc[df_nc['_mes'] == sel_fn].copy()
+                        sel_fn = st.multiselect(
+                            "🗓️ Filtrar por mes/año de creación (puedes elegir varios):",
+                            options=fechas_n,
+                            default=[],
+                            key="nat_fecha_sel",
+                            placeholder="Sin filtro — mostrando todos los meses"
+                        )
+                        if sel_fn and '_mes' in df_nc.columns:
+                            df_nc = df_nc[df_nc['_mes'].isin(sel_fn)].copy()
 
                         # Normalizar CUPs CRM
                         df_nc['luz_20'] = df_nc['CUPS Luz'].apply(n20) if 'CUPS Luz' in df_nc.columns else None
@@ -2827,7 +2818,10 @@ elif menu == "🔐 ZONA DIRECTIVOS":
                         cups_crm_all = cups_crm_luz | cups_crm_gas
 
                         # ── Columnas CRM a incluir en el cruce ──
-                        cols_crm = [c for c in ['ID','Comercial','DNI Cliente','CUPS Luz','CUPS Gas','Estado','Tarifa','Fecha Creación'] if c in df_nc.columns]
+                        # Renombrar 'Estado' del CRM antes del merge para evitar colisión con 'estado' de Naturgy
+                        if 'Estado' in df_nc.columns:
+                            df_nc = df_nc.rename(columns={'Estado': 'Estado CRM'})
+                        cols_crm = [c for c in ['ID','Comercial','DNI Cliente','CUPS Luz','CUPS Gas','Estado CRM','Tarifa','Fecha Creación'] if c in df_nc.columns]
                         cols_nat = [c for c in ['idCupsEle','idCupsGas','codigoVendedor','eleContratar','gasContratar','tarifaGas','tarifaEle','sveContratar','responseDtm','Mes','estado'] if c in df_ne.columns]
 
                         # ── CRUCE COMPLETO: CRM → Naturgy por CUP Luz, luego Gas ──
@@ -2846,25 +2840,30 @@ elif menu == "🔐 ZONA DIRECTIVOS":
 
                         # Renombrar a columnas de la plantilla
                         df_cruce_out = df_cruce.rename(columns={
-                            'Comercial':       'Comercial (CONTRATOS CRM BASETTE)',
-                            'idCupsEle':       'idCupsEle (EXPORTADO NATURGY)',
-                            'idCupsGas':       'idCupsGas (EXPORTADO NATURGY)',
-                            'codigoVendedor':  'Código Vendedor (EXPORTADO NATURGY)',
-                            'eleContratar':    'Tarifa Ele (eleContratar)',
-                            'gasContratar':    'Tarifa Gas (gasContratar)',
-                            'tarifaGas':       'Detalle Tarifa Gas (tarifaGas)',
-                            'tarifaEle':       'Detalle Tarifa Ele (tarifaEle)',
-                            'sveContratar':    'Mantenimiento Ele (sveContratar)',
-                            'responseDtm':     'Fecha (responseDtm)',
-                            'estado':          'Estado',
+                            'Comercial':        'Comercial (CONTRATOS CRM BASETTE)',
+                            'idCupsEle':        'idCupsEle (EXPORTADO NATURGY)',
+                            'idCupsGas':        'idCupsGas (EXPORTADO NATURGY)',
+                            'codigoVendedor':   'Código Vendedor (EXPORTADO NATURGY)',
+                            'eleContratar':     'Tarifa Ele (eleContratar)',
+                            'gasContratar':     'Tarifa Gas (gasContratar)',
+                            'tarifaGas':        'Detalle Tarifa Gas (tarifaGas)',
+                            'tarifaEle':        'Detalle Tarifa Ele (tarifaEle)',
+                            'sveContratar':     'Mantenimiento Ele (sveContratar)',
+                            'responseDtm':      'Fecha (responseDtm)',
+                            'estado':           'Estado Naturgy',
+                            'Estado CRM':       'Estado CRM',
                         })
                         ord_out = [c for c in [
                             'Comercial (CONTRATOS CRM BASETTE)','idCupsEle (EXPORTADO NATURGY)',
                             'idCupsGas (EXPORTADO NATURGY)','Código Vendedor (EXPORTADO NATURGY)',
                             'Tarifa Ele (eleContratar)','Tarifa Gas (gasContratar)',
                             'Detalle Tarifa Gas (tarifaGas)','Detalle Tarifa Ele (tarifaEle)',
-                            'Mantenimiento Ele (sveContratar)','Fecha (responseDtm)','Mes','Estado'
+                            'Mantenimiento Ele (sveContratar)','Fecha (responseDtm)','Mes',
+                            'Estado Naturgy','Estado CRM','DNI Cliente','CUPS Luz','CUPS Gas','Tarifa'
                         ] if c in df_cruce_out.columns]
+                        # Eliminar duplicados de columna si los hubiera
+                        seen = set()
+                        ord_out = [c for c in ord_out if not (c in seen or seen.add(c))]
                         df_cruce_out = df_cruce_out[ord_out].reset_index(drop=True)
 
                         # ── FALTAN EN CONTRATOS CRM ──
