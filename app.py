@@ -373,10 +373,29 @@ if not st.session_state["password_correct"]:
 with st.sidebar:
     if os.path.exists(LOGO_PRINCIPAL): st.image(LOGO_PRINCIPAL)
     st.markdown("---")
-    menu = st.sidebar.radio(
-    "Navegación",
-    ["🚀 CRM", "📊 PRECIOS", "🔍 COMPARADORES", "📢 ANUNCIOS Y PLAN AMIGO", "📈 DASHBOARD Y RANKING", "📂 REPOSITORIO", "🕒 CONTROL LABORAL", "🔐 ZONA DIRECTIVOS"]
-)
+
+    # Selector de zona principal
+    _zona = st.radio(
+        "Zona:",
+        ["👔 COMERCIALES", "🔐 ZONA DIRECTIVOS"],
+        key="zona_principal",
+        label_visibility="collapsed",
+        horizontal=True
+    )
+    st.markdown("---")
+
+    if _zona == "👔 COMERCIALES":
+        st.markdown('<p style="color:#d2ff00; font-weight:bold; font-size:0.8rem; margin:0 0 8px 4px;">📋 MENÚ COMERCIALES</p>', unsafe_allow_html=True)
+        menu = st.radio(
+            "Sección:",
+            ["🚀 CRM", "📊 PRECIOS", "🔍 COMPARADORES", "📢 ANUNCIOS Y PLAN AMIGO",
+             "📈 DASHBOARD Y RANKING", "📂 REPOSITORIO", "🕒 CONTROL LABORAL"],
+            key="menu_comerciales",
+            label_visibility="collapsed"
+        )
+    else:
+        menu = "🔐 ZONA DIRECTIVOS"
+
 
 # --- CRM ---
 if menu == "🚀 CRM":
@@ -1123,8 +1142,8 @@ elif menu == "🔐 ZONA DIRECTIVOS":
                 st.session_state["dir_auth"] = False
                 st.rerun()
 
-        # ── TABS PRINCIPALES ──
-        tab_rrhh, tab_ret, tab_nom, tab_liq, tab_cruces, tab_docs, tab_sop = st.tabs([
+        # ── MENÚ VERTICAL LATERAL ──
+        _opciones_menu = [
             "👥 PERSONAL",
             "💰 MARCOS RETRIBUTIVOS",
             "💼 NÓMINAS",
@@ -1132,7 +1151,19 @@ elif menu == "🔐 ZONA DIRECTIVOS":
             "🔀 CRUCES CIAS",
             "📁 DOCS EMPRESA",
             "🛠️ SOPORTE"
-        ])
+        ]
+        with st.sidebar:
+            st.markdown('<p style="color:#FFD700; font-weight:bold; font-size:0.8rem; margin:0 0 8px 4px;">⚙️ MENÚ DIRECTIVOS</p>', unsafe_allow_html=True)
+            _menu_sel = st.radio(
+                "Sección directivos:",
+                _opciones_menu,
+                key="dir_menu_sel",
+                label_visibility="collapsed"
+            )
+            st.markdown("---")
+
+        # Mapear selección a variables compatibles con el código existente
+        _sel = _menu_sel
 
         # ══════════════════════════════════════════════════════
         # ── GOOGLE DRIVE — ID raíz de BASETTE_DIRECTIVOS ──
@@ -1219,7 +1250,7 @@ elif menu == "🔐 ZONA DIRECTIVOS":
 
 
             # ── TAB PERSONAL ──
-        with tab_rrhh:
+        if _sel == "👥 PERSONAL":
             st.markdown('<div class="block-header">👥 GESTIÓN DE PERSONAL</div>', unsafe_allow_html=True)
 
             # Resumen de plantilla actual
@@ -1264,7 +1295,7 @@ elif menu == "🔐 ZONA DIRECTIVOS":
             mostrar_carpeta_dir("directivos", "PERSONAL", "📋")
 
         # ── TAB MARCOS RETRIBUTIVOS ──
-        with tab_ret:
+        if _sel == "💰 MARCOS RETRIBUTIVOS":
             st.markdown('<div class="block-header">💰 MARCOS RETRIBUTIVOS</div>', unsafe_allow_html=True)
             st.markdown("""
                 <div style="background:#161b22; border-left:4px solid #FFD700; padding:15px; border-radius:8px; margin-bottom:20px;">
@@ -1285,7 +1316,7 @@ elif menu == "🔐 ZONA DIRECTIVOS":
                     mostrar_carpeta_dir("directivos", "CONTRATOS", "📋")
 
         # ── TAB NÓMINAS ──
-        with tab_nom:
+        if _sel == "💼 NÓMINAS":
             st.markdown('<div class="block-header">💼 GESTIÓN DE NÓMINAS</div>', unsafe_allow_html=True)
             st.markdown("""
                 <div style="background:#161b22; border-left:4px solid #FFD700; padding:15px; border-radius:8px; margin-bottom:20px;">
@@ -1302,7 +1333,7 @@ elif menu == "🔐 ZONA DIRECTIVOS":
             mostrar_carpeta_drive(["NOMINAS", anio_nom, mes_nom], "💼")
 
         # ── TAB LIQUIDACIONES ──
-        with tab_liq:
+        if _sel == "📊 LIQUIDACIONES":
             st.markdown('<div class="block-header">📊 LIQUIDACIONES AUTOMÁTICAS</div>', unsafe_allow_html=True)
 
             # ══════════════════════════════════════════════════════
@@ -2441,7 +2472,7 @@ elif menu == "🔐 ZONA DIRECTIVOS":
         # ══════════════════════════════════════════════════════
         # ── TAB CRUCES CIAS ──
         # ══════════════════════════════════════════════════════
-        with tab_cruces:
+        if _sel == "🔀 CRUCES CIAS":
             st.markdown('<div class="block-header">🔀 CRUCES CON COMPAÑÍAS</div>', unsafe_allow_html=True)
             st.markdown("""
                 <div style="background:#161b22; border-left:4px solid #FFD700; padding:15px; border-radius:8px; margin-bottom:20px;">
@@ -2586,21 +2617,24 @@ elif menu == "🔐 ZONA DIRECTIVOS":
                                               'Estado','Tarifa','Comisión','CUPS Luz','CUPS Gas']
                             cols_crm_merge = [c for c in cols_crm_merge if c in df_crm.columns]
 
-                            # Tabla lookup: CUP_16 → datos CRM (tanto Luz como Gas en una sola tabla)
+                            # Tabla lookup: usa df_crm_vista (filtrado por fecha) cuando hay filtro activo
+                            # Así el cruce solo muestra contratos del mes/año seleccionado
+                            _base_lookup = df_crm_vista  # filtrado si hay sel_fg, completo si no
+                            cols_crm_merge_v = [c for c in cols_crm_merge if c in _base_lookup.columns]
                             lookup_rows = []
-                            if 'CUP_Luz_16' in df_crm.columns:
-                                tmp = df_crm[df_crm['CUP_Luz_16'].notna()][['CUP_Luz_16'] + cols_crm_merge].copy()
+                            if 'CUP_Luz_16' in _base_lookup.columns:
+                                tmp = _base_lookup[_base_lookup['CUP_Luz_16'].notna()][['CUP_Luz_16'] + cols_crm_merge_v].copy()
                                 tmp = tmp.rename(columns={'CUP_Luz_16': 'CUP_16'})
                                 lookup_rows.append(tmp)
-                            if 'CUP_Gas_16' in df_crm.columns:
-                                tmp = df_crm[df_crm['CUP_Gas_16'].notna()][['CUP_Gas_16'] + cols_crm_merge].copy()
+                            if 'CUP_Gas_16' in _base_lookup.columns:
+                                tmp = _base_lookup[_base_lookup['CUP_Gas_16'].notna()][['CUP_Gas_16'] + cols_crm_merge_v].copy()
                                 tmp = tmp.rename(columns={'CUP_Gas_16': 'CUP_16'})
                                 lookup_rows.append(tmp)
 
                             if lookup_rows:
                                 df_lookup = pd.concat(lookup_rows, ignore_index=True).drop_duplicates('CUP_16')
                             else:
-                                df_lookup = pd.DataFrame(columns=['CUP_16'] + cols_crm_merge)
+                                df_lookup = pd.DataFrame(columns=['CUP_16'] + cols_crm_merge_v)
 
                             # Merge único sobre df_cia
                             df_merged = pd.merge(
@@ -2746,9 +2780,15 @@ elif menu == "🔐 ZONA DIRECTIVOS":
                         try:
                             # ── Utilidades ──
                             def n20(cup):
+                                """Normaliza CUP/DNI: strip espacios + upper + trunca a 20."""
                                 if cup is None or str(cup).strip() in ['','nan','None']: return None
                                 s = str(cup).strip().upper()
                                 return s[:20] if len(s) >= 20 else s
+
+                            def strip_dni(val):
+                                """Limpia DNI/NIF quitando espacios al inicio y final."""
+                                if val is None or str(val).strip() in ['','nan','None']: return ''
+                                return str(val).strip().upper()
 
                             def ffn(val):
                                 if val is None or str(val).strip() in ['','nan','None','NaT']: return ''
@@ -2788,6 +2828,17 @@ elif menu == "🔐 ZONA DIRECTIVOS":
                             else:
                                 df_nc = df_nc_all.copy()
 
+                            # Limpiar DNI y CUPs CRM (strip espacios inicio/final/intermedios)
+                            def clean_str_crm(x):
+                                if x is None or str(x).strip() in ['nan','None','']: return None
+                                return ' '.join(str(x).strip().split())
+
+                            if 'DNI Cliente' in df_nc.columns:
+                                df_nc['DNI Cliente'] = df_nc['DNI Cliente'].apply(clean_str_crm)
+                            if 'CUPS Luz' in df_nc.columns:
+                                df_nc['CUPS Luz'] = df_nc['CUPS Luz'].apply(clean_str_crm)
+                            if 'CUPS Gas' in df_nc.columns:
+                                df_nc['CUPS Gas'] = df_nc['CUPS Gas'].apply(clean_str_crm)
                             # Normalizar CUPs en la BASE COMPLETA (antes de cualquier filtro)
                             df_nc['luz_20'] = df_nc['CUPS Luz'].apply(n20) if 'CUPS Luz' in df_nc.columns else None
                             df_nc['gas_20'] = df_nc['CUPS Gas'].apply(n20) if 'CUPS Gas' in df_nc.columns else None
@@ -2814,6 +2865,23 @@ elif menu == "🔐 ZONA DIRECTIVOS":
                                 if fc in df_ne.columns: df_ne[fc] = df_ne[fc].apply(ffn)
                             if 'responseDtm' in df_ne.columns:
                                 df_ne['Mes'] = df_ne['responseDtm'].apply(mes_anio_n)
+                            # Excluir estados no válidos de Naturgy
+                            ESTADOS_EXCLUIR_NAT = {'Pedidos incompletos', 'Por firmar', 'Scoring rechazado'}
+                            if 'estado' in df_ne.columns:
+                                df_ne = df_ne[~df_ne['estado'].isin(ESTADOS_EXCLUIR_NAT)].copy()
+
+                            # Limpiar NIF y CUPs Naturgy (strip espacios inicio/final/intermedios)
+                            def clean_str(x):
+                                if x is None or str(x).strip() in ['nan','None','']: return None
+                                # Eliminar espacios al inicio, final y espacios múltiples intermedios
+                                return ' '.join(str(x).strip().split())
+
+                            if 'nif' in df_ne.columns:
+                                df_ne['nif'] = df_ne['nif'].apply(lambda x: clean_str(x) or '')
+                            if 'idCupsEle' in df_ne.columns:
+                                df_ne['idCupsEle'] = df_ne['idCupsEle'].apply(clean_str)
+                            if 'idCupsGas' in df_ne.columns:
+                                df_ne['idCupsGas'] = df_ne['idCupsGas'].apply(clean_str)
                             df_ne['cup_ele_20'] = df_ne['idCupsEle'].apply(n20) if 'idCupsEle' in df_ne.columns else None
                             df_ne['cup_gas_20'] = df_ne['idCupsGas'].apply(n20) if 'idCupsGas' in df_ne.columns else None
 
@@ -2891,16 +2959,17 @@ elif menu == "🔐 ZONA DIRECTIVOS":
                                     lambda x: vendor_map.get(str(x), 'No Encontrado'))
                             else:
                                 df_falta_crm['Posible Vendedor'] = 'No Encontrado'
-                            cols_fcrm = [c for c in ['Posible Vendedor','idCupsEle','idCupsGas','codigoVendedor','eleContratar','estado','responseDtm','Mes'] if c in df_falta_crm.columns]
+                            cols_fcrm = [c for c in ['Posible Vendedor','nif','nombre','idCupsEle','idCupsGas','codigoVendedor','eleContratar','gasContratar','estado','responseDtm','Mes'] if c in df_falta_crm.columns]
                             df_falta_crm_out = df_falta_crm[cols_fcrm].rename(columns={
+                                'nif':            'DNI/NIF',
+                                'nombre':         'Nombre Naturgy',
                                 'codigoVendedor': 'Código Vendedor',
                                 'eleContratar':   'Tarifa Ele',
-                                'estado':         'Estado',
+                                'gasContratar':   'Tarifa Gas',
+                                'estado':         'Estado Naturgy',
                                 'responseDtm':    'Fecha (responseDtm)'
                             }).reset_index(drop=True)
-                            # Añadir columna Comercial = 'No Encontrado' (igual que la plantilla)
                             df_falta_crm_out.insert(0, 'Comercial', 'No Encontrado')
-
                             # ── FALTAN EN EXPORTADO NATURGY ──
                             # CRM Naturgy contracts (del conjunto filtrado) cuyo CUP no está en Naturgy
                             cups_matched_luz = set(df_m_luz['luz_20'].dropna()) if not df_m_luz.empty else set()
@@ -2981,7 +3050,7 @@ elif menu == "🔐 ZONA DIRECTIVOS":
                 else:
                     st.markdown('<div style="background:#0d1117;border:2px dashed #30363d;border-radius:12px;padding:30px;text-align:center;margin-top:10px;"><p style="color:#8b949e;margin:0;">👆 Sube el export CRM y la extracción de Naturgy para iniciar el cruce</p></div>', unsafe_allow_html=True)
 
-        with tab_docs:
+        if _sel == "📁 DOCS EMPRESA":
             st.markdown('<div class="block-header">📁 DOCUMENTACIÓN DE EMPRESA</div>', unsafe_allow_html=True)
             st.markdown("""
                 <div style="background:#161b22; border-left:4px solid #FFD700; padding:15px; border-radius:8px; margin-bottom:20px;">
@@ -3001,7 +3070,7 @@ elif menu == "🔐 ZONA DIRECTIVOS":
                     mostrar_carpeta_dir("directivos", "EMPRESA/OTROS", "📑")
 
         # ── TAB SOPORTE ──
-        with tab_sop:
+        if _sel == "🛠️ SOPORTE":
             st.markdown('<div class="block-header">🛠️ SOPORTE Y HERRAMIENTAS</div>', unsafe_allow_html=True)
 
             def render_links_dir(lista, ncols=3):
