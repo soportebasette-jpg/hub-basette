@@ -1078,10 +1078,13 @@ elif menu == "🔐 ZONA DIRECTIVOS":
     """, unsafe_allow_html=True)
 
     # ── AUTENTICACIÓN DIRECTIVOS ──
+    # Preservar dir_auth explícitamente en cada rerun
     if "dir_auth" not in st.session_state:
         st.session_state["dir_auth"] = False
+    # Re-leer para asegurar persistencia
+    _dir_auth_ok = st.session_state.get("dir_auth", False)
 
-    if not st.session_state["dir_auth"]:
+    if not _dir_auth_ok:
         st.markdown("""
             <div style="background:linear-gradient(135deg,#1a1a2e,#0f3460); border:2px solid #FFD700;
                         border-radius:20px; padding:40px; text-align:center; max-width:450px; margin:60px auto;">
@@ -1097,12 +1100,13 @@ elif menu == "🔐 ZONA DIRECTIVOS":
             if st.button("ACCEDER A ZONA DIRECTIVOS", use_container_width=True):
                 if pwd_dir == st.secrets["CLAVE_DIRECTIVOS"]:
                     st.session_state["dir_auth"] = True
+                    st.session_state["_dir_auth_ts"] = True  # flag extra de persistencia
                     st.rerun()
                 else:
                     st.error("❌ Clave incorrecta. Acceso denegado.")
         st.stop()
 
-    if st.session_state.get("dir_auth"):
+    if st.session_state.get("dir_auth", False) or st.session_state.get("_dir_auth_ts", False):
         # ── CONTENIDO ZONA DIRECTIVOS (solo si autenticado) ──
         st.markdown("""
             <div style="background:linear-gradient(135deg,#1a1a2e,#0f3460); border:2px solid #FFD700;
@@ -2551,9 +2555,8 @@ elif menu == "🔐 ZONA DIRECTIVOS":
                                 key="gana_fecha_sel",
                                 placeholder="Sin filtro — mostrando todos los meses"
                             )
-                            if sel_fg and '_mes_anio' in df_crm.columns:
-                                df_crm = df_crm[df_crm['_mes_anio'].isin(sel_fg)].copy()
-
+                            # df_crm_vista = filtrado para mostrar / df_crm = base completa para lookup
+                            df_crm_vista = df_crm[df_crm['_mes_anio'].isin(sel_fg)].copy() if (sel_fg and '_mes_anio' in df_crm.columns) else df_crm.copy()
                             # ── Leer archivo Gana CIA ──
                             df_cia = leer_excel_safe(f_gana_cia, header=0)
                             df_cia.columns = [str(c).strip() for c in df_cia.columns]
@@ -2610,19 +2613,18 @@ elif menu == "🔐 ZONA DIRECTIVOS":
                                 lambda x: '✅ En CRM' if (x is not None and str(x) not in ['','nan','None']) else '❌ No en CRM'
                             )
 
-                            # ── CRUCE 2: Nuestro CRM → no en Gana CIA ──
+                            # ── CRUCE 2: Nuestros no en Gana → usa df_crm_vista (filtrado por fecha) ──
                             cups_gana_16 = set(df_cia['CUP_16'].dropna())
-                            if 'CUP_Luz_16' in df_crm.columns:
-                                df_crm['en_gana'] = df_crm['CUP_Luz_16'].apply(lambda c: c in cups_gana_16 if c else False)
-                            if 'CUP_Gas_16' in df_crm.columns:
-                                df_crm['en_gana_gas'] = df_crm['CUP_Gas_16'].apply(lambda c: c in cups_gana_16 if c else False)
-                            mask_en_gana = pd.Series(False, index=df_crm.index)
-                            if 'en_gana' in df_crm.columns:
-                                mask_en_gana = mask_en_gana | df_crm['en_gana'].fillna(False)
-                            if 'en_gana_gas' in df_crm.columns:
-                                mask_en_gana = mask_en_gana | df_crm['en_gana_gas'].fillna(False)
-                            df_nuestros_no_gana = df_crm[~mask_en_gana].copy()
-                            # Formatear fechas en nuestros
+                            _v = df_crm_vista.copy()
+                            if 'CUP_Luz_16' in _v.columns:
+                                _v['_en_g'] = _v['CUP_Luz_16'].apply(lambda c: c in cups_gana_16 if c else False)
+                            else:
+                                _v['_en_g'] = False
+                            if 'CUP_Gas_16' in _v.columns:
+                                _v['_en_g2'] = _v['CUP_Gas_16'].apply(lambda c: c in cups_gana_16 if c else False)
+                            else:
+                                _v['_en_g2'] = False
+                            df_nuestros_no_gana = _v[~_v['_en_g'] & ~_v['_en_g2']].copy()
                             for fc in ['Fecha Creación','Fecha Activación']:
                                 if fc in df_nuestros_no_gana.columns:
                                     df_nuestros_no_gana[fc] = df_nuestros_no_gana[fc].apply(fmt_f)
@@ -2633,6 +2635,8 @@ elif menu == "🔐 ZONA DIRECTIVOS":
                             n_no_gana  = len(df_nuestros_no_gana)
 
                             st.markdown("---")
+                            if sel_fg:
+                                st.info(f"🗓️ Mostrando: {', '.join(sel_fg)} — {len(df_crm_vista)} de {len(df_crm)} contratos Gana en CRM")
                             k1, k2, k3, k4 = st.columns(4)
                             box_g = "border-radius:10px; padding:14px 8px; text-align:center; margin-bottom:10px;"
                             k1.markdown(f'<div style="background:#0d2818; border:2px solid #22c55e; {box_g}"><p style="color:#22c55e; font-size:0.7rem; font-weight:bold; margin:0;">✅ GANA CON MATCH CRM</p><h2 style="color:white; margin:4px 0;">{n_en_crm}</h2></div>', unsafe_allow_html=True)
@@ -2778,18 +2782,20 @@ elif menu == "🔐 ZONA DIRECTIVOS":
                                 if fc in df_nc_all.columns:
                                     df_nc_all[fc] = df_nc_all[fc].apply(ffn)
 
-                            # Filtrar sólo contratos Naturgy
+                            # Filtrar sólo contratos Naturgy (df_nc = BASE COMPLETA para lookup)
                             if 'Comercializadora' in df_nc_all.columns:
                                 df_nc = df_nc_all[df_nc_all['Comercializadora'].str.contains('Naturgy', case=False, na=False)].copy()
                             else:
                                 df_nc = df_nc_all.copy()
 
-                            # Filtro por mes/año
+                            # Normalizar CUPs en la BASE COMPLETA (antes de cualquier filtro)
+                            df_nc['luz_20'] = df_nc['CUPS Luz'].apply(n20) if 'CUPS Luz' in df_nc.columns else None
+                            df_nc['gas_20'] = df_nc['CUPS Gas'].apply(n20) if 'CUPS Gas' in df_nc.columns else None
                             if 'Fecha Creación' in df_nc.columns:
                                 df_nc['_mes'] = df_nc['Fecha Creación'].apply(mes_anio_n)
-                                fechas_n = sorted([f for f in df_nc['_mes'].unique() if f], reverse=True)
-                            else:
-                                fechas_n = []
+
+                            # Filtro por mes/año — solo afecta a lo mostrado en resultados
+                            fechas_n = sorted([f for f in df_nc['_mes'].unique() if f], reverse=True) if '_mes' in df_nc.columns else []
                             sel_fn = st.multiselect(
                                 "🗓️ Filtrar por mes/año de creación (puedes elegir varios):",
                                 options=fechas_n,
@@ -2797,12 +2803,9 @@ elif menu == "🔐 ZONA DIRECTIVOS":
                                 key="nat_fecha_sel",
                                 placeholder="Sin filtro — mostrando todos los meses"
                             )
-                            if sel_fn and '_mes' in df_nc.columns:
-                                df_nc = df_nc[df_nc['_mes'].isin(sel_fn)].copy()
-
-                            # Normalizar CUPs CRM
-                            df_nc['luz_20'] = df_nc['CUPS Luz'].apply(n20) if 'CUPS Luz' in df_nc.columns else None
-                            df_nc['gas_20'] = df_nc['CUPS Gas'].apply(n20) if 'CUPS Gas' in df_nc.columns else None
+                            # df_nc_filtrado = vista filtrada para mostrar en KPIs/tabla
+                            # df_nc = BASE COMPLETA para calcular cups_crm_all y el cruce
+                            df_nc_vista = df_nc[df_nc['_mes'].isin(sel_fn)].copy() if (sel_fn and '_mes' in df_nc.columns) else df_nc.copy()
 
                             # ── Leer Naturgy ──
                             df_ne = leer_excel_safe(f_nat_ext, header=0)
@@ -2814,28 +2817,32 @@ elif menu == "🔐 ZONA DIRECTIVOS":
                             df_ne['cup_ele_20'] = df_ne['idCupsEle'].apply(n20) if 'idCupsEle' in df_ne.columns else None
                             df_ne['cup_gas_20'] = df_ne['idCupsGas'].apply(n20) if 'idCupsGas' in df_ne.columns else None
 
+                            # cups_crm_all usa df_nc COMPLETO (todos los meses)
                             cups_crm_luz = set(df_nc['luz_20'].dropna()) if 'luz_20' in df_nc.columns else set()
                             cups_crm_gas = set(df_nc['gas_20'].dropna()) if 'gas_20' in df_nc.columns else set()
                             cups_crm_all = cups_crm_luz | cups_crm_gas
 
                             # ── Columnas CRM a incluir en el cruce ──
-                            # Renombrar 'Estado' del CRM antes del merge para evitar colisión con 'estado' de Naturgy
+                            # Usar df_nc_vista (filtrado por fecha) para el merge de resultados
+                            if 'Estado' in df_nc_vista.columns:
+                                df_nc_vista = df_nc_vista.rename(columns={'Estado': 'Estado CRM'})
                             if 'Estado' in df_nc.columns:
                                 df_nc = df_nc.rename(columns={'Estado': 'Estado CRM'})
-                            cols_crm = [c for c in ['ID','Comercial','DNI Cliente','CUPS Luz','CUPS Gas','Estado CRM','Tarifa','Fecha Creación'] if c in df_nc.columns]
+                            cols_crm = [c for c in ['ID','Comercial','DNI Cliente','CUPS Luz','CUPS Gas','Estado CRM','Tarifa','Fecha Creación'] if c in df_nc_vista.columns]
                             cols_nat = [c for c in ['idCupsEle','idCupsGas','codigoVendedor','eleContratar','gasContratar','tarifaGas','tarifaEle','sveContratar','responseDtm','Mes','estado'] if c in df_ne.columns]
 
-                            # ── CRUCE COMPLETO: CRM → Naturgy por CUP Luz, luego Gas ──
-                            df_crm_luz = df_nc[df_nc['luz_20'].notna()][cols_crm + ['luz_20']]
+                            # ── CRUCE COMPLETO: usa df_nc_vista (filtrado por fecha) para mostrar ──
+                            # pero cups_crm_all sigue siendo del df_nc completo (para Faltan en CRM)
+                            df_crm_luz = df_nc_vista[df_nc_vista['luz_20'].notna()][cols_crm + ['luz_20']] if 'luz_20' in df_nc_vista.columns else pd.DataFrame()
                             df_ne_ele  = df_ne[df_ne['cup_ele_20'].notna()][cols_nat + ['cup_ele_20']]
                             df_m_luz = pd.merge(df_crm_luz, df_ne_ele,
-                                                left_on='luz_20', right_on='cup_ele_20', how='inner')
+                                                left_on='luz_20', right_on='cup_ele_20', how='inner') if not df_crm_luz.empty else pd.DataFrame()
 
-                            ids_matched = set(df_m_luz['ID'].dropna()) if 'ID' in df_m_luz.columns else set()
-                            df_crm_gas = df_nc[df_nc['gas_20'].notna() & ~df_nc['ID'].isin(ids_matched)][cols_crm + ['gas_20']]
+                            ids_matched = set(df_m_luz['ID'].dropna()) if 'ID' in df_m_luz.columns and not df_m_luz.empty else set()
+                            df_crm_gas_v = df_nc_vista[df_nc_vista['gas_20'].notna() & ~df_nc_vista['ID'].isin(ids_matched)][cols_crm + ['gas_20']] if 'gas_20' in df_nc_vista.columns else pd.DataFrame()
                             df_ne_gas  = df_ne[df_ne['cup_gas_20'].notna()][cols_nat + ['cup_gas_20']]
-                            df_m_gas = pd.merge(df_crm_gas, df_ne_gas,
-                                                left_on='gas_20', right_on='cup_gas_20', how='inner') if not df_crm_gas.empty else pd.DataFrame()
+                            df_m_gas = pd.merge(df_crm_gas_v, df_ne_gas,
+                                                left_on='gas_20', right_on='cup_gas_20', how='inner') if not df_crm_gas_v.empty else pd.DataFrame()
 
                             df_cruce = pd.concat([df_m_luz, df_m_gas], ignore_index=True)
 
@@ -2895,12 +2902,14 @@ elif menu == "🔐 ZONA DIRECTIVOS":
                             df_falta_crm_out.insert(0, 'Comercial', 'No Encontrado')
 
                             # ── FALTAN EN EXPORTADO NATURGY ──
-                            # CRM Naturgy contracts cuyo CUP no apareció en el cruce
+                            # CRM Naturgy contracts (del conjunto filtrado) cuyo CUP no está en Naturgy
                             cups_matched_luz = set(df_m_luz['luz_20'].dropna()) if not df_m_luz.empty else set()
                             cups_matched_gas = set(df_m_gas['gas_20'].dropna()) if not df_m_gas.empty else set()
-                            df_falta_nat = df_nc[
-                                (~df_nc['luz_20'].isin(cups_matched_luz)) &
-                                (~df_nc['gas_20'].isin(cups_matched_gas))
+                            _has_luz = 'luz_20' in df_nc_vista.columns
+                            _has_gas = 'gas_20' in df_nc_vista.columns
+                            df_falta_nat = df_nc_vista[
+                                (~df_nc_vista['luz_20'].isin(cups_matched_luz) if _has_luz else True) &
+                                (~df_nc_vista['gas_20'].isin(cups_matched_gas) if _has_gas else True)
                             ].copy()
                             # Código Vendedor Luz/Gas: buscar en Naturgy por CUP
                             cup_vendor = {}
@@ -2918,13 +2927,17 @@ elif menu == "🔐 ZONA DIRECTIVOS":
 
                             # ── KPIs ──
                             n_c = len(df_cruce_out); n_fc = len(df_falta_crm_out); n_fn = len(df_falta_nat_out)
+                            n_vista = len(df_nc_vista)
+                            n_total = len(df_nc)
                             st.markdown("---")
+                            if sel_fn:
+                                st.info(f"🗓️ Mostrando contratos de: {', '.join(sel_fn)} ({n_vista} de {n_total} contratos Naturgy)")
                             kn1, kn2, kn3, kn4 = st.columns(4)
                             bg = "border-radius:10px;padding:14px 8px;text-align:center;margin-bottom:10px;"
                             kn1.markdown(f'<div style="background:#0d2818;border:2px solid #FFD700;{bg}"><p style="color:#FFD700;font-size:0.7rem;font-weight:bold;margin:0;">🔥 CRUCE COMPLETO</p><h2 style="color:white;margin:4px 0;">{n_c}</h2></div>', unsafe_allow_html=True)
                             kn2.markdown(f'<div style="background:#1a0a0a;border:2px solid #ff4b4b;{bg}"><p style="color:#ff4b4b;font-size:0.7rem;font-weight:bold;margin:0;">❌ FALTAN EN CRM</p><h2 style="color:white;margin:4px 0;">{n_fc}</h2></div>', unsafe_allow_html=True)
                             kn3.markdown(f'<div style="background:#1a0a1a;border:2px solid #a78bfa;{bg}"><p style="color:#a78bfa;font-size:0.7rem;font-weight:bold;margin:0;">⚠️ FALTAN EN NATURGY</p><h2 style="color:white;margin:4px 0;">{n_fn}</h2></div>', unsafe_allow_html=True)
-                            kn4.markdown(f'<div style="background:#161b22;border:2px solid #8b949e;{bg}"><p style="color:#8b949e;font-size:0.7rem;font-weight:bold;margin:0;">📋 TOTAL CRM NATURGY</p><h2 style="color:white;margin:4px 0;">{len(df_nc)}</h2></div>', unsafe_allow_html=True)
+                            kn4.markdown(f'<div style="background:#161b22;border:2px solid #8b949e;{bg}"><p style="color:#8b949e;font-size:0.7rem;font-weight:bold;margin:0;">📋 CRM {"(filtrado)" if sel_fn else "TOTAL"}</p><h2 style="color:white;margin:4px 0;">{n_vista}</h2></div>', unsafe_allow_html=True)
 
                             nt1, nt2, nt3 = st.tabs([
                                 f"🔗 CRUCE COMPLETO ({n_c})",
