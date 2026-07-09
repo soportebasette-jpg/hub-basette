@@ -11,7 +11,7 @@ from fpdf import FPDF
 st.set_page_config(
     page_title="Basette Group | Hub", 
     layout="wide", 
-    initial_sidebar_state="expanded" 
+    initial_sidebar_state="expanded"
 )
 
 # Función para convertir imagen a base64 y que se vea en el HTML
@@ -28,6 +28,29 @@ img_base64 = get_base64_of_bin_file("rosco.jpg")
 # 2. CSS DE ALTA VISIBILIDAD (GENERAL)
 st.markdown("""
     <style>
+    /* ══ SIDEBAR SIEMPRE VISIBLE — botón colapsar/expandir ══ */
+    /* Mostrar siempre el botón de toggle del sidebar */
+    [data-testid="collapsedControl"] {
+        display: flex !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        background: linear-gradient(160deg, #c60b1e, #e07010, #f1bf00) !important;
+        border-radius: 0 8px 8px 0 !important;
+        width: 28px !important;
+        color: white !important;
+        box-shadow: 2px 0 6px rgba(0,0,0,0.2) !important;
+    }
+    [data-testid="collapsedControl"] svg {
+        fill: white !important;
+        color: white !important;
+    }
+    /* Botón de colapsar dentro del sidebar también visible */
+    button[kind="header"] {
+        background: rgba(255,255,255,0.3) !important;
+        border-radius: 6px !important;
+    }
+    button[kind="header"] svg { fill: #000000 !important; }
+
     /* ══ FONDO PRINCIPAL BLANCO ══ */
     .stApp { background-color: #dce8f5 !important; color: #111111 !important; }
     .main .block-container { background-color: #dce8f5 !important; }
@@ -555,7 +578,7 @@ if menu == "🚀 CRM":
                     <img src="https://cdn-icons-png.flaticon.com/512/1384/1384060.png" width="35" class="social-icon">
                 </a>
                 <a href="https://x.com/tecomparotodo" target="_blank">
-                    <img src="https://cdn-icons-png.flaticon.com/512/733/733579.png" width="35" class="social-icon">
+                    <img src="https://cdn-icons-png.flaticon.com/512/5968/5968958.png" width="35" class="social-icon">
                 </a>
                 <a href="https://www.instagram.com/tecomparotodo/" target="_blank">
                     <img src="https://cdn-icons-png.flaticon.com/512/174/174855.png" width="35" class="social-icon">
