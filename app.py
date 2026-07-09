@@ -493,6 +493,10 @@ LOGO_PRINCIPAL = "1000233813.jpg"
 QR_PLAN_AMIGO = "anunciosbasette/qr-plan amigo.png"
 
 if "password_correct" not in st.session_state: st.session_state["password_correct"] = False
+if "_pw_persist" not in st.session_state: st.session_state["_pw_persist"] = False
+# Restore from persistent flag on rerun
+if st.session_state.get("_pw_persist") and not st.session_state.get("password_correct"):
+    st.session_state["password_correct"] = True
 if not st.session_state["password_correct"]:
     _, col_auth, _ = st.columns([1, 1.2, 1])
     with col_auth:
@@ -501,6 +505,7 @@ if not st.session_state["password_correct"]:
         if st.button("ACCEDER AL HUB"):
             if pwd == st.secrets["CLAVE_COMERCIAL"]:
                 st.session_state["password_correct"] = True
+                st.session_state["_pw_persist"] = True
                 st.rerun()
             else: st.error("Clave incorrecta")
     st.stop()
@@ -517,6 +522,7 @@ with st.sidebar:
     with col_s2:
         if st.button("🚪 Salir", key="logout_btn", use_container_width=True):
             st.session_state["password_correct"] = False
+            st.session_state["_pw_persist"] = False
             st.session_state["dir_auth"] = False
             st.session_state["_dir_auth_ts"] = False
             st.rerun()
@@ -1098,7 +1104,7 @@ elif menu == "🕒 CONTROL LABORAL":
 
         # ── BADGE HORARIO DEL COMERCIAL SELECCIONADO ──
         if "RAQUEL" in com_sel.upper() and "GUADALUPE" in com_sel.upper():
-            st.markdown('<div style="background:#1a1a2e; border:1px solid #FFD700; border-radius:8px; padding:8px 16px; margin-bottom:10px; display:inline-block;"><span style="color:#FFD700; font-weight:bold;">⏰ Horario:</span> <span style="color:#111111;">09:00 – 14:30 · 17:00 – 19:30 (turno partido)</span></div>', unsafe_allow_html=True)
+            st.markdown('<div style="background:#fffbf0; border:2px solid #f1bf00; border-radius:8px; padding:8px 16px; margin-bottom:10px; display:inline-block;"><span style="color:#b38a00; font-weight:bold;">⏰ Horario:</span> <span style="color:#111111;">09:00 – 14:30 · 17:00 – 19:30 (turno partido)</span></div>', unsafe_allow_html=True)
         else:
             st.markdown('<div style="background:#ffffff; border:1px solid #30363d; border-radius:8px; padding:8px 16px; margin-bottom:10px; display:inline-block;"><span style="color:#d2ff00; font-weight:bold;">⏰ Horario:</span> <span style="color:#111111;">09:30 – 14:30</span></div>', unsafe_allow_html=True)
 
@@ -1479,15 +1485,7 @@ elif menu == "🔐 ZONA BACKOFFICE":
             # ── TAB PERSONAL ──
         if _sel == "👥 PERSONAL":
             st.markdown('<div class="block-header">👥 GESTIÓN DE PERSONAL</div>', unsafe_allow_html=True)
-            # Debug: mostrar contenido raíz Drive (quitar cuando funcione)
-            with st.expander("🔍 Ver contenido raíz del Drive (diagnóstico)", expanded=False):
-                items_root = drive_list_folder(DRIVE_ROOT_ID)
-                if items_root:
-                    for _it in items_root:
-                        _ico = "📁" if _it.get("mimeType") == "application/vnd.google-apps.folder" else "📄"
-                        st.caption(f"{_ico} {_it['name']} — `{_it['id']}`")
-                else:
-                    st.warning("Drive vacío o sin acceso")
+
 
             # Resumen de plantilla actual
             from datetime import date
@@ -2993,7 +2991,7 @@ elif menu == "🔐 ZONA BACKOFFICE":
                                 return hacer_xlsx_nativo(clean)
 
                             gt1, gt2, gt3 = st.tabs([
-                                f"📋 GANA COMPLETO ({len(df_cia)})",
+                                f"📋 GANA COMPLETO ({len(df_merged)})",
                                 f"❌ GANA SIN CRM ({n_no_crm})",
                                 f"⚠️ NUESTROS NO EN GANA ({n_no_gana})"
                             ])
