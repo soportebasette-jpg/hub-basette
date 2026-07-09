@@ -1274,6 +1274,15 @@ elif menu == "🔐 ZONA DIRECTIVOS":
             # ── TAB PERSONAL ──
         if _sel == "👥 PERSONAL":
             st.markdown('<div class="block-header">👥 GESTIÓN DE PERSONAL</div>', unsafe_allow_html=True)
+            # Debug: mostrar contenido raíz Drive (quitar cuando funcione)
+            with st.expander("🔍 Ver contenido raíz del Drive (diagnóstico)", expanded=False):
+                items_root = drive_list_folder(DRIVE_ROOT_ID)
+                if items_root:
+                    for _it in items_root:
+                        _ico = "📁" if _it.get("mimeType") == "application/vnd.google-apps.folder" else "📄"
+                        st.caption(f"{_ico} {_it['name']} — `{_it['id']}`")
+                else:
+                    st.warning("Drive vacío o sin acceso")
 
             # Resumen de plantilla actual
             from datetime import date
@@ -1313,8 +1322,28 @@ elif menu == "🔐 ZONA DIRECTIVOS":
 
             st.markdown("---")
             st.markdown('<div class="block-header">📂 DOCUMENTACIÓN DE PERSONAL</div>', unsafe_allow_html=True)
-            st.markdown("Los archivos se leen desde Google Drive · Carpeta **PERSONAL**")
-            mostrar_carpeta_dir("directivos", "PERSONAL", "📋")
+            st.markdown("""
+                <div style="background:#111827; border-left:4px solid #FFD700; padding:12px; border-radius:8px; margin-bottom:16px;">
+                    <p style="color:#8b949e; margin:0; font-size:0.82rem;">Archivos desde Google Drive · Carpeta <b style="color:#FFD700;">PERSONAL</b></p>
+                </div>
+            """, unsafe_allow_html=True)
+
+            # ── Excel Datos Empleados (nivel raíz de PERSONAL) ──
+            col_p1, col_p2 = st.columns(2)
+            with col_p1:
+                with st.expander("👥 Empleados Actuales"):
+                    mostrar_carpeta_drive(["PERSONAL", "EMPLEADOS ACTUALES"], "👤")
+                with st.expander("🚫 Bajas / No Incorporaciones"):
+                    mostrar_carpeta_drive(["PERSONAL", "BAJAS EMPLEADOS O NO INCORPORACIONES2"], "📤")
+                with st.expander("🖼️ Fotos"):
+                    mostrar_carpeta_drive(["PERSONAL", "FOTOS"], "🖼️")
+            with col_p2:
+                with st.expander("📋 Plantilla Bajas"):
+                    mostrar_carpeta_drive(["PERSONAL", "PLANTILLA BAJAS"], "📋")
+                with st.expander("📊 Certificados y Costes"):
+                    mostrar_carpeta_drive(["PERSONAL", "CERTIFICADOS Y COSTES EMPLEADOS"], "📊")
+                with st.expander("📁 Datos Empleados (Excel)"):
+                    mostrar_carpeta_drive(["PERSONAL"], "📊")
 
         # ── TAB MARCOS RETRIBUTIVOS ──
         if _sel == "💰 MARCOS RETRIBUTIVOS":
@@ -3097,15 +3126,17 @@ elif menu == "🔐 ZONA DIRECTIVOS":
             """, unsafe_allow_html=True)
             col_doc1, col_doc2 = st.columns(2)
             with col_doc1:
-                with st.expander("🏛️ Documentación Legal"):
-                    mostrar_carpeta_dir("directivos", "EMPRESA/LEGAL", "⚖️")
-                with st.expander("🔏 Certificados y Licencias"):
-                    mostrar_carpeta_dir("directivos", "EMPRESA/CERTIFICADOS", "🔏")
+                with st.expander("📬 Otros / Firmas Email Tecomparotodo"):
+                    mostrar_carpeta_drive(["EMPRESA", "OTROS POR FIRMAS EMAIL TECOMPAROTODO"], "📬")
+                with st.expander("🎓 Formación Inicial"):
+                    mostrar_carpeta_drive(["EMPRESA", "FORMACION INICIAL"], "🎓")
+                with st.expander("⚖️ Legal (CIF / CCC / Tarjetas)"):
+                    mostrar_carpeta_drive(["EMPRESA", "LEGAL POR CIF CCC TARJETAS EMPRESAS"], "⚖️")
             with col_doc2:
-                with st.expander("🛡️ Seguros"):
-                    mostrar_carpeta_dir("directivos", "EMPRESA/SEGUROS", "🛡️")
-                with st.expander("📑 Otros Documentos"):
-                    mostrar_carpeta_dir("directivos", "EMPRESA/OTROS", "📑")
+                with st.expander("🛡️ Seguros (DNI CEO / BO)"):
+                    mostrar_carpeta_drive(["EMPRESA", "SEGUROS POR DNI CEO BO"], "🛡️")
+                with st.expander("🤝 Contratos de Colaboración"):
+                    mostrar_carpeta_drive(["EMPRESA", "CONTRATOS COLABORACION"], "🤝")
 
         # ── TAB SOPORTE ──
         if _sel == "🛠️ SOPORTE":
