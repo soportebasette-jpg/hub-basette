@@ -29,8 +29,8 @@ img_base64 = get_base64_of_bin_file("rosco.jpg")
 st.markdown("""
     <style>
     /* ══ FONDO PRINCIPAL BLANCO ══ */
-    .stApp { background-color: #ffffff !important; color: #111111 !important; }
-    .main .block-container { background-color: #ffffff !important; }
+    .stApp { background-color: #dce8f5 !important; color: #111111 !important; }
+    .main .block-container { background-color: #dce8f5 !important; }
 
     /* ══ SIDEBAR — BANDERA ESPAÑA PROPORCIONAL (30%-40%-30%) ══ */
     [data-testid="stSidebar"] {
@@ -95,7 +95,9 @@ st.markdown("""
     .stText, .element-container p {
         color: #111111 !important;
     }
-    h1, h2, h3, h4, h5, h6 { color: #111111 !important; }
+    h1, h2 { color: #c60b1e !important; font-weight: 900 !important; }
+    h3, h4 { color: #8B0000 !important; font-weight: 800 !important; }
+    h5, h6 { color: #333333 !important; }
 
     /* ══ BOTONES ══ */
     button p, .stDownloadButton button p, .stButton button p {
@@ -121,12 +123,12 @@ st.markdown("""
     /* ══ INPUTS Y SELECTBOX ══ */
     .stSelectbox div[data-baseweb="select"],
     .stMultiSelect div[data-baseweb="select"] {
-        background-color: #f5f5f5 !important;
+        background-color: #eef4fb !important;
         color: #111111 !important;
         border: 1px solid #c60b1e !important;
     }
     .stTextInput input, .stTextArea textarea {
-        background-color: #f5f5f5 !important;
+        background-color: #eef4fb !important;
         color: #111111 !important;
         border: 1px solid #c60b1e !important;
     }
@@ -138,7 +140,7 @@ st.markdown("""
 
     /* ══ EXPANDERS ══ */
     [data-testid="stExpander"] {
-        background-color: #fafafa !important;
+        background-color: #eef4fb !important;
         border: 1px solid #e0e0e0 !important;
         border-radius: 8px !important;
     }
@@ -158,20 +160,23 @@ st.markdown("""
 
     /* ══ BLOCK-HEADER (titulos de secciones) ══ */
     .block-header {
-        background-color: #c60b1e;
-        color: white !important;
-        padding: 8px 20px;
-        border-radius: 5px;
+        background: linear-gradient(90deg, #c60b1e 0%, #9b0016 100%);
+        color: #ffffff !important;
+        padding: 10px 24px;
+        border-radius: 6px;
+        border-left: 6px solid #f1bf00;
         font-weight: bold;
         margin-bottom: 20px;
         margin-top: 25px;
         display: inline-block;
-        font-size: 1.1rem;
+        font-size: 1.05rem;
+        letter-spacing: 0.03em;
+        box-shadow: 2px 2px 6px rgba(198,11,30,0.18);
     }
 
     /* ══ CARDS DE PRECIOS ══ */
     .price-card {
-        background-color: #ffffff;
+        background-color: #eef4fb;
         border: 2px solid #c60b1e;
         border-radius: 15px;
         padding: 20px;
@@ -1375,7 +1380,7 @@ elif menu == "🔐 ZONA DIRECTIVOS":
                 col_a, col_b = st.columns([5, 1])
                 with col_a:
                     st.markdown(
-                        f'<div style="background:#f8f8f8; border:1px solid #e0e0e0; border-radius:8px; '
+                        f'<div style="background:#eef4fb; border:1px solid #c0d8ee; border-radius:8px; '
                         f'padding:8px 12px; margin-bottom:4px;">'
                         f'<span style="color:#111111; font-size:0.9rem;">{icono} {fname}</span>'
                         f'<span style="color:#666666; font-size:0.75rem;">{size_str}</span></div>',
@@ -1463,21 +1468,19 @@ elif menu == "🔐 ZONA DIRECTIVOS":
                 </div>
             """, unsafe_allow_html=True)
 
-            # ── Excel Datos Empleados (nivel raíz de PERSONAL) ──
+            # Carpetas y archivos según Drive real
             col_p1, col_p2 = st.columns(2)
             with col_p1:
                 with st.expander("👥 Empleados Actuales"):
                     mostrar_carpeta_drive(["PERSONAL", "EMPLEADOS ACTUALES"], "👤")
                 with st.expander("🚫 Bajas / No Incorporaciones"):
-                    mostrar_carpeta_drive(["PERSONAL", "BAJAS EMPLEADOS O NO INCORPORACIONES2"], "📤")
+                    mostrar_carpeta_drive(["PERSONAL", "BAJAS EMPLEADOS O NO INCORPORACIONES"], "📤")
                 with st.expander("🖼️ Fotos"):
                     mostrar_carpeta_drive(["PERSONAL", "FOTOS"], "🖼️")
             with col_p2:
-                with st.expander("📋 Plantilla Bajas"):
-                    mostrar_carpeta_drive(["PERSONAL", "PLANTILLA BAJAS"], "📋")
-                with st.expander("📊 Certificados y Costes"):
-                    mostrar_carpeta_drive(["PERSONAL", "CERTIFICADOS Y COSTES EMPLEADOS"], "📊")
-                with st.expander("📁 Datos Empleados (Excel)"):
+                with st.expander("📋 Plantillas, Certificados y Costes"):
+                    mostrar_carpeta_drive(["PERSONAL", "PLANTILLAS BAJAS, CERTIFICADOS Y COSTES EMPLEADOS"], "📋")
+                with st.expander("📊 Datos Empleados (Excel suelto)"):
                     mostrar_carpeta_drive(["PERSONAL"], "📊")
 
         # ── TAB MARCOS RETRIBUTIVOS ──
@@ -2802,17 +2805,18 @@ elif menu == "🔐 ZONA DIRECTIVOS":
                                               'Estado','Tarifa','Comisión','CUPS Luz','CUPS Gas']
                             cols_crm_merge = [c for c in cols_crm_merge if c in df_crm.columns]
 
-                            # Tabla lookup: usa df_crm_vista (filtrado por fecha) cuando hay filtro activo
-                            # Así el cruce solo muestra contratos del mes/año seleccionado
-                            _base_lookup = df_crm_vista  # filtrado si hay sel_fg, completo si no
-                            cols_crm_merge_v = [c for c in cols_crm_merge if c in _base_lookup.columns]
+                            # ── LOOKUP: siempre usa df_crm COMPLETO (todos los meses) ──
+                            # El filtro de fecha se aplica DESPUÉS sobre el resultado, no aquí.
+                            # Si se usa df_crm_vista aquí, contratos de otros meses no matchean
+                            # aunque sus CUPs existan en el archivo de Gana → da 0 resultados.
+                            cols_crm_merge_v = [c for c in cols_crm_merge if c in df_crm.columns]
                             lookup_rows = []
-                            if 'CUP_Luz_16' in _base_lookup.columns:
-                                tmp = _base_lookup[_base_lookup['CUP_Luz_16'].notna()][['CUP_Luz_16'] + cols_crm_merge_v].copy()
+                            if 'CUP_Luz_16' in df_crm.columns:
+                                tmp = df_crm[df_crm['CUP_Luz_16'].notna()][['CUP_Luz_16'] + cols_crm_merge_v].copy()
                                 tmp = tmp.rename(columns={'CUP_Luz_16': 'CUP_16'})
                                 lookup_rows.append(tmp)
-                            if 'CUP_Gas_16' in _base_lookup.columns:
-                                tmp = _base_lookup[_base_lookup['CUP_Gas_16'].notna()][['CUP_Gas_16'] + cols_crm_merge_v].copy()
+                            if 'CUP_Gas_16' in df_crm.columns:
+                                tmp = df_crm[df_crm['CUP_Gas_16'].notna()][['CUP_Gas_16'] + cols_crm_merge_v].copy()
                                 tmp = tmp.rename(columns={'CUP_Gas_16': 'CUP_16'})
                                 lookup_rows.append(tmp)
 
@@ -2821,7 +2825,7 @@ elif menu == "🔐 ZONA DIRECTIVOS":
                             else:
                                 df_lookup = pd.DataFrame(columns=['CUP_16'] + cols_crm_merge_v)
 
-                            # Merge único sobre df_cia
+                            # Merge: Gana CIA ↔ CRM completo por CUP_16
                             df_merged = pd.merge(
                                 df_cia, df_lookup,
                                 on='CUP_16', how='left', suffixes=('', '_crm')
@@ -2832,24 +2836,27 @@ elif menu == "🔐 ZONA DIRECTIVOS":
                                 lambda x: '✅ En CRM' if (x is not None and str(x) not in ['','nan','None']) else '❌ No en CRM'
                             )
 
-                            # ── Aplicar filtro de fecha DESPUÉS del merge ──
-                            # Cuando hay filtro activo: mostrar SOLO las filas de Gana cuyo CUP
-                            # tiene match con un contrato CRM creado en el mes seleccionado.
-                            # Los "No en CRM" NO se muestran cuando hay filtro (no tienen fecha CRM).
-                            if sel_fg and '_mes_anio' in df_crm.columns:
-                                def _mes_fila(fc_val):
+                            # ── Filtro de fecha DESPUÉS del merge ──
+                            # Filtra sobre las filas que ya tienen match, por Fecha Creación del CRM
+                            if sel_fg and 'Fecha Creación' in df_merged.columns:
+                                def _mes_fila_g(fc_val):
                                     s = str(fc_val).strip()
-                                    if not s or s in ['','nan','None']: return ''
-                                    try: return s[3:5]+'/'+s[6:10]
-                                    except: return ''
-                                if 'Fecha Creación' in df_merged.columns:
-                                    df_merged['_mes_crm'] = df_merged['Fecha Creación'].apply(_mes_fila)
-                                else:
-                                    df_merged['_mes_crm'] = ''
-                                # Solo mostrar filas cuya Fecha Creación (del CRM) está en el filtro
-                                df_merged = df_merged[df_merged['_mes_crm'].isin(sel_fg)].copy()
+                                    if not s or s in ['','nan','None','NaT']: return ''
+                                    # dd/mm/yyyy → mm/yyyy
+                                    if len(s) >= 10 and s[2] == '/':
+                                        return s[3:5] + '/' + s[6:10]
+                                    # yyyy-mm-dd
+                                    if len(s) >= 7 and s[4] == '-':
+                                        return s[5:7] + '/' + s[:4]
+                                    return ''
+                                df_merged['_mes_crm'] = df_merged['Fecha Creación'].apply(_mes_fila_g)
+                                # Mantener: filas con fecha en filtro ✅ + SIEMPRE las "No en CRM" ❌
+                                df_merged = df_merged[
+                                    df_merged['_mes_crm'].isin(sel_fg) |
+                                    (df_merged['ESTADO CRUCE'] == '❌ No en CRM')
+                                ].copy()
 
-                            # ── CRUCE 2: Nuestros no en Gana → usa df_crm_vista (filtrado por fecha) ──
+                            # ── CRUCE 2: Nuestros no en Gana → usa df_crm_vista (filtrado) ──
                             cups_gana_16 = set(df_cia['CUP_16'].dropna())
                             _v = df_crm_vista.copy()
                             if 'CUP_Luz_16' in _v.columns:
