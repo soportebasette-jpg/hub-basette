@@ -548,16 +548,16 @@ with st.sidebar:
 
     st.markdown("<br>", unsafe_allow_html=True)
 
-    # ── BLOQUE ZONA DIRECTIVOS ──
+    # ── BLOQUE ZONA BACKOFFICE ──
     st.markdown('''<div class="menu-box-directivos" style="cursor:pointer; margin-bottom:4px;">''', unsafe_allow_html=True)
-    _toggle_dir = st.button("🔐 ZONA DIRECTIVOS", key="btn_zona_dir", use_container_width=True)
+    _toggle_dir = st.button("🔐 ZONA BACKOFFICE", key="btn_zona_dir", use_container_width=True)
     st.markdown('</div>', unsafe_allow_html=True)
     if _toggle_dir:
         st.session_state["zona_activa"] = "directivos"
         st.rerun()
 
     if st.session_state.get("zona_activa") == "directivos":
-        menu = "🔐 ZONA DIRECTIVOS"
+        menu = "🔐 ZONA BACKOFFICE"
 
     if menu is None:
         menu = "🚀 CRM"  # fallback
@@ -781,34 +781,43 @@ elif menu == "📈 DASHBOARD Y RANKING":
                     return base64.b64encode(f.read()).decode()
             return None
 
-        # 2. ANIMACIÓN DE PERRITOS (ROSCO) - NO INFINITA
-        rosco_b64 = get_img_64("rosco.jpg")
-        if rosco_b64:
-            falling_items = ""
-            for i in range(15):  # Número de perritos
-                left = random.randint(0, 95)
-                delay = random.uniform(0, 3)
-                dur = random.uniform(3, 6)
-                size = random.randint(60, 100)
-                falling_items += f'<img src="data:image/jpeg;base64,{rosco_b64}" class="rosco-fall" style="left:{left}%; animation-delay:{delay}s; animation-duration:{dur}s; width:{size}px;">'
-            
-            st.markdown(f"""
-                <div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 9999; pointer-events: none;">
-                    {falling_items}
-                </div>
-                <style>
-                    .rosco-fall {{ 
-                        position: absolute; 
-                        top: -150px; 
-                        opacity: 0.8; 
-                        animation: fall linear forwards; 
-                    }}
-                    @keyframes fall {{ 
-                        0% {{ top: -150px; transform: rotate(0deg); opacity: 1; }} 
-                        100% {{ top: 110vh; transform: rotate(360deg); opacity: 0; }} 
-                    }}
-                </style>
-            """, unsafe_allow_html=True)
+        # 2. GLOBOS MOTIVACIONALES — cambian cada día
+        _frases_mot = [
+            "🎯 El éxito es la suma de pequeños esfuerzos repetidos cada día.",
+            "🚀 No cuentes los días, haz que los días cuenten.",
+            "💪 Cada cliente es una oportunidad de demostrar quién eres.",
+            "⭐ La disciplina es el puente entre las metas y los logros.",
+            "🔥 Un NO es solo el comienzo de la negociación.",
+            "🏆 Los campeones no nacen, se forjan con constancia.",
+            "💡 La energía y la persistencia lo conquistan todo.",
+            "🌟 El único límite es el que tú mismo te pones.",
+            "🎪 Vende como si fuera el último día, planifica como si fuera el primero.",
+            "⚡ El momento de actuar es ahora. Siempre ahora.",
+            "🦁 El trabajo duro supera al talento cuando el talento no trabaja duro.",
+            "🎸 Convierte cada objeción en una razón para comprar.",
+            "🏅 Los resultados hablan por ti, trabaja para que hablen fuerte.",
+        ]
+        from datetime import date as _dfr
+        _frase_dia = _frases_mot[_dfr.today().timetuple().tm_yday % len(_frases_mot)]
+        _globos_items = ""
+        for _gi in range(20):
+            _gl = random.randint(2, 97)
+            _gd = random.uniform(0, 5)
+            _gdu = random.uniform(4, 9)
+            _gs = random.randint(24, 48)
+            _globos_items += f'<div class="globo-up" style="left:{_gl}%;animation-delay:{_gd}s;animation-duration:{_gdu}s;font-size:{_gs}px;">🎈</div>'
+        st.markdown(f"""
+            <div style="position:fixed;top:0;left:0;width:100%;height:100%;z-index:9998;pointer-events:none;overflow:hidden;">
+                {_globos_items}
+            </div>
+            <style>
+                .globo-up{{position:absolute;top:110vh;opacity:0.9;animation:subir-g linear forwards;}}
+                @keyframes subir-g{{0%{{top:110vh;opacity:1;transform:translateX(0);}}50%{{transform:translateX(12px);}}100%{{top:-15vh;opacity:0;transform:translateX(-8px);}}}}
+            </style>
+            <div style="text-align:center;background:linear-gradient(90deg,#c60b1e,#e07010,#f1bf00);border-radius:12px;padding:14px 24px;margin:0 0 18px 0;box-shadow:0 3px 10px rgba(0,0,0,0.15);">
+                <p style="color:#ffffff;font-size:1.05rem;font-weight:800;margin:0;text-shadow:0 1px 3px rgba(0,0,0,0.3);">{_frase_dia}</p>
+            </div>
+        """, unsafe_allow_html=True)
 
         # 3. CARGA DE DATOS
         de, dt, da = load_and_clean_ranking()
@@ -1230,13 +1239,13 @@ elif menu == "🕒 CONTROL LABORAL":
         st.error(f"Error procesando datos: {e}")
 
 # ══════════════════════════════════════════════════════
-# --- ZONA DIRECTIVOS ---
+# --- ZONA BACKOFFICE ---
 # ══════════════════════════════════════════════════════
-elif menu == "🔐 ZONA DIRECTIVOS":
+elif menu == "🔐 ZONA BACKOFFICE":
     import os
     from datetime import datetime
 
-    # ── CSS adicional para la zona directivos ──
+    # ── CSS adicional para la zona backoffice ──
     st.markdown("""
         <style>
         .dir-header {
@@ -1280,7 +1289,7 @@ elif menu == "🔐 ZONA DIRECTIVOS":
             <div style="background:linear-gradient(135deg,#f0f4ff,#e8eeff); border:2px solid #FFD700;
                         border-radius:20px; padding:40px; text-align:center; max-width:450px; margin:60px auto;">
                 <h1 style="color:#FFD700; font-size:2.5rem; margin-bottom:5px;">🔐</h1>
-                <h2 style="color:#FFD700; margin-bottom:5px;">ZONA DIRECTIVOS</h2>
+                <h2 style="color:#FFD700; margin-bottom:5px;">ZONA BACKOFFICE</h2>
                 <p style="color:#8b949e; font-size:0.9rem;">Acceso restringido · Basette Group</p>
             </div>
         """, unsafe_allow_html=True)
@@ -1288,7 +1297,7 @@ elif menu == "🔐 ZONA DIRECTIVOS":
         _, col_dir, _ = st.columns([1, 1.2, 1])
         with col_dir:
             pwd_dir = st.text_input("🔑 Clave Directivos:", type="password", key="pwd_dir_input")
-            if st.button("ACCEDER A ZONA DIRECTIVOS", use_container_width=True):
+            if st.button("ACCEDER A ZONA BACKOFFICE", use_container_width=True):
                 if pwd_dir == st.secrets["CLAVE_DIRECTIVOS"]:
                     st.session_state["dir_auth"] = True
                     st.session_state["_dir_auth_ts"] = True  # flag extra de persistencia
@@ -1304,11 +1313,11 @@ elif menu == "🔐 ZONA DIRECTIVOS":
         st.session_state["_dir_auth_ts"] = True
 
     if st.session_state.get("dir_auth", False):
-        # ── CONTENIDO ZONA DIRECTIVOS (solo si autenticado) ──
+        # ── CONTENIDO ZONA BACKOFFICE (solo si autenticado) ──
         st.markdown("""
             <div style="background:linear-gradient(135deg,#f0f4ff,#e8eeff); border:2px solid #FFD700;
                         border-radius:15px; padding:25px; text-align:center; margin-bottom:25px;">
-                <h2 style="color:#FFD700; margin:0;">🏛️ ZONA DIRECTIVOS · BASETTE GROUP</h2>
+                <h2 style="color:#FFD700; margin:0;">🏛️ ZONA BACKOFFICE · BASETTE GROUP</h2>
                 <p style="color:#8b949e; margin:5px 0 0 0; font-size:0.85rem;">Área de acceso restringido · Documentación confidencial</p>
             </div>
         """, unsafe_allow_html=True)
@@ -2917,18 +2926,16 @@ elif menu == "🔐 ZONA DIRECTIVOS":
                                     s = str(fc_val).strip()
                                     if not s or s in ['','nan','None','NaT']: return ''
                                     # dd/mm/yyyy → mm/yyyy
-                                    if len(s) >= 10 and s[2] == '/':
+                                    if len(s) >= 10 and s[2] == '/' and s[5] == '/':
                                         return s[3:5] + '/' + s[6:10]
-                                    # yyyy-mm-dd
-                                    if len(s) >= 7 and s[4] == '-':
+                                    # yyyy-mm-dd → mm/yyyy
+                                    if len(s) >= 10 and s[4] == '-' and s[7] == '-':
                                         return s[5:7] + '/' + s[:4]
                                     return ''
                                 df_merged['_mes_crm'] = df_merged['Fecha Creación'].apply(_mes_fila_g)
-                                # Mantener: filas con fecha en filtro ✅ + SIEMPRE las "No en CRM" ❌
-                                df_merged = df_merged[
-                                    df_merged['_mes_crm'].isin(sel_fg) |
-                                    (df_merged['ESTADO CRUCE'] == '❌ No en CRM')
-                                ].copy()
+                                # SOLO mostrar filas cuya Fecha Creación (CRM) coincide con el filtro
+                                # Las "No en CRM" no tienen fecha CRM → no aparecen con filtro activo
+                                df_merged = df_merged[df_merged['_mes_crm'].isin(sel_fg)].copy()
 
                             # ── CRUCE 2: Nuestros no en Gana → usa df_crm_vista (filtrado) ──
                             cups_gana_16 = set(df_cia['CUP_16'].dropna())
@@ -2992,38 +2999,39 @@ elif menu == "🔐 ZONA DIRECTIVOS":
                             ])
 
                             with gt1:
-                                st.markdown('<p style="color:#8b949e; font-size:0.83rem;">Todos los contratos del archivo de Gana con el cruce contra nuestro CRM. Columnas de Gana + datos del CRM donde hay match.</p>', unsafe_allow_html=True)
                                 df_show1 = df_merged[cols_result].reset_index(drop=True)
-                                st.dataframe(df_show1, use_container_width=True, height=460)
-                                st.download_button("⬇️ Descargar CRUCE COMPLETO GANA",
-                                    _safe_xlsx({
-                                        'Gana Completo':    df_show1,
-                                        'Gana sin CRM':     df_merged[df_merged['ESTADO CRUCE']=='❌ No en CRM'][cols_result].reset_index(drop=True),
-                                        'Nuestros no Gana': df_nuestros_no_gana[cols_nuestros].reset_index(drop=True),
-                                    }),
+                                _hdr1, _btn1 = st.columns([4,1])
+                                with _hdr1: st.markdown('<p style="color:#8b949e;font-size:0.83rem;margin:0;">Todos los contratos de Gana + datos CRM donde hay match.</p>', unsafe_allow_html=True)
+                                with _btn1: st.download_button("⬇️ Descargar",
+                                    _safe_xlsx({'Gana Completo': df_show1,
+                                        'Gana sin CRM': df_merged[df_merged['ESTADO CRUCE']=='❌ No en CRM'][cols_result].reset_index(drop=True),
+                                        'Nuestros no Gana': df_nuestros_no_gana[cols_nuestros].reset_index(drop=True)}),
                                     file_name="gana_cruce_completo.xlsx",
                                     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                                    use_container_width=True)
+                                    use_container_width=True, key="dl_gt1")
+                                st.dataframe(df_show1, use_container_width=True, height=420)
 
                             with gt2:
-                                st.markdown('<p style="color:#ff4b4b; font-size:0.83rem;">Contratos en el archivo de Gana que <b>no tienen match en nuestro CRM</b> — verificar si son nuestros o de otro agente.</p>', unsafe_allow_html=True)
                                 df_show2 = df_merged[df_merged['ESTADO CRUCE']=='❌ No en CRM'][cols_result].reset_index(drop=True)
-                                st.dataframe(df_show2, use_container_width=True, height=460)
-                                st.download_button("⬇️ Descargar GANA SIN CRM",
+                                _hdr2, _btn2 = st.columns([4,1])
+                                with _hdr2: st.markdown('<p style="color:#ff4b4b;font-size:0.83rem;margin:0;">En Gana pero <b>no en nuestro CRM</b> — verificar si son nuestros.</p>', unsafe_allow_html=True)
+                                with _btn2: st.download_button("⬇️ Descargar",
                                     _safe_xlsx({'Gana sin CRM': df_show2}),
                                     file_name="gana_sin_crm.xlsx",
                                     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                                    use_container_width=True)
+                                    use_container_width=True, key="dl_gt2")
+                                st.dataframe(df_show2, use_container_width=True, height=420)
 
                             with gt3:
-                                st.markdown('<p style="color:#a78bfa; font-size:0.83rem;">Contratos nuestros con Gana Energía que <b>no aparecen en el archivo de Gana</b> — reclamar o verificar alta.</p>', unsafe_allow_html=True)
                                 df_show3 = df_nuestros_no_gana[cols_nuestros].reset_index(drop=True)
-                                st.dataframe(df_show3, use_container_width=True, height=460)
-                                st.download_button("⬇️ Descargar NUESTROS NO EN GANA",
+                                _hdr3, _btn3 = st.columns([4,1])
+                                with _hdr3: st.markdown('<p style="color:#a78bfa;font-size:0.83rem;margin:0;">Nuestros contratos Gana que <b>no aparecen en el archivo</b> — reclamar.</p>', unsafe_allow_html=True)
+                                with _btn3: st.download_button("⬇️ Descargar",
                                     _safe_xlsx({'Nuestros no en Gana': df_show3}),
                                     file_name="gana_nuestros_no_encontrados.xlsx",
                                     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                                    use_container_width=True)
+                                    use_container_width=True, key="dl_gt3")
+                                st.dataframe(df_show3, use_container_width=True, height=420)
 
                         except Exception as _eg:
                             import traceback
@@ -3231,6 +3239,9 @@ elif menu == "🔐 ZONA DIRECTIVOS":
                                 (~df_ne['cup_ele_20'].isin(cups_crm_all)) &
                                 (~df_ne['cup_gas_20'].isin(cups_crm_all))
                             ].copy()
+                            # Aplicar filtro de fecha también a "Faltan en CRM"
+                            if sel_fn and 'Mes' in df_falta_crm.columns:
+                                df_falta_crm = df_falta_crm[df_falta_crm['Mes'].isin(sel_fn)].copy()
                             # Posible Vendedor: codigoVendedor → Comercial mapeado desde el cruce
                             vendor_map = {}
                             for _, r in df_cruce.iterrows():
@@ -3298,33 +3309,36 @@ elif menu == "🔐 ZONA DIRECTIVOS":
                             ])
 
                             with nt1:
-                                st.markdown('<p style="color:#FFD700;font-size:0.83rem;">Contratos de nuestro CRM Naturgy que cruzaron con la extracción, por CUP de luz o gas.</p>', unsafe_allow_html=True)
-                                st.dataframe(df_cruce_out, use_container_width=True, height=460)
-                                st.download_button("⬇️ Descargar CRUCE COMPLETO NATURGY",
+                                _nh1, _nb1 = st.columns([4,1])
+                                with _nh1: st.markdown('<p style="color:#FFD700;font-size:0.83rem;margin:0;">CRM Naturgy cruzados con la extracción por CUP de luz o gas.</p>', unsafe_allow_html=True)
+                                with _nb1: st.download_button("⬇️ Descargar",
                                     _safe({'Cruce Completo': df_cruce_out,
                                            'Faltan en CONTRATOS CRM': df_falta_crm_out,
                                            'Faltan en EXPORTADO NATURGY': df_falta_nat_out}),
                                     file_name="naturgy_cruce_completo.xlsx",
                                     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                                    use_container_width=True)
+                                    use_container_width=True, key="dl_nt1")
+                                st.dataframe(df_cruce_out, use_container_width=True, height=420)
 
                             with nt2:
-                                st.markdown('<p style="color:#ff4b4b;font-size:0.83rem;">En la extracción de Naturgy pero <b>ningún CUP está en nuestro CRM</b>. "Posible Vendedor" estimado por codigoVendedor.</p>', unsafe_allow_html=True)
-                                st.dataframe(df_falta_crm_out, use_container_width=True, height=460)
-                                st.download_button("⬇️ Descargar FALTAN EN CRM",
+                                _nh2, _nb2 = st.columns([4,1])
+                                with _nh2: st.markdown('<p style="color:#ff4b4b;font-size:0.83rem;margin:0;">En Naturgy pero <b>ningún CUP en nuestro CRM</b>. Posible Vendedor estimado.</p>', unsafe_allow_html=True)
+                                with _nb2: st.download_button("⬇️ Descargar",
                                     _safe({'Faltan en CONTRATOS CRM': df_falta_crm_out}),
                                     file_name="naturgy_faltan_en_crm.xlsx",
                                     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                                    use_container_width=True)
+                                    use_container_width=True, key="dl_nt2")
+                                st.dataframe(df_falta_crm_out, use_container_width=True, height=420)
 
                             with nt3:
-                                st.markdown('<p style="color:#a78bfa;font-size:0.83rem;">Contratos nuestros de Naturgy cuyo CUP <b>no aparece en la extracción</b> — verificar o reclamar.</p>', unsafe_allow_html=True)
-                                st.dataframe(df_falta_nat_out, use_container_width=True, height=460)
-                                st.download_button("⬇️ Descargar FALTAN EN NATURGY",
+                                _nh3, _nb3 = st.columns([4,1])
+                                with _nh3: st.markdown('<p style="color:#a78bfa;font-size:0.83rem;margin:0;">Nuestros contratos Naturgy cuyo CUP <b>no aparece en la extracción</b>.</p>', unsafe_allow_html=True)
+                                with _nb3: st.download_button("⬇️ Descargar",
                                     _safe({'Faltan en EXPORTADO NATURGY': df_falta_nat_out}),
                                     file_name="naturgy_faltan_en_extraccion.xlsx",
                                     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                                    use_container_width=True)
+                                    use_container_width=True, key="dl_nt3")
+                                st.dataframe(df_falta_nat_out, use_container_width=True, height=420)
 
                         except Exception as _en:
                             import traceback
