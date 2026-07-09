@@ -28,120 +28,151 @@ img_base64 = get_base64_of_bin_file("rosco.jpg")
 # 2. CSS DE ALTA VISIBILIDAD (GENERAL)
 st.markdown("""
     <style>
-    /* ── FONDO PRINCIPAL ── */
-    .stApp { background-color: #1a1f2e; color: #ffffff; }
+    /* ══ FONDO PRINCIPAL BLANCO ══ */
+    .stApp { background-color: #ffffff !important; color: #111111 !important; }
+    .main .block-container { background-color: #ffffff !important; }
 
-    /* ── SIDEBAR: franjas bandera de España (rojo-amarillo-rojo) ── */
+    /* ══ SIDEBAR — BANDERA ESPAÑA PROPORCIONAL (30%-40%-30%) ══ */
     [data-testid="stSidebar"] {
         background: linear-gradient(180deg,
-            #c60b1e 0%, #c60b1e 15%,
-            #f1bf00 15%, #f1bf00 50%,
-            #c60b1e 50%, #c60b1e 100%
+            #c60b1e 0%,   #c60b1e 30%,
+            #f1bf00 30%,  #f1bf00 70%,
+            #c60b1e 70%,  #c60b1e 100%
         ) !important;
+        position: relative;
     }
-    [data-testid="stSidebarContent"] {
-        background: transparent !important;
-    }
+    [data-testid="stSidebarContent"] { background: transparent !important; }
 
-    /* ── TEXTOS DEL SIDEBAR EN NEGRO ── */
+    /* Todos los textos del sidebar en negro */
     [data-testid="stSidebar"] p,
     [data-testid="stSidebar"] span,
     [data-testid="stSidebar"] label,
     [data-testid="stSidebar"] div,
+    [data-testid="stSidebar"] small,
     [data-testid="stSidebar"] h1,
     [data-testid="stSidebar"] h2,
     [data-testid="stSidebar"] h3 {
         color: #000000 !important;
         font-weight: 700 !important;
     }
-
-    /* ── RADIO BUTTONS DEL SIDEBAR ── */
     [data-testid="stSidebar"] [data-testid="stMarkdownContainer"] p {
         color: #000000 !important;
         font-weight: 900 !important;
     }
-    /* Etiqueta del radio seleccionado */
-    [data-testid="stSidebar"] [role="radio"][aria-checked="true"] ~ div p {
+    [data-testid="stSidebar"] hr { border-color: rgba(0,0,0,0.25) !important; }
+
+    /* ══ CUADROS DE MENÚ (COMERCIALES y ZONA DIRECTIVOS) ══ */
+    .menu-box-comercial {
+        background: rgba(255,255,255,0.85);
+        border: 3px solid #c60b1e;
+        border-radius: 12px;
+        padding: 10px 12px;
+        margin-bottom: 10px;
+        backdrop-filter: blur(4px);
+    }
+    .menu-box-directivos {
+        background: rgba(255,255,255,0.85);
+        border: 3px solid #8B0000;
+        border-radius: 12px;
+        padding: 10px 12px;
+        margin-bottom: 10px;
+        backdrop-filter: blur(4px);
+    }
+    .menu-box-title {
+        font-size: 0.8rem;
+        font-weight: 900;
+        color: #c60b1e !important;
+        margin: 0 0 6px 0;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    /* ══ CONTENIDO PRINCIPAL — FONDO BLANCO, TEXTO NEGRO ══ */
+    .main p, .main span, .main div, .main li, .main td, .main th,
+    [data-testid="stMarkdownContainer"] p,
+    [data-testid="stMarkdownContainer"] span,
+    [data-testid="stMarkdownContainer"] li,
+    .stText, .element-container p {
+        color: #111111 !important;
+    }
+    h1, h2, h3, h4, h5, h6 { color: #111111 !important; }
+
+    /* ══ BOTONES ══ */
+    button p, .stDownloadButton button p, .stButton button p {
         color: #000000 !important;
         font-weight: 900 !important;
     }
-    /* Fondo blanco semitransparente en la opción seleccionada */
-    [data-testid="stSidebar"] [data-baseweb="radio"] > div:first-child {
-        background-color: rgba(255,255,255,0.25) !important;
-        border-radius: 6px;
-        padding: 4px 8px;
-    }
-
-    /* ── BOTONES: fondo blanco, borde rojo España, texto negro ── */
-    button p, .stDownloadButton button p, .stButton button p { 
-        color: #000000 !important; 
-        font-weight: 900 !important; 
-    }
-    button, .stDownloadButton button, .stButton button { 
-        background-color: #ffffff !important; 
-        border: 2px solid #c60b1e !important; 
+    button, .stDownloadButton button, .stButton button {
+        background-color: #ffffff !important;
+        border: 2px solid #c60b1e !important;
     }
     button:hover, .stButton button:hover {
         background-color: #f1bf00 !important;
         border-color: #c60b1e !important;
     }
-
-    /* ── LINK BUTTONS ── */
     [data-testid="stLinkButton"] a {
         background-color: #ffffff !important;
         border: 2px solid #c60b1e !important;
         color: #000000 !important;
         font-weight: 900 !important;
     }
+    [data-testid="stLinkButton"] a p { color: #000000 !important; }
 
-    /* ── SIDEBAR SEPARADORES ── */
-    [data-testid="stSidebar"] hr {
-        border-color: rgba(0,0,0,0.3) !important;
+    /* ══ INPUTS Y SELECTBOX ══ */
+    .stSelectbox div[data-baseweb="select"],
+    .stMultiSelect div[data-baseweb="select"] {
+        background-color: #f5f5f5 !important;
+        color: #111111 !important;
+        border: 1px solid #c60b1e !important;
+    }
+    .stTextInput input, .stTextArea textarea {
+        background-color: #f5f5f5 !important;
+        color: #111111 !important;
+        border: 1px solid #c60b1e !important;
     }
 
-    header { visibility: hidden; }
-    label[data-testid="stWidgetLabel"] p {
-        color: #f1bf00 !important;
-        font-weight: 900 !important;
-        font-size: 1.15rem !important;
-    }
+    /* ══ DATAFRAME / TABLAS ══ */
     .stTable { background-color: white !important; border-radius: 10px; }
     .stTable td, .stTable th { color: #000000 !important; text-align: center !important; }
-    
+    [data-testid="stDataFrame"] { background: white !important; color: #111 !important; }
+
+    /* ══ EXPANDERS ══ */
+    [data-testid="stExpander"] {
+        background-color: #fafafa !important;
+        border: 1px solid #e0e0e0 !important;
+        border-radius: 8px !important;
+    }
+    [data-testid="stExpander"] summary p { color: #111111 !important; font-weight: 700 !important; }
+
+    /* ══ TAGS / MULTISELECT ══ */
+    span[data-baseweb="tag"] { background-color: #c60b1e !important; border-radius: 5px !important; }
+    span[data-baseweb="tag"] span { color: white !important; font-weight: bold !important; }
+
+    /* ══ LABELS ══ */
+    header { visibility: hidden; }
+    label[data-testid="stWidgetLabel"] p {
+        color: #c60b1e !important;
+        font-weight: 900 !important;
+        font-size: 1.05rem !important;
+    }
+
+    /* ══ BLOCK-HEADER (titulos de secciones) ══ */
     .block-header {
-        background-color: #d2ff00; color: black; padding: 8px 20px; border-radius: 5px;
-        font-weight: bold; margin-bottom: 20px; margin-top: 25px; display: inline-block; font-size: 1.1rem;
-    }
-    
-    .winner-card { 
-        background: linear-gradient(90deg, #1e3a8a, #3b82f6); 
-        padding: 25px; 
-        border-radius: 15px; 
-        color: white !important; 
-        text-align: center; 
-        font-weight: bold; 
-        font-size: 28px; 
-        margin-bottom: 25px;
-        box-shadow: 0px 4px 15px rgba(0,0,0,0.5);
+        background-color: #c60b1e;
+        color: white !important;
+        padding: 8px 20px;
+        border-radius: 5px;
+        font-weight: bold;
+        margin-bottom: 20px;
+        margin-top: 25px;
+        display: inline-block;
+        font-size: 1.1rem;
     }
 
-    .social-container {
-        display: flex;
-        justify-content: flex-end;
-        align-items: center;
-        gap: 20px;
-        padding: 10px;
-    }
-    .social-icon {
-        transition: transform 0.3s;
-    }
-    .social-icon:hover {
-        transform: scale(1.1);
-    }
-
+    /* ══ CARDS DE PRECIOS ══ */
     .price-card {
-        background-color: #111827;
-        border: 2px solid #30363d;
+        background-color: #ffffff;
+        border: 2px solid #c60b1e;
         border-radius: 15px;
         padding: 20px;
         text-align: center;
@@ -149,36 +180,37 @@ st.markdown("""
         transition: transform 0.3s;
         height: 100%;
     }
-    .price-card:hover {
-        border-color: #d2ff00;
-        transform: translateY(-5px);
-    }
-    .price-title { color: #d2ff00; font-size: 1.2rem; font-weight: bold; margin-bottom: 10px; }
-    .price-val { color: white; font-size: 2rem; font-weight: 900; }
-    .price-sub { color: #8b949e; font-size: 0.85rem; margin-bottom: 5px; }
+    .price-card:hover { border-color: #f1bf00; transform: translateY(-5px); }
+    .price-title { color: #c60b1e !important; font-size: 1.2rem; font-weight: bold; margin-bottom: 10px; }
+    .price-val { color: #111111 !important; font-size: 2rem; font-weight: 900; }
+    .price-sub { color: #555555 !important; font-size: 0.85rem; margin-bottom: 5px; }
 
-    span[data-baseweb="tag"] {
-        background-color: #d2ff00 !important;
-        border-radius: 5px !important;
-    }
-    span[data-baseweb="tag"] span {
-        color: black !important;
-        font-weight: bold !important;
+    /* ══ WINNER CARD ══ */
+    .winner-card {
+        background: linear-gradient(90deg, #c60b1e, #8B0000);
+        padding: 25px; border-radius: 15px; color: white !important;
+        text-align: center; font-weight: bold; font-size: 28px;
+        margin-bottom: 25px; box-shadow: 0px 4px 15px rgba(0,0,0,0.2);
     }
 
-    .stSelectbox div[data-baseweb="select"], .stMultiSelect div[data-baseweb="select"] {
-        background-color: #111827 !important;
-        color: white !important;
+    /* ══ SOCIAL ICONS ══ */
+    .social-container {
+        display: flex; justify-content: flex-end;
+        align-items: center; gap: 20px; padding: 10px;
     }
-    /* Tabs: solo estilo visual en el botón activo, sin tocar visibilidad de paneles */
+    .social-icon { transition: transform 0.3s; }
+    .social-icon:hover { transform: scale(1.1); }
+
+    /* ══ TABS ══ */
     button[data-baseweb="tab"][aria-selected="true"] p {
-        color: #d2ff00 !important;
-        font-weight: 900 !important;
+        color: #c60b1e !important; font-weight: 900 !important;
     }
     button[data-baseweb="tab"] p {
-        color: #c9d1d9 !important;
-        font-weight: 600 !important;
+        color: #555555 !important; font-weight: 600 !important;
     }
+
+    /* ══ INFO / WARNING / ERROR BOXES ══ */
+    [data-testid="stAlert"] { color: #111111 !important; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -439,7 +471,7 @@ with st.sidebar:
     # ── Botón de cierre de sesión ──
     col_s1, col_s2 = st.columns([2,1])
     with col_s1:
-        st.markdown('<p style="color:#8b949e; font-size:0.75rem; margin:0;">Sesión activa ✅</p>', unsafe_allow_html=True)
+        st.markdown('<p style="color:#000000; font-size:0.75rem; margin:0; font-weight:bold;">✅ Sesión activa</p>', unsafe_allow_html=True)
     with col_s2:
         if st.button("🚪 Salir", key="logout_btn", use_container_width=True):
             st.session_state["password_correct"] = False
@@ -459,8 +491,9 @@ with st.sidebar:
     st.markdown("---")
 
     if _zona == "👔 COMERCIALES":
-        # Al cambiar a COMERCIALES, preservar dir_auth intacto
-        st.markdown('<p style="color:#d2ff00; font-weight:bold; font-size:0.8rem; margin:0 0 8px 4px;">📋 MENÚ COMERCIALES</p>', unsafe_allow_html=True)
+        st.markdown('''<div class="menu-box-comercial">
+            <p class="menu-box-title">👔 Menú Comerciales</p>
+        </div>''', unsafe_allow_html=True)
         menu = st.radio(
             "Sección:",
             ["🚀 CRM", "📊 PRECIOS", "🔍 COMPARADORES", "📢 ANUNCIOS Y PLAN AMIGO",
@@ -469,6 +502,9 @@ with st.sidebar:
             label_visibility="collapsed"
         )
     else:
+        st.markdown('''<div class="menu-box-directivos">
+            <p class="menu-box-title">🔐 Zona Directivos</p>
+        </div>''', unsafe_allow_html=True)
         menu = "🔐 ZONA DIRECTIVOS"
 
 
@@ -502,11 +538,11 @@ if menu == "🚀 CRM":
         """, unsafe_allow_html=True)
 
     st.markdown('<div class="block-header">🕒 CONTROL LABORAL</div>', unsafe_allow_html=True)
-    st.markdown(f'''<div style="background:#111827; padding:15px; border-radius:10px; border:2px solid #d2ff00; text-align:center; margin-bottom:10px;"><h4 style="color:white; margin:0;">REGISTRO DE JORNADA</h4></div>''', unsafe_allow_html=True)
+    st.markdown(f'''<div style="background:#ffffff; padding:15px; border-radius:10px; border:2px solid #d2ff00; text-align:center; margin-bottom:10px;"><h4 style="color:#111111; margin:0;">REGISTRO DE JORNADA</h4></div>''', unsafe_allow_html=True)
     st.link_button(f"ENTRAR AL FORMULARIO", "https://forms.gle/icG7jFPoyGmFD6vC8", use_container_width=True)
     
     st.markdown('<div class="block-header">⭐ MARCADOR</div>', unsafe_allow_html=True)
-    st.markdown(f'''<div style="background:#111827; padding:15px; border-radius:10px; border:2px solid #d2ff00; text-align:center; margin-bottom:10px;"><h4 style="color:white; margin:0;">MARCADOR PRINCIPAL</h4></div>''', unsafe_allow_html=True)
+    st.markdown(f'''<div style="background:#ffffff; padding:15px; border-radius:10px; border:2px solid #d2ff00; text-align:center; margin-bottom:10px;"><h4 style="color:#111111; margin:0;">MARCADOR PRINCIPAL</h4></div>''', unsafe_allow_html=True)
     st.link_button(f"ENTRAR AL MARCADOR", "https://grupobasette.vozipcenter.com/", use_container_width=True)
     
     st.markdown('<div class="block-header">💡 🔥 ENERGÍA</div>', unsafe_allow_html=True)
@@ -523,7 +559,7 @@ if menu == "🚀 CRM":
     cols_en = st.columns(3)
     for i, p in enumerate(energia):
         with cols_en[i % 3]:
-            st.markdown(f'''<div style="background:#111827; padding:15px; border-radius:10px; border:1px solid #30363d; text-align:center; margin-bottom:10px;"><h4 style="color:white; margin:0;">{p["n"]}</h4></div>''', unsafe_allow_html=True)
+            st.markdown(f'''<div style="background:#ffffff; padding:15px; border-radius:10px; border:1px solid #30363d; text-align:center; margin-bottom:10px;"><h4 style="color:#111111; margin:0;">{p["n"]}</h4></div>''', unsafe_allow_html=True)
             st.link_button(f"ENTRAR", p["u"], use_container_width=True)
     
     st.markdown("---")
@@ -532,20 +568,20 @@ if menu == "🚀 CRM":
         st.markdown('<div class="block-header">🛡️ 🚨 ALARMAS</div>', unsafe_allow_html=True)
         c_al1, c_al2 = st.columns(2)
         with c_al1:
-            st.markdown('<div style="background:#111827; padding:15px; border-radius:10px; border:1px solid #30363d; text-align:center; margin-bottom:10px;"><h4 style="color:white; margin:0;">SEGURMA</h4></div>', unsafe_allow_html=True)
+            st.markdown('<div style="background:#ffffff; padding:15px; border-radius:10px; border:1px solid #30363d; text-align:center; margin-bottom:10px;"><h4 style="color:#111111; margin:0;">SEGURMA</h4></div>', unsafe_allow_html=True)
             st.link_button("ENTRAR", "https://crm.segurma.com/web#action=619&cids=1&menu_id=200&model=sale.order&view_type=list", use_container_width=True)
         with c_al2:
-            st.markdown('<div style="background:#111827; padding:15px; border-radius:10px; border:1px solid #30363d; text-align:center; margin-bottom:10px;"><h4 style="color:white; margin:0;">3D</h4></div>', unsafe_allow_html=True)
+            st.markdown('<div style="background:#ffffff; padding:15px; border-radius:10px; border:1px solid #30363d; text-align:center; margin-bottom:10px;"><h4 style="color:#111111; margin:0;">3D</h4></div>', unsafe_allow_html=True)
             st.link_button("ENTRAR", "https://www.3dseguridad.es/reportes/menu.php", use_container_width=True)
             
     with col_der:
         st.markdown('<div class="block-header">📶 📱 TELECOMUNICACIONES</div>', unsafe_allow_html=True)
         c_t1, c_t2 = st.columns(2)
         with c_t1:
-            st.markdown('<div style="background:#111827; padding:15px; border-radius:10px; border:1px solid #30363d; text-align:center; margin-bottom:10px;"><h4 style="color:white; margin:0;">O2</h4></div>', unsafe_allow_html=True)
+            st.markdown('<div style="background:#ffffff; padding:15px; border-radius:10px; border:1px solid #30363d; text-align:center; margin-bottom:10px;"><h4 style="color:#111111; margin:0;">O2</h4></div>', unsafe_allow_html=True)
             st.link_button("ENTRAR O2", "https://o2online.es/auth/login/?next=%2Fventas%2F&type=retail", use_container_width=True)
         with c_t2:
-            st.markdown('<div style="background:#111827; padding:15px; border-radius:10px; border:1px solid #30363d; text-align:center; margin-bottom:10px;"><h4 style="color:white; margin:0;">LOWI</h4></div>', unsafe_allow_html=True)
+            st.markdown('<div style="background:#ffffff; padding:15px; border-radius:10px; border:1px solid #30363d; text-align:center; margin-bottom:10px;"><h4 style="color:#111111; margin:0;">LOWI</h4></div>', unsafe_allow_html=True)
             st.link_button("ENTRAR LOWI", "https://vodafone.topgestion.es/login", use_container_width=True)
 
 # --- PRECIOS ---
@@ -609,7 +645,7 @@ elif menu == "📊 PRECIOS":
 elif menu == "🔍 COMPARADORES":
     st.markdown('<div class="block-header">🔍 COMPARADORES</div>', unsafe_allow_html=True)
     st.markdown("""
-        <div style="background:#111827; border:2px solid #d2ff00; border-radius:15px; padding:30px; text-align:center; margin-bottom:30px;">
+        <div style="background:#ffffff; border:2px solid #d2ff00; border-radius:15px; padding:30px; text-align:center; margin-bottom:30px;">
             <h2 style="color:#d2ff00; margin-bottom:10px;">🔗 Herramientas de Comparación</h2>
             <p style="color:#8b949e; font-size:1rem; margin-bottom:20px;">Accede a las herramientas de comparación de tarifas para encontrar la mejor oferta para tu cliente.</p>
         </div>
@@ -659,25 +695,25 @@ elif menu == "📢 ANUNCIOS Y PLAN AMIGO":
         st.markdown("---")
         st.markdown('<p style="color:#d2ff00; font-weight:bold; text-align:center;">📊 TOTALES BRUTOS (VENTAS SIN DESCUENTOS)</p>', unsafe_allow_html=True)
         c1, c2, c3, c4 = st.columns(4)
-        box = "background:#0e1628; border:2px solid #d2ff00; padding:15px; border-radius:10px; text-align:center;"
+        box = "background:#f0f0f0; border:2px solid #d2ff00; padding:15px; border-radius:10px; text-align:center;"
         
         # Usamos filter(like=...) para que no dé error si la columna no existe
-        c1.markdown(f'<div style="{box}"><p style="color:#d2ff00;font-size:0.8rem;margin:0;">ENERGÍA BRUTA</p><h2 style="color:white;margin:0;">{int(rank.filter(like="V_Luz").sum().sum() + rank.filter(like="V_Gas").sum().sum())}</h2></div>', unsafe_allow_html=True)
-        c2.markdown(f'<div style="{box}"><p style="color:#d2ff00;font-size:0.8rem;margin:0;">FIBRA BRUTA</p><h2 style="color:white;margin:0;">{int(rank.filter(like="V_Fibra").sum().sum())}</h2></div>', unsafe_allow_html=True)
-        c3.markdown(f'<div style="{box}"><p style="color:#d2ff00;font-size:0.8rem;margin:0;">ALARMA BRUTA</p><h2 style="color:white;margin:0;">{int(rank.filter(like="V_Alarma").sum().sum())}</h2></div>', unsafe_allow_html=True)
+        c1.markdown(f'<div style="{box}"><p style="color:#d2ff00;font-size:0.8rem;margin:0;">ENERGÍA BRUTA</p><h2 style="color:#111111;margin:0;">{int(rank.filter(like="V_Luz").sum().sum() + rank.filter(like="V_Gas").sum().sum())}</h2></div>', unsafe_allow_html=True)
+        c2.markdown(f'<div style="{box}"><p style="color:#d2ff00;font-size:0.8rem;margin:0;">FIBRA BRUTA</p><h2 style="color:#111111;margin:0;">{int(rank.filter(like="V_Fibra").sum().sum())}</h2></div>', unsafe_allow_html=True)
+        c3.markdown(f'<div style="{box}"><p style="color:#d2ff00;font-size:0.8rem;margin:0;">ALARMA BRUTA</p><h2 style="color:#111111;margin:0;">{int(rank.filter(like="V_Alarma").sum().sum())}</h2></div>', unsafe_allow_html=True)
         c4.markdown(f'<div style="{box} background:#d2ff00;"><p style="color:black;font-weight:bold;margin:0;">TOTAL BRUTO</p><h2 style="color:black;margin:0;">{int(rank["Ventas_Sin_Movil"].sum())}</h2></div>', unsafe_allow_html=True)
 
         # 10. CUADROS: CANCELACIONES, BAJAS Y PTE FIRMA (Corregidos)
         st.markdown("<br>", unsafe_allow_html=True)
         cx1, cx2, cx3, cx4, cx5 = st.columns(5)
-        box_alt = "background:#111827; border:1px solid #ff4b4b; padding:15px; border-radius:10px; text-align:center;"
+        box_alt = "background:#ffffff; border:1px solid #ff4b4b; padding:15px; border-radius:10px; text-align:center;"
         
         # Filtramos por columnas que contengan 'Cancel' o 'Baja' para no depender de nombres exactos
-        cx1.markdown(f'<div style="{box_alt}"><p style="color:#ff4b4b;font-size:0.75rem;margin:0;">CANCEL. ENERGÍA</p><h3 style="color:white;margin:0;">{int(rank.filter(like="Cancel_E").sum().sum())}</h3></div>', unsafe_allow_html=True)
-        cx2.markdown(f'<div style="{box_alt}"><p style="color:#ff4b4b;font-size:0.75rem;margin:0;">CANCEL. FIBRA</p><h3 style="color:white;margin:0;">{int(rank.filter(like="Cancel_F").sum().sum())}</h3></div>', unsafe_allow_html=True)
-        cx3.markdown(f'<div style="{box_alt}"><p style="color:#ff4b4b;font-size:0.75rem;margin:0;">BAJAS ENERGÍA</p><h3 style="color:white;margin:0;">{int(rank.filter(like="Baja_E").sum().sum())}</h3></div>', unsafe_allow_html=True)
-        cx4.markdown(f'<div style="{box_alt}"><p style="color:#ff4b4b;font-size:0.75rem;margin:0;">BAJAS FIBRA</p><h3 style="color:white;margin:0;">{int(rank.filter(like="Baja_F").sum().sum())}</h3></div>', unsafe_allow_html=True)
-        cx5.markdown(f'<div style="{box_alt} border:1px solid #d2ff00;"><p style="color:#d2ff00;font-size:0.75rem;margin:0;">PTE. FIRMA</p><h3 style="color:white;margin:0;">{int(rank["Pte_Firma_Total"].sum())}</h3></div>', unsafe_allow_html=True)
+        cx1.markdown(f'<div style="{box_alt}"><p style="color:#ff4b4b;font-size:0.75rem;margin:0;">CANCEL. ENERGÍA</p><h3 style="color:#111111;margin:0;">{int(rank.filter(like="Cancel_E").sum().sum())}</h3></div>', unsafe_allow_html=True)
+        cx2.markdown(f'<div style="{box_alt}"><p style="color:#ff4b4b;font-size:0.75rem;margin:0;">CANCEL. FIBRA</p><h3 style="color:#111111;margin:0;">{int(rank.filter(like="Cancel_F").sum().sum())}</h3></div>', unsafe_allow_html=True)
+        cx3.markdown(f'<div style="{box_alt}"><p style="color:#ff4b4b;font-size:0.75rem;margin:0;">BAJAS ENERGÍA</p><h3 style="color:#111111;margin:0;">{int(rank.filter(like="Baja_E").sum().sum())}</h3></div>', unsafe_allow_html=True)
+        cx4.markdown(f'<div style="{box_alt}"><p style="color:#ff4b4b;font-size:0.75rem;margin:0;">BAJAS FIBRA</p><h3 style="color:#111111;margin:0;">{int(rank.filter(like="Baja_F").sum().sum())}</h3></div>', unsafe_allow_html=True)
+        cx5.markdown(f'<div style="{box_alt} border:1px solid #d2ff00;"><p style="color:#d2ff00;font-size:0.75rem;margin:0;">PTE. FIRMA</p><h3 style="color:#111111;margin:0;">{int(rank["Pte_Firma_Total"].sum())}</h3></div>', unsafe_allow_html=True)
 # --- DASHBOARD Y RANKING ---
 elif menu == "📈 DASHBOARD Y RANKING":
     try:
@@ -783,7 +819,7 @@ elif menu == "📈 DASHBOARD Y RANKING":
         # 7. OBJETIVO EQUIPO
         v_equipo_neta = int(rank['Total Neto'].sum())
         v_falta_equipo = max(0, 75 - v_equipo_neta)
-        st.markdown(f'<div style="background:#111827;padding:15px;border-radius:15px;border:1px solid #30363d;margin:0 auto 20px auto;text-align:center;max-width:320px;"><p style="color:#d2ff00;margin:0;font-weight:bold;font-size:0.9rem;">🚀 FALTAN PARA EL OBJETIVO</p><h1 style="color:white;margin:0;font-size:2.8rem;">{v_falta_equipo}</h1></div>', unsafe_allow_html=True)
+        st.markdown(f'<div style="background:#ffffff;padding:15px;border-radius:15px;border:1px solid #30363d;margin:0 auto 20px auto;text-align:center;max-width:320px;"><p style="color:#d2ff00;margin:0;font-weight:bold;font-size:0.9rem;">🚀 FALTAN PARA EL OBJETIVO</p><h1 style="color:#111111;margin:0;font-size:2.8rem;">{v_falta_equipo}</h1></div>', unsafe_allow_html=True)
 
         # 8. TABLA DE RANKING
         df_vis = rank.rename(columns={'V_Luz':'Luz','V_Gas':'Gas','V_Fibra':'Fibra','V_Móvil':'Móvil','V_Alarma':'Alarma','Bajas_Total':'Bajas','Cancel_Total':'Cancelados'})
@@ -795,22 +831,22 @@ elif menu == "📈 DASHBOARD Y RANKING":
         st.markdown("---")
         st.markdown('<p style="color:#d2ff00; font-weight:bold; text-align:center;">📊 TOTALES BRUTOS (VENTAS SIN DESCUENTOS)</p>', unsafe_allow_html=True)
         c1, c2, c3, c4 = st.columns(4)
-        box = "background:#0e1628; border:2px solid #d2ff00; padding:15px; border-radius:10px; text-align:center;"
+        box = "background:#f0f0f0; border:2px solid #d2ff00; padding:15px; border-radius:10px; text-align:center;"
         
-        c1.markdown(f'<div style="{box}"><p style="color:#d2ff00;font-size:0.8rem;margin:0;">ENERGÍA BRUTA</p><h2 style="color:white;margin:0;">{int(rank["V_Luz"].sum() + rank["V_Gas"].sum()) if "V_Luz" in rank else 0}</h2></div>', unsafe_allow_html=True)
-        c2.markdown(f'<div style="{box}"><p style="color:#d2ff00;font-size:0.8rem;margin:0;">FIBRA BRUTA</p><h2 style="color:white;margin:0;">{int(rank["V_Fibra"].sum()) if "V_Fibra" in rank else 0}</h2></div>', unsafe_allow_html=True)
-        c3.markdown(f'<div style="{box}"><p style="color:#d2ff00;font-size:0.8rem;margin:0;">ALARMA BRUTA</p><h2 style="color:white;margin:0;">{int(rank["V_Alarma"].sum()) if "V_Alarma" in rank else 0}</h2></div>', unsafe_allow_html=True)
+        c1.markdown(f'<div style="{box}"><p style="color:#d2ff00;font-size:0.8rem;margin:0;">ENERGÍA BRUTA</p><h2 style="color:#111111;margin:0;">{int(rank["V_Luz"].sum() + rank["V_Gas"].sum()) if "V_Luz" in rank else 0}</h2></div>', unsafe_allow_html=True)
+        c2.markdown(f'<div style="{box}"><p style="color:#d2ff00;font-size:0.8rem;margin:0;">FIBRA BRUTA</p><h2 style="color:#111111;margin:0;">{int(rank["V_Fibra"].sum()) if "V_Fibra" in rank else 0}</h2></div>', unsafe_allow_html=True)
+        c3.markdown(f'<div style="{box}"><p style="color:#d2ff00;font-size:0.8rem;margin:0;">ALARMA BRUTA</p><h2 style="color:#111111;margin:0;">{int(rank["V_Alarma"].sum()) if "V_Alarma" in rank else 0}</h2></div>', unsafe_allow_html=True)
         c4.markdown(f'<div style="{box} background:#d2ff00;"><p style="color:black;font-weight:bold;margin:0;">TOTAL BRUTO</p><h2 style="color:black;margin:0;">{int(rank["Ventas_Sin_Movil"].sum())}</h2></div>', unsafe_allow_html=True)
 
         # 10. NUEVOS CUADROS: CANCELACIONES Y BAJAS
         st.markdown("<br>", unsafe_allow_html=True)
         cx1, cx2, cx3, cx4 = st.columns(4)
-        box_alt = "background:#111827; border:1px solid #ff4b4b; padding:15px; border-radius:10px; text-align:center;"
+        box_alt = "background:#ffffff; border:1px solid #ff4b4b; padding:15px; border-radius:10px; text-align:center;"
         
-        cx1.markdown(f'<div style="{box_alt}"><p style="color:#ff4b4b;font-size:0.75rem;margin:0;">CANCEL. ENERGÍA</p><h3 style="color:white;margin:0;">{int(rank["Cancel_E"].sum()) if "Cancel_E" in rank else 0}</h3></div>', unsafe_allow_html=True)
-        cx2.markdown(f'<div style="{box_alt}"><p style="color:#ff4b4b;font-size:0.75rem;margin:0;">CANCEL. FIBRA</p><h3 style="color:white;margin:0;">{int(rank["Cancel_F"].sum()) if "Cancel_F" in rank else 0}</h3></div>', unsafe_allow_html=True)
-        cx3.markdown(f'<div style="{box_alt}"><p style="color:#ff4b4b;font-size:0.75rem;margin:0;">BAJAS ENERGÍA</p><h3 style="color:white;margin:0;">{int(rank["Baja_E"].sum()) if "Baja_E" in rank else 0}</h3></div>', unsafe_allow_html=True)
-        cx4.markdown(f'<div style="{box_alt}"><p style="color:#ff4b4b;font-size:0.75rem;margin:0;">BAJAS FIBRA</p><h3 style="color:white;margin:0;">{int(rank["Baja_F"].sum()) if "Baja_F" in rank else 0}</h3></div>', unsafe_allow_html=True)
+        cx1.markdown(f'<div style="{box_alt}"><p style="color:#ff4b4b;font-size:0.75rem;margin:0;">CANCEL. ENERGÍA</p><h3 style="color:#111111;margin:0;">{int(rank["Cancel_E"].sum()) if "Cancel_E" in rank else 0}</h3></div>', unsafe_allow_html=True)
+        cx2.markdown(f'<div style="{box_alt}"><p style="color:#ff4b4b;font-size:0.75rem;margin:0;">CANCEL. FIBRA</p><h3 style="color:#111111;margin:0;">{int(rank["Cancel_F"].sum()) if "Cancel_F" in rank else 0}</h3></div>', unsafe_allow_html=True)
+        cx3.markdown(f'<div style="{box_alt}"><p style="color:#ff4b4b;font-size:0.75rem;margin:0;">BAJAS ENERGÍA</p><h3 style="color:#111111;margin:0;">{int(rank["Baja_E"].sum()) if "Baja_E" in rank else 0}</h3></div>', unsafe_allow_html=True)
+        cx4.markdown(f'<div style="{box_alt}"><p style="color:#ff4b4b;font-size:0.75rem;margin:0;">BAJAS FIBRA</p><h3 style="color:#111111;margin:0;">{int(rank["Baja_F"].sum()) if "Baja_F" in rank else 0}</h3></div>', unsafe_allow_html=True)
 
     except Exception as e:
         st.error(f"Error en Dashboard: {e}")
@@ -946,7 +982,7 @@ elif menu == "🕒 CONTROL LABORAL":
             dias_hasta = (inicio - date.today()).days
             estado_color = "#d2ff00" if dias_hasta > 7 else "#ffaa00" if dias_hasta > 0 else "#7ee787"
             cols[i].markdown(f"""
-                <div style="background:#111827; padding:15px; border-radius:10px; border:2px solid {estado_color}; text-align:center;">
+                <div style="background:#ffffff; padding:15px; border-radius:10px; border:2px solid {estado_color}; text-align:center;">
                 <p style="margin:0; font-size:0.85rem; color:{estado_color}; font-weight:bold;">{nombre}</p>
                 <b style="font-size:1rem; color:white;">{inicio.strftime('%d/%m/%Y')} → {fin.strftime('%d/%m/%Y')}</b>
                 <p style="margin:4px 0 0 0; font-size:0.75rem; color:#8b949e;">{(fin - inicio).days + 1} días laborables</p>
@@ -962,11 +998,11 @@ elif menu == "🕒 CONTROL LABORAL":
         with col_a:
             st.markdown('<p style="color:#7ee787; font-weight:bold;">✅ Activas en plantilla</p>', unsafe_allow_html=True)
             for nombre, p in activas.items():
-                st.markdown(f'<div style="background:#0d2818; border:1px solid #7ee787; border-radius:8px; padding:8px 12px; margin-bottom:6px;"><span style="color:white; font-size:0.9rem;">{nombre}</span><br><span style="color:#8b949e; font-size:0.75rem;">Alta: {p["alta"].strftime("%d/%m/%Y")}</span></div>', unsafe_allow_html=True)
+                st.markdown(f'<div style="background:#f0fff4; border:1px solid #7ee787; border-radius:8px; padding:8px 12px; margin-bottom:6px;"><span style="color:#111111; font-size:0.9rem;">{nombre}</span><br><span style="color:#8b949e; font-size:0.75rem;">Alta: {p["alta"].strftime("%d/%m/%Y")}</span></div>', unsafe_allow_html=True)
         with col_b:
             st.markdown('<p style="color:#ff4b4b; font-weight:bold;">📋 Bajas procesadas</p>', unsafe_allow_html=True)
             for nombre, p in bajas.items():
-                st.markdown(f'<div style="background:#1a0a0a; border:1px solid #30363d; border-radius:8px; padding:8px 12px; margin-bottom:6px;"><span style="color:#8b949e; font-size:0.9rem;">{nombre}</span><br><span style="color:#8b949e; font-size:0.75rem;">Alta: {p["alta"].strftime("%d/%m/%Y")} · Baja: {p["baja"].strftime("%d/%m/%Y")}</span></div>', unsafe_allow_html=True)
+                st.markdown(f'<div style="background:#fff0f0; border:1px solid #30363d; border-radius:8px; padding:8px 12px; margin-bottom:6px;"><span style="color:#8b949e; font-size:0.9rem;">{nombre}</span><br><span style="color:#8b949e; font-size:0.75rem;">Alta: {p["alta"].strftime("%d/%m/%Y")} · Baja: {p["baja"].strftime("%d/%m/%Y")}</span></div>', unsafe_allow_html=True)
 
     st.markdown("---")
 
@@ -992,9 +1028,9 @@ elif menu == "🕒 CONTROL LABORAL":
 
         # ── BADGE HORARIO DEL COMERCIAL SELECCIONADO ──
         if "RAQUEL" in com_sel.upper() and "GUADALUPE" in com_sel.upper():
-            st.markdown('<div style="background:#1a1a2e; border:1px solid #FFD700; border-radius:8px; padding:8px 16px; margin-bottom:10px; display:inline-block;"><span style="color:#FFD700; font-weight:bold;">⏰ Horario:</span> <span style="color:white;">09:00 – 14:30 · 17:00 – 19:30 (turno partido)</span></div>', unsafe_allow_html=True)
+            st.markdown('<div style="background:#1a1a2e; border:1px solid #FFD700; border-radius:8px; padding:8px 16px; margin-bottom:10px; display:inline-block;"><span style="color:#FFD700; font-weight:bold;">⏰ Horario:</span> <span style="color:#111111;">09:00 – 14:30 · 17:00 – 19:30 (turno partido)</span></div>', unsafe_allow_html=True)
         else:
-            st.markdown('<div style="background:#111827; border:1px solid #30363d; border-radius:8px; padding:8px 16px; margin-bottom:10px; display:inline-block;"><span style="color:#d2ff00; font-weight:bold;">⏰ Horario:</span> <span style="color:white;">09:30 – 14:30</span></div>', unsafe_allow_html=True)
+            st.markdown('<div style="background:#ffffff; border:1px solid #30363d; border-radius:8px; padding:8px 16px; margin-bottom:10px; display:inline-block;"><span style="color:#d2ff00; font-weight:bold;">⏰ Horario:</span> <span style="color:#111111;">09:30 – 14:30</span></div>', unsafe_allow_html=True)
 
         # ── LÓGICA DE AUDITORÍA ──
         festivos = [
@@ -1102,10 +1138,10 @@ elif menu == "🕒 CONTROL LABORAL":
         # ── DASHBOARD MÉTRICAS ──
         st.markdown("<br>", unsafe_allow_html=True)
         c1, c2, c3, c4 = st.columns(4)
-        c1.markdown(f'<div style="background:#262730; padding:15px; border-radius:10px; border-left:8px solid #ff4b4b; text-align:center;"><p style="color:#ff4b4b; font-size:0.8rem; margin:0; font-weight:bold;">⏰ RETRASO ACUM.</p><h1 style="color:white; margin:5px 0;">{int(min_ret)} m</h1></div>', unsafe_allow_html=True)
-        c2.markdown(f'<div style="background:#262730; padding:15px; border-radius:10px; border-left:8px solid #ffaa00; text-align:center;"><p style="color:#ffaa00; font-size:0.8rem; margin:0; font-weight:bold;">❌ FALTAS</p><h1 style="color:white; margin:5px 0;">{faltas}</h1></div>', unsafe_allow_html=True)
-        c3.markdown(f'<div style="background:#262730; padding:15px; border-radius:10px; border-left:8px solid #7ee787; text-align:center;"><p style="color:#7ee787; font-size:0.8rem; margin:0; font-weight:bold;">🏖️ VACACIONES</p><h1 style="color:white; margin:5px 0;">{dias_vac} d</h1></div>', unsafe_allow_html=True)
-        c4.markdown(f'<div style="background:#262730; padding:15px; border-radius:10px; border-left:8px solid #8b949e; text-align:center;"><p style="color:#8b949e; font-size:0.8rem; margin:0; font-weight:bold;">🔴 BAJA EMPRESA</p><h1 style="color:white; margin:5px 0;">{dias_baja_emp} d</h1></div>', unsafe_allow_html=True)
+        c1.markdown(f'<div style="background:#262730; padding:15px; border-radius:10px; border-left:8px solid #ff4b4b; text-align:center;"><p style="color:#ff4b4b; font-size:0.8rem; margin:0; font-weight:bold;">⏰ RETRASO ACUM.</p><h1 style="color:#111111; margin:5px 0;">{int(min_ret)} m</h1></div>', unsafe_allow_html=True)
+        c2.markdown(f'<div style="background:#262730; padding:15px; border-radius:10px; border-left:8px solid #ffaa00; text-align:center;"><p style="color:#ffaa00; font-size:0.8rem; margin:0; font-weight:bold;">❌ FALTAS</p><h1 style="color:#111111; margin:5px 0;">{faltas}</h1></div>', unsafe_allow_html=True)
+        c3.markdown(f'<div style="background:#262730; padding:15px; border-radius:10px; border-left:8px solid #7ee787; text-align:center;"><p style="color:#7ee787; font-size:0.8rem; margin:0; font-weight:bold;">🏖️ VACACIONES</p><h1 style="color:#111111; margin:5px 0;">{dias_vac} d</h1></div>', unsafe_allow_html=True)
+        c4.markdown(f'<div style="background:#262730; padding:15px; border-radius:10px; border-left:8px solid #8b949e; text-align:center;"><p style="color:#8b949e; font-size:0.8rem; margin:0; font-weight:bold;">🔴 BAJA EMPRESA</p><h1 style="color:#111111; margin:5px 0;">{dias_baja_emp} d</h1></div>', unsafe_allow_html=True)
         
         st.markdown("---")
 
@@ -1180,7 +1216,7 @@ elif menu == "🔐 ZONA DIRECTIVOS":
 
     if not _dir_auth_ok:
         st.markdown("""
-            <div style="background:linear-gradient(135deg,#1a1a2e,#0f3460); border:2px solid #FFD700;
+            <div style="background:linear-gradient(135deg,#f0f4ff,#e8eeff); border:2px solid #FFD700;
                         border-radius:20px; padding:40px; text-align:center; max-width:450px; margin:60px auto;">
                 <h1 style="color:#FFD700; font-size:2.5rem; margin-bottom:5px;">🔐</h1>
                 <h2 style="color:#FFD700; margin-bottom:5px;">ZONA DIRECTIVOS</h2>
@@ -1209,7 +1245,7 @@ elif menu == "🔐 ZONA DIRECTIVOS":
     if st.session_state.get("dir_auth", False):
         # ── CONTENIDO ZONA DIRECTIVOS (solo si autenticado) ──
         st.markdown("""
-            <div style="background:linear-gradient(135deg,#1a1a2e,#0f3460); border:2px solid #FFD700;
+            <div style="background:linear-gradient(135deg,#f0f4ff,#e8eeff); border:2px solid #FFD700;
                         border-radius:15px; padding:25px; text-align:center; margin-bottom:25px;">
                 <h2 style="color:#FFD700; margin:0;">🏛️ ZONA DIRECTIVOS · BASETTE GROUP</h2>
                 <p style="color:#8b949e; margin:5px 0 0 0; font-size:0.85rem;">Área de acceso restringido · Documentación confidencial</p>
@@ -1272,11 +1308,24 @@ elif menu == "🔐 ZONA DIRECTIVOS":
 
         @st.cache_data(ttl=300, show_spinner=False)
         def drive_find_subfolder(parent_id, name):
-            """Devuelve el ID de una subcarpeta por nombre (case-insensitive)."""
+            """Devuelve el ID de subcarpeta: primero exacto (sin acento/espacios), luego contiene."""
             items = drive_list_folder(parent_id)
+            name_norm = name.strip().upper()
+            # 1. Exact match (case-insensitive)
             for item in items:
                 if (item.get("mimeType") == "application/vnd.google-apps.folder"
-                        and item.get("name", "").strip().upper() == name.strip().upper()):
+                        and item.get("name", "").strip().upper() == name_norm):
+                    return item["id"]
+            # 2. Contains match (busca si el nombre de Drive contiene nuestra búsqueda)
+            for item in items:
+                if (item.get("mimeType") == "application/vnd.google-apps.folder"
+                        and name_norm in item.get("name", "").strip().upper()):
+                    return item["id"]
+            # 3. Our name contains the Drive name (nombre Drive es prefijo del nuestro)
+            for item in items:
+                drv = item.get("name", "").strip().upper()
+                if (item.get("mimeType") == "application/vnd.google-apps.folder"
+                        and drv and drv in name_norm):
                     return item["id"]
             return None
 
@@ -1290,39 +1339,66 @@ elif menu == "🔐 ZONA DIRECTIVOS":
                     return None
             return current_id
 
-        def mostrar_carpeta_drive(path_parts, icono="📄"):
-            """Muestra archivos de una carpeta Drive con botón para abrirlos."""
-            folder_id = drive_folder_id_by_path(tuple(path_parts))
-            if not folder_id:
-                st.caption(f"🚫 Carpeta no encontrada en Drive: {' / '.join(path_parts)}")
-                st.info("Comprueba que la carpeta existe y que Drive está compartido como **Cualquiera con el enlace puede ver**.")
+        def _render_drive_items(folder_id, icono="📄", depth=0):
+            """Renderiza archivos y subcarpetas de una carpeta Drive de forma recursiva."""
+            items = drive_list_folder(folder_id)
+            if not items:
+                if depth == 0:
+                    st.info("📭 Carpeta vacía o sin acceso.")
                 return
 
-            items    = drive_list_folder(folder_id)
-            archivos = [f for f in items if f.get("mimeType") != "application/vnd.google-apps.folder"]
+            archivos   = [f for f in items if f.get("mimeType") != "application/vnd.google-apps.folder"]
+            subcarpetas = [f for f in items if f.get("mimeType") == "application/vnd.google-apps.folder"]
 
-            if not archivos:
-                st.info("📭 Carpeta vacía. Sube archivos a Drive para que aparezcan aquí.")
-                return
+            # Mostrar subcarpetas primero como expanders
+            for sub in subcarpetas:
+                with st.expander(f"📁 {sub['name']}", expanded=False):
+                    _render_drive_items(sub["id"], icono, depth + 1)
 
+            # Mostrar archivos
             for f in archivos:
                 fid      = f["id"]
                 fname    = f["name"]
                 size_kb  = int(f.get("size", 0)) // 1024 if f.get("size") else 0
                 size_str = f" · {size_kb} KB" if size_kb else ""
-                view_url = f"https://drive.google.com/file/d/{fid}/view"
+                # Enlace para visualizar; para Google Docs usar export
+                mime = f.get("mimeType", "")
+                if "spreadsheet" in mime:
+                    view_url = f"https://docs.google.com/spreadsheets/d/{fid}/edit"
+                elif "document" in mime:
+                    view_url = f"https://docs.google.com/document/d/{fid}/edit"
+                elif "presentation" in mime:
+                    view_url = f"https://docs.google.com/presentation/d/{fid}/edit"
+                else:
+                    view_url = f"https://drive.google.com/file/d/{fid}/view"
 
                 col_a, col_b = st.columns([5, 1])
                 with col_a:
                     st.markdown(
-                        f'<div style="background:#111827; border:1px solid #30363d; border-radius:8px; '
+                        f'<div style="background:#f8f8f8; border:1px solid #e0e0e0; border-radius:8px; '
                         f'padding:8px 12px; margin-bottom:4px;">'
-                        f'<span style="color:white; font-size:0.9rem;">{icono} {fname}</span>'
-                        f'<span style="color:#8b949e; font-size:0.75rem;">{size_str}</span></div>',
+                        f'<span style="color:#111111; font-size:0.9rem;">{icono} {fname}</span>'
+                        f'<span style="color:#666666; font-size:0.75rem;">{size_str}</span></div>',
                         unsafe_allow_html=True
                     )
                 with col_b:
                     st.link_button("⬇️ Abrir", view_url, use_container_width=True)
+
+        def mostrar_carpeta_drive(path_parts, icono="📄"):
+            """Muestra archivos Y subcarpetas de una carpeta Drive."""
+            folder_id = drive_folder_id_by_path(tuple(path_parts))
+            if not folder_id:
+                # Mostrar diagnóstico: qué hay en el padre
+                if len(path_parts) > 1:
+                    parent_id = drive_folder_id_by_path(tuple(path_parts[:-1]))
+                    if parent_id:
+                        items_padre = drive_list_folder(parent_id)
+                        carpetas_padre = [i["name"] for i in items_padre if i.get("mimeType") == "application/vnd.google-apps.folder"]
+                        st.warning(f"⚠️ No encontré '{path_parts[-1]}'. Carpetas disponibles en el padre: {carpetas_padre}")
+                        return
+                st.caption(f"🚫 Carpeta no encontrada: {' / '.join(path_parts)}")
+                return
+            _render_drive_items(folder_id, icono)
 
         def mostrar_carpeta_dir(ruta_base, nombre_carpeta, icono="📄"):
             """Wrapper de compatibilidad: traduce rutas locales a path_parts de Drive."""
@@ -1361,9 +1437,9 @@ elif menu == "🔐 ZONA DIRECTIVOS":
             bajas_e = [k for k, v in empleados_dir.items() if v["baja"] is not None]
 
             col_res1, col_res2, col_res3 = st.columns(3)
-            col_res1.markdown(f'<div style="background:#0d2818;border:2px solid #7ee787;border-radius:12px;padding:20px;text-align:center;"><p style="color:#7ee787;margin:0;font-weight:bold;font-size:0.85rem;">ACTIVOS</p><h1 style="color:white;margin:5px 0;">{len(activos)}</h1></div>', unsafe_allow_html=True)
-            col_res2.markdown(f'<div style="background:#1a0a0a;border:2px solid #ff4b4b;border-radius:12px;padding:20px;text-align:center;"><p style="color:#ff4b4b;margin:0;font-weight:bold;font-size:0.85rem;">BAJAS HISTÓRICAS</p><h1 style="color:white;margin:5px 0;">{len(bajas_e)}</h1></div>', unsafe_allow_html=True)
-            col_res3.markdown(f'<div style="background:#111827;border:2px solid #FFD700;border-radius:12px;padding:20px;text-align:center;"><p style="color:#FFD700;margin:0;font-weight:bold;font-size:0.85rem;">TOTAL HISTORIAL</p><h1 style="color:white;margin:5px 0;">{len(empleados_dir)}</h1></div>', unsafe_allow_html=True)
+            col_res1.markdown(f'<div style="background:#f0fff4;border:2px solid #7ee787;border-radius:12px;padding:20px;text-align:center;"><p style="color:#7ee787;margin:0;font-weight:bold;font-size:0.85rem;">ACTIVOS</p><h1 style="color:#111111;margin:5px 0;">{len(activos)}</h1></div>', unsafe_allow_html=True)
+            col_res2.markdown(f'<div style="background:#fff0f0;border:2px solid #ff4b4b;border-radius:12px;padding:20px;text-align:center;"><p style="color:#ff4b4b;margin:0;font-weight:bold;font-size:0.85rem;">BAJAS HISTÓRICAS</p><h1 style="color:#111111;margin:5px 0;">{len(bajas_e)}</h1></div>', unsafe_allow_html=True)
+            col_res3.markdown(f'<div style="background:#ffffff;border:2px solid #FFD700;border-radius:12px;padding:20px;text-align:center;"><p style="color:#FFD700;margin:0;font-weight:bold;font-size:0.85rem;">TOTAL HISTORIAL</p><h1 style="color:#111111;margin:5px 0;">{len(empleados_dir)}</h1></div>', unsafe_allow_html=True)
 
             st.markdown("<br>", unsafe_allow_html=True)
 
@@ -1382,7 +1458,7 @@ elif menu == "🔐 ZONA DIRECTIVOS":
             st.markdown("---")
             st.markdown('<div class="block-header">📂 DOCUMENTACIÓN DE PERSONAL</div>', unsafe_allow_html=True)
             st.markdown("""
-                <div style="background:#111827; border-left:4px solid #FFD700; padding:12px; border-radius:8px; margin-bottom:16px;">
+                <div style="background:#ffffff; border-left:4px solid #FFD700; padding:12px; border-radius:8px; margin-bottom:16px;">
                     <p style="color:#8b949e; margin:0; font-size:0.82rem;">Archivos desde Google Drive · Carpeta <b style="color:#FFD700;">PERSONAL</b></p>
                 </div>
             """, unsafe_allow_html=True)
@@ -1408,7 +1484,7 @@ elif menu == "🔐 ZONA DIRECTIVOS":
         if _sel == "💰 MARCOS RETRIBUTIVOS":
             st.markdown('<div class="block-header">💰 MARCOS RETRIBUTIVOS</div>', unsafe_allow_html=True)
             st.markdown("""
-                <div style="background:#111827; border-left:4px solid #FFD700; padding:15px; border-radius:8px; margin-bottom:20px;">
+                <div style="background:#ffffff; border-left:4px solid #FFD700; padding:15px; border-radius:8px; margin-bottom:20px;">
                     <p style="color:#FFD700; font-weight:bold; margin:0;">ℹ️ ÁREA CONFIDENCIAL</p>
                     <p style="color:#8b949e; margin:5px 0 0 0; font-size:0.85rem;">Los documentos de estructura salarial, bandas retributivas y comisiones se gestionan aquí.</p>
                 </div>
@@ -1429,7 +1505,7 @@ elif menu == "🔐 ZONA DIRECTIVOS":
         if _sel == "💼 NÓMINAS":
             st.markdown('<div class="block-header">💼 GESTIÓN DE NÓMINAS</div>', unsafe_allow_html=True)
             st.markdown("""
-                <div style="background:#111827; border-left:4px solid #FFD700; padding:15px; border-radius:8px; margin-bottom:20px;">
+                <div style="background:#ffffff; border-left:4px solid #FFD700; padding:15px; border-radius:8px; margin-bottom:20px;">
                     <p style="color:#8b949e; margin:0; font-size:0.85rem;">Los archivos se leen desde Google Drive · Carpeta <b style="color:#FFD700;">NOMINAS / AÑO / MES</b></p>
                 </div>
             """, unsafe_allow_html=True)
@@ -1754,7 +1830,7 @@ elif menu == "🔐 ZONA DIRECTIVOS":
             # ══════════════════════════════════════════════════════
 
             st.markdown("""
-                <div style="background:#111827; border-left:4px solid #FFD700; padding:15px; border-radius:8px; margin-bottom:20px;">
+                <div style="background:#ffffff; border-left:4px solid #FFD700; padding:15px; border-radius:8px; margin-bottom:20px;">
                     <p style="color:#FFD700; font-weight:bold; margin:0 0 6px 0;">⚙️ CRUCE AUTOMÁTICO DE LIQUIDACIONES</p>
                     <p style="color:#8b949e; margin:0; font-size:0.85rem;">
                         Sube la liquidación de la compañía (ej: <b>liqui_naturgy_abril.xlsx</b>) y el Excel de contratos.
@@ -1838,14 +1914,14 @@ elif menu == "🔐 ZONA DIRECTIVOS":
                                             '7':'Julio','8':'Agosto','9':'Septiembre','10':'Octubre','11':'Noviembre','12':'Diciembre'}
                                 mes_nombre = meses_es.get(meta.get('mes',''), meta.get('mes',''))
                                 st.markdown(f"""
-                                    <div style="background:linear-gradient(135deg,#1a1a2e,#0f3460); border:2px solid #FFD700;
+                                    <div style="background:linear-gradient(135deg,#f0f4ff,#e8eeff); border:2px solid #FFD700;
                                                 border-radius:12px; padding:18px 24px; margin:10px 0 20px 0;">
                                         <h3 style="color:#FFD700; margin:0 0 4px 0;">⚡ {compania_detectada} · {mes_nombre} {meta.get('anio','')}</h3>
                                         <p style="color:#8b949e; margin:0; font-size:0.82rem;">
-                                            Factura: <b style="color:white;">{meta.get('factura','-')}</b> &nbsp;·&nbsp;
-                                            Empresa: <b style="color:white;">{meta.get('nombre','-')}</b> &nbsp;·&nbsp;
-                                            Registros liquidación: <b style="color:white;">{len(df_liq_raw)}</b> &nbsp;·&nbsp;
-                                            Contratos {compania_detectada} en CRM: <b style="color:white;">{n_filtrado}</b>
+                                            Factura: <b style="color:#111111;">{meta.get('factura','-')}</b> &nbsp;·&nbsp;
+                                            Empresa: <b style="color:#111111;">{meta.get('nombre','-')}</b> &nbsp;·&nbsp;
+                                            Registros liquidación: <b style="color:#111111;">{len(df_liq_raw)}</b> &nbsp;·&nbsp;
+                                            Contratos {compania_detectada} en CRM: <b style="color:#111111;">{n_filtrado}</b>
                                         </p>
                                     </div>
                                 """, unsafe_allow_html=True)
@@ -1867,10 +1943,10 @@ elif menu == "🔐 ZONA DIRECTIVOS":
 
                                 k1, k2, k3, k4, k5 = st.columns(5)
                                 box_k = "border-radius:10px; padding:14px 8px; text-align:center; margin-bottom:10px;"
-                                k1.markdown(f'<div style="background:#0d2818; border:2px solid #7ee787; {box_k}"><p style="color:#7ee787; font-size:0.72rem; font-weight:bold; margin:0;">✅ PAGADOS</p><h2 style="color:white; margin:4px 0;">{len(pagados)}</h2><p style="color:#7ee787; font-size:0.75rem; margin:0;">💡{len(pagados_luz)} 🔥{len(pagados_gas)}</p><p style="color:#7ee787; font-size:0.8rem; margin:4px 0 0 0;font-weight:bold;">{total_cobrado:,.0f}€</p></div>', unsafe_allow_html=True)
-                                k2.markdown(f'<div style="background:#1a0a0a; border:2px solid #ff4b4b; {box_k}"><p style="color:#ff4b4b; font-size:0.72rem; font-weight:bold; margin:0;">🔴 DESCOMISIONADOS</p><h2 style="color:white; margin:4px 0;">{len(descomisionados)}</h2><p style="color:#ff4b4b; font-size:0.75rem; margin:0;">💡{len(descom_luz)} 🔥{len(descom_gas)}</p><p style="color:#ff4b4b; font-size:0.8rem; margin:4px 0 0 0;font-weight:bold;">-{total_descom:,.0f}€</p></div>', unsafe_allow_html=True)
-                                k3.markdown(f'<div style="background:#1a1000; border:2px solid #ffaa00; {box_k}"><p style="color:#ffaa00; font-size:0.72rem; font-weight:bold; margin:0;">⚠️ SIN MATCH CRM</p><h2 style="color:white; margin:4px 0;">{len(sin_match)}</h2><p style="color:#ffaa00; font-size:0.75rem; margin:0;">Verificar manualmente</p></div>', unsafe_allow_html=True)
-                                k4.markdown(f'<div style="background:#111827; border:2px solid #8b949e; {box_k}"><p style="color:#8b949e; font-size:0.72rem; font-weight:bold; margin:0;">❓ PENDIENTE REVISAR</p><h2 style="color:white; margin:4px 0;">{len(pendientes)}</h2><p style="color:#8b949e; font-size:0.75rem; margin:0;"> </p></div>', unsafe_allow_html=True)
+                                k1.markdown(f'<div style="background:#f0fff4; border:2px solid #7ee787; {box_k}"><p style="color:#7ee787; font-size:0.72rem; font-weight:bold; margin:0;">✅ PAGADOS</p><h2 style="color:#111111; margin:4px 0;">{len(pagados)}</h2><p style="color:#7ee787; font-size:0.75rem; margin:0;">💡{len(pagados_luz)} 🔥{len(pagados_gas)}</p><p style="color:#7ee787; font-size:0.8rem; margin:4px 0 0 0;font-weight:bold;">{total_cobrado:,.0f}€</p></div>', unsafe_allow_html=True)
+                                k2.markdown(f'<div style="background:#fff0f0; border:2px solid #ff4b4b; {box_k}"><p style="color:#ff4b4b; font-size:0.72rem; font-weight:bold; margin:0;">🔴 DESCOMISIONADOS</p><h2 style="color:#111111; margin:4px 0;">{len(descomisionados)}</h2><p style="color:#ff4b4b; font-size:0.75rem; margin:0;">💡{len(descom_luz)} 🔥{len(descom_gas)}</p><p style="color:#ff4b4b; font-size:0.8rem; margin:4px 0 0 0;font-weight:bold;">-{total_descom:,.0f}€</p></div>', unsafe_allow_html=True)
+                                k3.markdown(f'<div style="background:#1a1000; border:2px solid #ffaa00; {box_k}"><p style="color:#ffaa00; font-size:0.72rem; font-weight:bold; margin:0;">⚠️ SIN MATCH CRM</p><h2 style="color:#111111; margin:4px 0;">{len(sin_match)}</h2><p style="color:#ffaa00; font-size:0.75rem; margin:0;">Verificar manualmente</p></div>', unsafe_allow_html=True)
+                                k4.markdown(f'<div style="background:#ffffff; border:2px solid #8b949e; {box_k}"><p style="color:#8b949e; font-size:0.72rem; font-weight:bold; margin:0;">❓ PENDIENTE REVISAR</p><h2 style="color:#111111; margin:4px 0;">{len(pendientes)}</h2><p style="color:#8b949e; font-size:0.75rem; margin:0;"> </p></div>', unsafe_allow_html=True)
                                 k5.markdown(f'<div style="background:linear-gradient(135deg,#1e3a1e,#0a280a); border:2px solid #d2ff00; {box_k}"><p style="color:#d2ff00; font-size:0.72rem; font-weight:bold; margin:0;">💰 A RECLAMAR</p><h2 style="color:#d2ff00; margin:4px 0;">{len(sin_match)+len(pendientes)}</h2><p style="color:#d2ff00; font-size:0.8rem; margin:0;font-weight:bold;">{total_a_reclamar:,.0f}€</p></div>', unsafe_allow_html=True)
 
                                 st.markdown("<br>", unsafe_allow_html=True)
@@ -1908,10 +1984,10 @@ elif menu == "🔐 ZONA DIRECTIVOS":
                                     st.markdown('<p style="color:#a78bfa; font-weight:bold; font-size:0.85rem; margin:0 0 6px 0;">⚡ SVA</p>', unsafe_allow_html=True)
                                     ks1, ks2, ks3, ks4 = st.columns(4)
                                     box_ks = "border-radius:8px; padding:10px 8px; text-align:center; margin-bottom:12px;"
-                                    ks1.markdown(f'<div style="background:#0d1f2d; border:2px solid #a78bfa; {box_ks}"><p style="color:#a78bfa; font-size:0.7rem; font-weight:bold; margin:0;">⚡ SVA PAGADOS</p><h3 style="color:white; margin:4px 0;">{sva_pagados_n}</h3><p style="color:#a78bfa; font-size:0.8rem; margin:0;font-weight:bold;">{sva_total_pagado:,.0f}€</p></div>', unsafe_allow_html=True)
-                                    ks2.markdown(f'<div style="background:#1a0a0a; border:2px solid #ff4b4b; {box_ks}"><p style="color:#ff4b4b; font-size:0.7rem; font-weight:bold; margin:0;">🔴 SVA DESCOM</p><h3 style="color:white; margin:4px 0;">{sva_descom_n}</h3><p style="color:#ff4b4b; font-size:0.8rem; margin:0;font-weight:bold;">{sva_total_descom:,.0f}€</p></div>', unsafe_allow_html=True)
-                                    ks3.markdown(f'<div style="background:#1a1000; border:2px solid #ffaa00; {box_ks}"><p style="color:#ffaa00; font-size:0.7rem; font-weight:bold; margin:0;">⚠️ SVA SIN MATCH</p><h3 style="color:white; margin:4px 0;">{sva_sinmatch_n}</h3></div>', unsafe_allow_html=True)
-                                    ks4.markdown(f'<div style="background:#0d1f2d; border:2px solid #d2ff00; {box_ks}"><p style="color:#d2ff00; font-size:0.7rem; font-weight:bold; margin:0;">📋 SVA TOTAL</p><h3 style="color:white; margin:4px 0;">{len(df_sva_resultado)}</h3></div>', unsafe_allow_html=True)
+                                    ks1.markdown(f'<div style="background:#f0f4ff; border:2px solid #a78bfa; {box_ks}"><p style="color:#a78bfa; font-size:0.7rem; font-weight:bold; margin:0;">⚡ SVA PAGADOS</p><h3 style="color:#111111; margin:4px 0;">{sva_pagados_n}</h3><p style="color:#a78bfa; font-size:0.8rem; margin:0;font-weight:bold;">{sva_total_pagado:,.0f}€</p></div>', unsafe_allow_html=True)
+                                    ks2.markdown(f'<div style="background:#fff0f0; border:2px solid #ff4b4b; {box_ks}"><p style="color:#ff4b4b; font-size:0.7rem; font-weight:bold; margin:0;">🔴 SVA DESCOM</p><h3 style="color:#111111; margin:4px 0;">{sva_descom_n}</h3><p style="color:#ff4b4b; font-size:0.8rem; margin:0;font-weight:bold;">{sva_total_descom:,.0f}€</p></div>', unsafe_allow_html=True)
+                                    ks3.markdown(f'<div style="background:#1a1000; border:2px solid #ffaa00; {box_ks}"><p style="color:#ffaa00; font-size:0.7rem; font-weight:bold; margin:0;">⚠️ SVA SIN MATCH</p><h3 style="color:#111111; margin:4px 0;">{sva_sinmatch_n}</h3></div>', unsafe_allow_html=True)
+                                    ks4.markdown(f'<div style="background:#f0f4ff; border:2px solid #d2ff00; {box_ks}"><p style="color:#d2ff00; font-size:0.7rem; font-weight:bold; margin:0;">📋 SVA TOTAL</p><h3 style="color:#111111; margin:4px 0;">{len(df_sva_resultado)}</h3></div>', unsafe_allow_html=True)
                                     st.markdown("<br>", unsafe_allow_html=True)
 
                                 # ── TABS DE DETALLE ──
@@ -2287,7 +2363,7 @@ elif menu == "🔐 ZONA DIRECTIVOS":
 
                     else:
                         st.markdown("""
-                            <div style="background:#0e1628; border:2px dashed #30363d; border-radius:12px; padding:40px; text-align:center; margin-top:20px;">
+                            <div style="background:#f0f0f0; border:2px dashed #30363d; border-radius:12px; padding:40px; text-align:center; margin-top:20px;">
                                 <p style="color:#8b949e; font-size:1rem; margin:0;">
                                     👆 Sube la <b style="color:#d2ff00;">liquidación de la compañía</b> y el archivo de 
                                     <b style="color:#d2ff00;">contratos_energia.xlsx</b> para iniciar el cruce automático
@@ -2300,7 +2376,7 @@ elif menu == "🔐 ZONA DIRECTIVOS":
             with liq_tab_gana:
                 st.markdown('<div class="block-header" style="font-size:1rem;">⚡ LIQUIDACIÓN GANA ENERGÍA</div>', unsafe_allow_html=True)
                 st.markdown("""
-                    <div style="background:#0e1628; border:2px dashed #30363d; border-radius:12px; padding:40px; text-align:center; margin-top:20px;">
+                    <div style="background:#f0f0f0; border:2px dashed #30363d; border-radius:12px; padding:40px; text-align:center; margin-top:20px;">
                         <p style="color:#22c55e; font-size:1.2rem; margin:0 0 8px 0;">⚡ GANA ENERGÍA</p>
                         <p style="color:#8b949e; margin:0; font-size:0.9rem;">Liquidación en construcción — próximamente disponible.</p>
                     </div>
@@ -2310,7 +2386,7 @@ elif menu == "🔐 ZONA DIRECTIVOS":
             with liq_tab_total:
                 st.markdown('<div class="block-header" style="font-size:1rem;">🌍 LIQUIDACIÓN TOTAL ENERGIES</div>', unsafe_allow_html=True)
                 st.markdown("""
-                    <div style="background:#111827; border-left:4px solid #3b82f6; padding:15px; border-radius:8px; margin-bottom:20px;">
+                    <div style="background:#ffffff; border-left:4px solid #3b82f6; padding:15px; border-radius:8px; margin-bottom:20px;">
                         <p style="color:#3b82f6; font-weight:bold; margin:0 0 6px 0;">⚙️ CRUCE AUTOMÁTICO TOTAL ENERGIES</p>
                         <p style="color:#8b949e; margin:0; font-size:0.82rem;">
                             Sube la liquidación de Total Energies y el Excel de contratos.
@@ -2448,11 +2524,11 @@ elif menu == "🔐 ZONA DIRECTIVOS":
                             st.markdown("---")
                             kt1, kt2, kt3, kta, ktb = st.columns(5)
                             box_t = "border-radius:10px; padding:14px 8px; text-align:center; margin-bottom:10px;"
-                            kt1.markdown(f'<div style="background:#0d2818; border:2px solid #22c55e; {box_t}"><p style="color:#22c55e; font-size:0.7rem; font-weight:bold; margin:0;">✅ PAGADOS</p><h2 style="color:white; margin:4px 0;">{len(pagados)}</h2><p style="color:#22c55e; font-size:0.8rem; font-weight:bold; margin:0;">{total_cobrado:,.0f}€</p></div>', unsafe_allow_html=True)
-                            kt2.markdown(f'<div style="background:#1a0a0a; border:2px solid #ff4b4b; {box_t}"><p style="color:#ff4b4b; font-size:0.7rem; font-weight:bold; margin:0;">🔴 DESCOMISIONADOS</p><h2 style="color:white; margin:4px 0;">{len(descom)}</h2><p style="color:#ff4b4b; font-size:0.8rem; font-weight:bold; margin:0;">{total_descom:,.0f}€</p></div>', unsafe_allow_html=True)
-                            kt3.markdown(f'<div style="background:#111827; border:2px solid #8b949e; {box_t}"><p style="color:#8b949e; font-size:0.7rem; font-weight:bold; margin:0;">❓ PENDIENTE</p><h2 style="color:white; margin:4px 0;">{len(pendiente)}</h2></div>', unsafe_allow_html=True)
-                            kta.markdown(f'<div style="background:#1a0a1a; border:2px solid #a78bfa; {box_t}"><p style="color:#a78bfa; font-size:0.7rem; font-weight:bold; margin:0;">⚠️ NO EN LIQ</p><h2 style="color:white; margin:4px 0;">{n_no_liq}</h2></div>', unsafe_allow_html=True)
-                            ktb.markdown(f'<div style="background:#0d1f2d; border:2px solid #3b82f6; {box_t}"><p style="color:#3b82f6; font-size:0.7rem; font-weight:bold; margin:0;">📋 TOTAL CRM</p><h2 style="color:white; margin:4px 0;">{len(df_total_crm)}</h2></div>', unsafe_allow_html=True)
+                            kt1.markdown(f'<div style="background:#f0fff4; border:2px solid #22c55e; {box_t}"><p style="color:#22c55e; font-size:0.7rem; font-weight:bold; margin:0;">✅ PAGADOS</p><h2 style="color:#111111; margin:4px 0;">{len(pagados)}</h2><p style="color:#22c55e; font-size:0.8rem; font-weight:bold; margin:0;">{total_cobrado:,.0f}€</p></div>', unsafe_allow_html=True)
+                            kt2.markdown(f'<div style="background:#fff0f0; border:2px solid #ff4b4b; {box_t}"><p style="color:#ff4b4b; font-size:0.7rem; font-weight:bold; margin:0;">🔴 DESCOMISIONADOS</p><h2 style="color:#111111; margin:4px 0;">{len(descom)}</h2><p style="color:#ff4b4b; font-size:0.8rem; font-weight:bold; margin:0;">{total_descom:,.0f}€</p></div>', unsafe_allow_html=True)
+                            kt3.markdown(f'<div style="background:#ffffff; border:2px solid #8b949e; {box_t}"><p style="color:#8b949e; font-size:0.7rem; font-weight:bold; margin:0;">❓ PENDIENTE</p><h2 style="color:#111111; margin:4px 0;">{len(pendiente)}</h2></div>', unsafe_allow_html=True)
+                            kta.markdown(f'<div style="background:#f8f0ff; border:2px solid #a78bfa; {box_t}"><p style="color:#a78bfa; font-size:0.7rem; font-weight:bold; margin:0;">⚠️ NO EN LIQ</p><h2 style="color:#111111; margin:4px 0;">{n_no_liq}</h2></div>', unsafe_allow_html=True)
+                            ktb.markdown(f'<div style="background:#f0f4ff; border:2px solid #3b82f6; {box_t}"><p style="color:#3b82f6; font-size:0.7rem; font-weight:bold; margin:0;">📋 TOTAL CRM</p><h2 style="color:#111111; margin:4px 0;">{len(df_total_crm)}</h2></div>', unsafe_allow_html=True)
 
                             # ── Columnas resultado ──
                             cols_show_t = []
@@ -2558,7 +2634,7 @@ elif menu == "🔐 ZONA DIRECTIVOS":
                             st.code(traceback.format_exc())
                 else:
                     st.markdown("""
-                        <div style="background:#0e1628; border:2px dashed #30363d; border-radius:12px; padding:30px; text-align:center; margin-top:10px;">
+                        <div style="background:#f0f0f0; border:2px dashed #30363d; border-radius:12px; padding:30px; text-align:center; margin-top:10px;">
                             <p style="color:#8b949e; margin:0;">👆 Sube la liquidación de Total Energies y el archivo de contratos para iniciar el cruce</p>
                         </div>
                     """, unsafe_allow_html=True)
@@ -2585,7 +2661,7 @@ elif menu == "🔐 ZONA DIRECTIVOS":
         if _sel == "🔀 CRUCES CIAS":
             st.markdown('<div class="block-header">🔀 CRUCES CON COMPAÑÍAS</div>', unsafe_allow_html=True)
             st.markdown("""
-                <div style="background:#111827; border-left:4px solid #FFD700; padding:15px; border-radius:8px; margin-bottom:20px;">
+                <div style="background:#ffffff; border-left:4px solid #FFD700; padding:15px; border-radius:8px; margin-bottom:20px;">
                     <p style="color:#8b949e; margin:0; font-size:0.85rem;">
                         Cruce de nuestras ventas con los archivos de cada compañía para detectar discrepancias,
                         contratos no reconocidos y estados incorrectos.
@@ -2603,7 +2679,7 @@ elif menu == "🔐 ZONA DIRECTIVOS":
             with cia_tab_gana:
                 st.markdown('<div class="block-header" style="font-size:1rem;">⚡ CRUCE GANA ENERGÍA</div>', unsafe_allow_html=True)
                 st.markdown("""
-                    <div style="background:#0e1628; border-left:4px solid #22c55e; padding:12px; border-radius:8px; margin-bottom:16px;">
+                    <div style="background:#f0f0f0; border-left:4px solid #22c55e; padding:12px; border-radius:8px; margin-bottom:16px;">
                         <p style="color:#8b949e; margin:0; font-size:0.82rem;">
                             Sube <b style="color:#22c55e;">nuestras ventas</b> (export CRM con CUPS) y el archivo de
                             <b style="color:#22c55e;">Gana Energía</b>. El sistema cruza por CUP (20 ó 22 dígitos) y
@@ -2799,10 +2875,10 @@ elif menu == "🔐 ZONA DIRECTIVOS":
                                 st.info(f"🗓️ Mostrando: {', '.join(sel_fg)} — {len(df_crm_vista)} de {len(df_crm)} contratos Gana en CRM")
                             k1, k2, k3, k4 = st.columns(4)
                             box_g = "border-radius:10px; padding:14px 8px; text-align:center; margin-bottom:10px;"
-                            k1.markdown(f'<div style="background:#0d2818; border:2px solid #22c55e; {box_g}"><p style="color:#22c55e; font-size:0.7rem; font-weight:bold; margin:0;">✅ GANA CON MATCH CRM</p><h2 style="color:white; margin:4px 0;">{n_en_crm}</h2></div>', unsafe_allow_html=True)
-                            k2.markdown(f'<div style="background:#1a0a0a; border:2px solid #ff4b4b; {box_g}"><p style="color:#ff4b4b; font-size:0.7rem; font-weight:bold; margin:0;">❌ GANA SIN CRM</p><h2 style="color:white; margin:4px 0;">{n_no_crm}</h2></div>', unsafe_allow_html=True)
-                            k3.markdown(f'<div style="background:#1a0a1a; border:2px solid #a78bfa; {box_g}"><p style="color:#a78bfa; font-size:0.7rem; font-weight:bold; margin:0;">⚠️ NUESTROS NO EN GANA</p><h2 style="color:white; margin:4px 0;">{n_no_gana}</h2></div>', unsafe_allow_html=True)
-                            k4.markdown(f'<div style="background:#111827; border:2px solid #8b949e; {box_g}"><p style="color:#8b949e; font-size:0.7rem; font-weight:bold; margin:0;">📋 TOTAL EN GANA</p><h2 style="color:white; margin:4px 0;">{len(df_cia)}</h2></div>', unsafe_allow_html=True)
+                            k1.markdown(f'<div style="background:#f0fff4; border:2px solid #22c55e; {box_g}"><p style="color:#22c55e; font-size:0.7rem; font-weight:bold; margin:0;">✅ GANA CON MATCH CRM</p><h2 style="color:#111111; margin:4px 0;">{n_en_crm}</h2></div>', unsafe_allow_html=True)
+                            k2.markdown(f'<div style="background:#fff0f0; border:2px solid #ff4b4b; {box_g}"><p style="color:#ff4b4b; font-size:0.7rem; font-weight:bold; margin:0;">❌ GANA SIN CRM</p><h2 style="color:#111111; margin:4px 0;">{n_no_crm}</h2></div>', unsafe_allow_html=True)
+                            k3.markdown(f'<div style="background:#f8f0ff; border:2px solid #a78bfa; {box_g}"><p style="color:#a78bfa; font-size:0.7rem; font-weight:bold; margin:0;">⚠️ NUESTROS NO EN GANA</p><h2 style="color:#111111; margin:4px 0;">{n_no_gana}</h2></div>', unsafe_allow_html=True)
+                            k4.markdown(f'<div style="background:#ffffff; border:2px solid #8b949e; {box_g}"><p style="color:#8b949e; font-size:0.7rem; font-weight:bold; margin:0;">📋 TOTAL EN GANA</p><h2 style="color:#111111; margin:4px 0;">{len(df_cia)}</h2></div>', unsafe_allow_html=True)
 
                             # ── Columnas resultado principal ──
                             # Primero las columnas CRM clave (siempre visibles), luego las de Gana
@@ -2873,7 +2949,7 @@ elif menu == "🔐 ZONA DIRECTIVOS":
                             st.error(f"❌ Error en cruce Gana: {_eg}")
                             st.code(traceback.format_exc())
                     st.markdown("""
-                        <div style="background:#0e1628; border:2px dashed #30363d; border-radius:12px; padding:30px; text-align:center; margin-top:10px;">
+                        <div style="background:#f0f0f0; border:2px dashed #30363d; border-radius:12px; padding:30px; text-align:center; margin-top:10px;">
                             <p style="color:#8b949e; margin:0;">👆 Sube los dos archivos para iniciar el cruce con Gana Energía</p>
                         </div>
                     """, unsafe_allow_html=True)
@@ -2884,7 +2960,7 @@ elif menu == "🔐 ZONA DIRECTIVOS":
             with cia_tab_naturgy:
                 st.markdown('<div class="block-header" style="font-size:1rem;">🔥 CRUCE NATURGY</div>', unsafe_allow_html=True)
                 st.markdown("""
-                    <div style="background:#0e1628; border-left:4px solid #FFD700; padding:12px; border-radius:8px; margin-bottom:16px;">
+                    <div style="background:#f0f0f0; border-left:4px solid #FFD700; padding:12px; border-radius:8px; margin-bottom:16px;">
                         <p style="color:#c9d1d9; margin:0; font-size:0.82rem;">
                             Sube <b style="color:#FFD700;">nuestras ventas</b> (export CRM) y la
                             <b style="color:#FFD700;">extracción de Naturgy</b> (exportedDataorders).
@@ -3129,10 +3205,10 @@ elif menu == "🔐 ZONA DIRECTIVOS":
                                 st.info(f"🗓️ Mostrando contratos de: {', '.join(sel_fn)} ({n_vista} de {n_total} contratos Naturgy)")
                             kn1, kn2, kn3, kn4 = st.columns(4)
                             bg = "border-radius:10px;padding:14px 8px;text-align:center;margin-bottom:10px;"
-                            kn1.markdown(f'<div style="background:#0d2818;border:2px solid #FFD700;{bg}"><p style="color:#FFD700;font-size:0.7rem;font-weight:bold;margin:0;">🔥 CRUCE COMPLETO</p><h2 style="color:white;margin:4px 0;">{n_c}</h2></div>', unsafe_allow_html=True)
-                            kn2.markdown(f'<div style="background:#1a0a0a;border:2px solid #ff4b4b;{bg}"><p style="color:#ff4b4b;font-size:0.7rem;font-weight:bold;margin:0;">❌ FALTAN EN CRM</p><h2 style="color:white;margin:4px 0;">{n_fc}</h2></div>', unsafe_allow_html=True)
-                            kn3.markdown(f'<div style="background:#1a0a1a;border:2px solid #a78bfa;{bg}"><p style="color:#a78bfa;font-size:0.7rem;font-weight:bold;margin:0;">⚠️ FALTAN EN NATURGY</p><h2 style="color:white;margin:4px 0;">{n_fn}</h2></div>', unsafe_allow_html=True)
-                            kn4.markdown(f'<div style="background:#111827;border:2px solid #8b949e;{bg}"><p style="color:#8b949e;font-size:0.7rem;font-weight:bold;margin:0;">📋 CRM {"(filtrado)" if sel_fn else "TOTAL"}</p><h2 style="color:white;margin:4px 0;">{n_vista}</h2></div>', unsafe_allow_html=True)
+                            kn1.markdown(f'<div style="background:#f0fff4;border:2px solid #FFD700;{bg}"><p style="color:#FFD700;font-size:0.7rem;font-weight:bold;margin:0;">🔥 CRUCE COMPLETO</p><h2 style="color:#111111;margin:4px 0;">{n_c}</h2></div>', unsafe_allow_html=True)
+                            kn2.markdown(f'<div style="background:#fff0f0;border:2px solid #ff4b4b;{bg}"><p style="color:#ff4b4b;font-size:0.7rem;font-weight:bold;margin:0;">❌ FALTAN EN CRM</p><h2 style="color:#111111;margin:4px 0;">{n_fc}</h2></div>', unsafe_allow_html=True)
+                            kn3.markdown(f'<div style="background:#f8f0ff;border:2px solid #a78bfa;{bg}"><p style="color:#a78bfa;font-size:0.7rem;font-weight:bold;margin:0;">⚠️ FALTAN EN NATURGY</p><h2 style="color:#111111;margin:4px 0;">{n_fn}</h2></div>', unsafe_allow_html=True)
+                            kn4.markdown(f'<div style="background:#ffffff;border:2px solid #8b949e;{bg}"><p style="color:#8b949e;font-size:0.7rem;font-weight:bold;margin:0;">📋 CRM {"(filtrado)" if sel_fn else "TOTAL"}</p><h2 style="color:#111111;margin:4px 0;">{n_vista}</h2></div>', unsafe_allow_html=True)
 
                             nt1, nt2, nt3 = st.tabs([
                                 f"🔗 CRUCE COMPLETO ({n_c})",
@@ -3174,12 +3250,12 @@ elif menu == "🔐 ZONA DIRECTIVOS":
                             st.error(f"❌ Error en cruce Naturgy: {_en}")
                             st.code(traceback.format_exc())
                 else:
-                    st.markdown('<div style="background:#0e1628;border:2px dashed #30363d;border-radius:12px;padding:30px;text-align:center;margin-top:10px;"><p style="color:#8b949e;margin:0;">👆 Sube el export CRM y la extracción de Naturgy para iniciar el cruce</p></div>', unsafe_allow_html=True)
+                    st.markdown('<div style="background:#f0f0f0;border:2px dashed #30363d;border-radius:12px;padding:30px;text-align:center;margin-top:10px;"><p style="color:#8b949e;margin:0;">👆 Sube el export CRM y la extracción de Naturgy para iniciar el cruce</p></div>', unsafe_allow_html=True)
 
         if _sel == "📁 DOCS EMPRESA":
             st.markdown('<div class="block-header">📁 DOCUMENTACIÓN DE EMPRESA</div>', unsafe_allow_html=True)
             st.markdown("""
-                <div style="background:#111827; border-left:4px solid #FFD700; padding:15px; border-radius:8px; margin-bottom:20px;">
+                <div style="background:#ffffff; border-left:4px solid #FFD700; padding:15px; border-radius:8px; margin-bottom:20px;">
                     <p style="color:#8b949e; margin:0; font-size:0.85rem;">Escrituras, certificados, seguros, licencias y documentación oficial. Los archivos se leen desde Google Drive · Carpeta <b style="color:#FFD700;">EMPRESA</b></p>
                 </div>
             """, unsafe_allow_html=True)
@@ -3206,10 +3282,10 @@ elif menu == "🔐 ZONA DIRECTIVOS":
                 for i, p in enumerate(lista):
                     with cols[i % ncols]:
                         st.markdown(
-                            f'<div style="background:#111827; padding:14px; border-radius:10px; '
+                            f'<div style="background:#ffffff; padding:14px; border-radius:10px; '
                             f'border:1px solid #30363d; text-align:center; margin-bottom:10px;">'
                             f'<p style="color:#FFD700; font-size:1.1rem; margin:0;">{p.get("ico","🔗")}</p>'
-                            f'<h4 style="color:white; margin:4px 0 0 0; font-size:0.9rem;">{p["n"]}</h4></div>',
+                            f'<h4 style="color:#111111; margin:4px 0 0 0; font-size:0.9rem;">{p["n"]}</h4></div>',
                             unsafe_allow_html=True
                         )
                         st.link_button("ENTRAR", p["u"], use_container_width=True)
