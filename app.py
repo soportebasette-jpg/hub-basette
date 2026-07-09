@@ -32,12 +32,14 @@ st.markdown("""
     .stApp { background-color: #dce8f5 !important; color: #111111 !important; }
     .main .block-container { background-color: #dce8f5 !important; }
 
-    /* ══ SIDEBAR — BANDERA ESPAÑA PROPORCIONAL (30%-40%-30%) ══ */
+    /* ══ SIDEBAR — DEGRADADO NARANJA FUSIÓN ROJO+AMARILLO ══ */
     [data-testid="stSidebar"] {
-        background: linear-gradient(180deg,
-            #c60b1e 0%,   #c60b1e 30%,
-            #f1bf00 30%,  #f1bf00 70%,
-            #c60b1e 70%,  #c60b1e 100%
+        background: linear-gradient(160deg,
+            #c60b1e 0%,
+            #d4420a 25%,
+            #e07010 50%,
+            #e89b0a 75%,
+            #f1bf00 100%
         ) !important;
         position: relative;
     }
@@ -61,30 +63,42 @@ st.markdown("""
     }
     [data-testid="stSidebar"] hr { border-color: rgba(0,0,0,0.25) !important; }
 
-    /* ══ CUADROS DE MENÚ (COMERCIALES y ZONA DIRECTIVOS) ══ */
+    /* ══ CUADROS DE MENÚ ══ */
     .menu-box-comercial {
-        background: rgba(255,255,255,0.85);
-        border: 3px solid #c60b1e;
-        border-radius: 12px;
-        padding: 10px 12px;
-        margin-bottom: 10px;
+        background: rgba(255,255,255,0.30);
+        border: 2px solid rgba(255,255,255,0.6);
+        border-radius: 10px;
+        padding: 2px 4px;
+        margin-bottom: 6px;
         backdrop-filter: blur(4px);
     }
     .menu-box-directivos {
-        background: rgba(255,255,255,0.85);
-        border: 3px solid #8B0000;
-        border-radius: 12px;
-        padding: 10px 12px;
-        margin-bottom: 10px;
+        background: rgba(255,255,255,0.30);
+        border: 2px solid rgba(255,255,255,0.6);
+        border-radius: 10px;
+        padding: 2px 4px;
+        margin-bottom: 6px;
         backdrop-filter: blur(4px);
     }
     .menu-box-title {
         font-size: 0.8rem;
         font-weight: 900;
-        color: #c60b1e !important;
-        margin: 0 0 6px 0;
+        color: #ffffff !important;
+        margin: 0;
         text-transform: uppercase;
         letter-spacing: 0.05em;
+        text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+    }
+    /* Botones del sidebar sobre gradiente naranja */
+    [data-testid="stSidebar"] button {
+        background: rgba(255,255,255,0.25) !important;
+        border: 2px solid rgba(255,255,255,0.5) !important;
+        color: #000000 !important;
+        font-weight: 900 !important;
+        border-radius: 8px !important;
+    }
+    [data-testid="stSidebar"] button:hover {
+        background: rgba(255,255,255,0.5) !important;
     }
 
     /* ══ CONTENIDO PRINCIPAL — FONDO BLANCO, TEXTO NEGRO ══ */
@@ -485,32 +499,45 @@ with st.sidebar:
             st.rerun()
     st.markdown("---")
 
-    # Selector de zona principal
-    _zona = st.radio(
-        "Zona:",
-        ["👔 COMERCIALES", "🔐 ZONA DIRECTIVOS"],
-        key="zona_principal",
-        label_visibility="collapsed",
-        horizontal=True
-    )
-    st.markdown("---")
+    # ── MENÚ ACORDEÓN VERTICAL ──
+    # Inicializar zona activa
+    if "zona_activa" not in st.session_state:
+        st.session_state["zona_activa"] = "comerciales"
 
-    if _zona == "👔 COMERCIALES":
-        st.markdown('''<div class="menu-box-comercial">
-            <p class="menu-box-title">👔 Menú Comerciales</p>
-        </div>''', unsafe_allow_html=True)
+    # ── BLOQUE COMERCIALES ──
+    st.markdown('''<div class="menu-box-comercial" style="cursor:pointer; margin-bottom:4px;">''', unsafe_allow_html=True)
+    _toggle_com = st.button("👔 COMERCIALES", key="btn_zona_com", use_container_width=True)
+    st.markdown('</div>', unsafe_allow_html=True)
+    if _toggle_com:
+        st.session_state["zona_activa"] = "comerciales"
+        st.rerun()
+
+    if st.session_state.get("zona_activa") == "comerciales":
         menu = st.radio(
-            "Sección:",
+            "Menú comerciales:",
             ["🚀 CRM", "📊 PRECIOS", "🔍 COMPARADORES", "📢 ANUNCIOS Y PLAN AMIGO",
              "📈 DASHBOARD Y RANKING", "📂 REPOSITORIO", "🕒 CONTROL LABORAL"],
             key="menu_comerciales",
             label_visibility="collapsed"
         )
     else:
-        st.markdown('''<div class="menu-box-directivos">
-            <p class="menu-box-title">🔐 Zona Directivos</p>
-        </div>''', unsafe_allow_html=True)
+        menu = None
+
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    # ── BLOQUE ZONA DIRECTIVOS ──
+    st.markdown('''<div class="menu-box-directivos" style="cursor:pointer; margin-bottom:4px;">''', unsafe_allow_html=True)
+    _toggle_dir = st.button("🔐 ZONA DIRECTIVOS", key="btn_zona_dir", use_container_width=True)
+    st.markdown('</div>', unsafe_allow_html=True)
+    if _toggle_dir:
+        st.session_state["zona_activa"] = "directivos"
+        st.rerun()
+
+    if st.session_state.get("zona_activa") == "directivos":
         menu = "🔐 ZONA DIRECTIVOS"
+
+    if menu is None:
+        menu = "🚀 CRM"  # fallback
 
 
 # --- CRM ---
@@ -812,7 +839,13 @@ elif menu == "📈 DASHBOARD Y RANKING":
         
         # Total Neto para el objetivo individual
         rank['Total Neto'] = rank['Ventas_Sin_Movil'] - rank['Bajas_Total'] - rank['Cancel_Total']
-        rank['Faltan para 25'] = rank.index.to_series().apply(lambda x: max(0, 25 - int(rank.loc[x, 'Total Neto'])) if "LUIS" not in str(x).upper() else 0)
+        # Solo MARIA JOSE ARACIL tiene objetivo (25). Raquel Guadalupe no tiene.
+        def _faltan(nombre):
+            n = str(nombre).upper()
+            if "MARIA JOSE" in n and "ARACIL" in n:
+                return max(0, 25 - int(rank.loc[nombre, 'Total Neto']))
+            return 0
+        rank['Faltan para 25'] = rank.index.to_series().apply(_faltan)
 
         # 6. CABECERA TÍTULO (Sin Nº1)
         st.markdown("""
@@ -823,7 +856,7 @@ elif menu == "📈 DASHBOARD Y RANKING":
 
         # 7. OBJETIVO EQUIPO
         v_equipo_neta = int(rank['Total Neto'].sum())
-        v_falta_equipo = max(0, 75 - v_equipo_neta)
+        v_falta_equipo = max(0, 25 - v_equipo_neta)  # Objetivo equipo = 25 (1 comercial activa)
         st.markdown(f'<div style="background:#ffffff;padding:15px;border-radius:15px;border:1px solid #30363d;margin:0 auto 20px auto;text-align:center;max-width:320px;"><p style="color:#d2ff00;margin:0;font-weight:bold;font-size:0.9rem;">🚀 FALTAN PARA EL OBJETIVO</p><h1 style="color:#111111;margin:0;font-size:2.8rem;">{v_falta_equipo}</h1></div>', unsafe_allow_html=True)
 
         # 8. TABLA DE RANKING
@@ -1143,10 +1176,10 @@ elif menu == "🕒 CONTROL LABORAL":
         # ── DASHBOARD MÉTRICAS ──
         st.markdown("<br>", unsafe_allow_html=True)
         c1, c2, c3, c4 = st.columns(4)
-        c1.markdown(f'<div style="background:#262730; padding:15px; border-radius:10px; border-left:8px solid #ff4b4b; text-align:center;"><p style="color:#ff4b4b; font-size:0.8rem; margin:0; font-weight:bold;">⏰ RETRASO ACUM.</p><h1 style="color:#111111; margin:5px 0;">{int(min_ret)} m</h1></div>', unsafe_allow_html=True)
-        c2.markdown(f'<div style="background:#262730; padding:15px; border-radius:10px; border-left:8px solid #ffaa00; text-align:center;"><p style="color:#ffaa00; font-size:0.8rem; margin:0; font-weight:bold;">❌ FALTAS</p><h1 style="color:#111111; margin:5px 0;">{faltas}</h1></div>', unsafe_allow_html=True)
-        c3.markdown(f'<div style="background:#262730; padding:15px; border-radius:10px; border-left:8px solid #7ee787; text-align:center;"><p style="color:#7ee787; font-size:0.8rem; margin:0; font-weight:bold;">🏖️ VACACIONES</p><h1 style="color:#111111; margin:5px 0;">{dias_vac} d</h1></div>', unsafe_allow_html=True)
-        c4.markdown(f'<div style="background:#262730; padding:15px; border-radius:10px; border-left:8px solid #8b949e; text-align:center;"><p style="color:#8b949e; font-size:0.8rem; margin:0; font-weight:bold;">🔴 BAJA EMPRESA</p><h1 style="color:#111111; margin:5px 0;">{dias_baja_emp} d</h1></div>', unsafe_allow_html=True)
+        c1.markdown(f'<div style="background:#fff0f0; padding:15px; border-radius:10px; border-left:8px solid #ff4b4b; text-align:center;"><p style="color:#c60b1e; font-size:0.8rem; margin:0; font-weight:bold;">⏰ RETRASO ACUM.</p><h1 style="color:#111111; margin:5px 0;">{int(min_ret)} m</h1></div>', unsafe_allow_html=True)
+        c2.markdown(f'<div style="background:#fffbf0; padding:15px; border-radius:10px; border-left:8px solid #f1bf00; text-align:center;"><p style="color:#b38a00; font-size:0.8rem; margin:0; font-weight:bold;">❌ FALTAS</p><h1 style="color:#111111; margin:5px 0;">{faltas}</h1></div>', unsafe_allow_html=True)
+        c3.markdown(f'<div style="background:#f0fff4; padding:15px; border-radius:10px; border-left:8px solid #22c55e; text-align:center;"><p style="color:#166534; font-size:0.8rem; margin:0; font-weight:bold;">🏖️ VACACIONES</p><h1 style="color:#111111; margin:5px 0;">{dias_vac} d</h1></div>', unsafe_allow_html=True)
+        c4.markdown(f'<div style="background:#f5f5f5; padding:15px; border-radius:10px; border-left:8px solid #6b7280; text-align:center;"><p style="color:#374151; font-size:0.8rem; margin:0; font-weight:bold;">🔴 BAJA EMPRESA</p><h1 style="color:#111111; margin:5px 0;">{dias_baja_emp} d</h1></div>', unsafe_allow_html=True)
         
         st.markdown("---")
 
@@ -1481,7 +1514,25 @@ elif menu == "🔐 ZONA DIRECTIVOS":
                 with st.expander("📋 Plantillas, Certificados y Costes"):
                     mostrar_carpeta_drive(["PERSONAL", "PLANTILLAS BAJAS, CERTIFICADOS Y COSTES EMPLEADOS"], "📋")
                 with st.expander("📊 Datos Empleados (Excel suelto)"):
-                    mostrar_carpeta_drive(["PERSONAL"], "📊")
+                    # Buscar solo el Excel en la raíz de PERSONAL, sin mostrar subcarpetas
+                    _pid = drive_folder_id_by_path(("PERSONAL",))
+                    if _pid:
+                        _items = drive_list_folder(_pid)
+                        _excels = [f for f in _items
+                                   if f.get("mimeType") != "application/vnd.google-apps.folder"
+                                   and "DATOS EMPLEADOS" in f.get("name","").upper()]
+                        if _excels:
+                            for _f in _excels:
+                                _url = f"https://docs.google.com/spreadsheets/d/{_f['id']}/edit"
+                                _col1, _col2 = st.columns([5,1])
+                                with _col1:
+                                    st.markdown(f'<div style="background:#eef4fb;border:1px solid #c0d8ee;border-radius:8px;padding:8px 12px;">📊 {_f["name"]} · {int(_f.get("size",0))//1024} KB</div>', unsafe_allow_html=True)
+                                with _col2:
+                                    st.link_button("⬇️ Abrir", _url, use_container_width=True)
+                        else:
+                            st.info("No se encontró DATOS EMPLEADOS.xlsx en la carpeta PERSONAL.")
+                    else:
+                        st.warning("Carpeta PERSONAL no encontrada.")
 
         # ── TAB MARCOS RETRIBUTIVOS ──
         if _sel == "💰 MARCOS RETRIBUTIVOS":
@@ -3268,17 +3319,42 @@ elif menu == "🔐 ZONA DIRECTIVOS":
             """, unsafe_allow_html=True)
             col_doc1, col_doc2 = st.columns(2)
             with col_doc1:
-                with st.expander("📬 Otros / Firmas Email Tecomparotodo"):
-                    mostrar_carpeta_drive(["EMPRESA", "OTROS POR FIRMAS EMAIL TECOMPAROTODO"], "📬")
+                with st.expander("📬 Firmas Email Tecomparotodo"):
+                    mostrar_carpeta_drive(["EMPRESA", "FIRMAS EMAIL TECOMPAROTODO"], "📬")
                 with st.expander("🎓 Formación Inicial"):
                     mostrar_carpeta_drive(["EMPRESA", "FORMACION INICIAL"], "🎓")
-                with st.expander("⚖️ Legal (CIF / CCC / Tarjetas)"):
-                    mostrar_carpeta_drive(["EMPRESA", "LEGAL POR CIF CCC TARJETAS EMPRESAS"], "⚖️")
+                with st.expander("⚖️ CIF / CCC / Tarjetas Empresas"):
+                    mostrar_carpeta_drive(["EMPRESA", "CIF CCC TARJETAS EMPRESAS"], "⚖️")
+                with st.expander("🖼️ Logos"):
+                    mostrar_carpeta_drive(["EMPRESA", "LOGOS"], "🖼️")
             with col_doc2:
                 with st.expander("🛡️ Seguros (DNI CEO / BO)"):
-                    mostrar_carpeta_drive(["EMPRESA", "SEGUROS POR DNI CEO BO"], "🛡️")
-                with st.expander("🤝 Contratos de Colaboración"):
-                    mostrar_carpeta_drive(["EMPRESA", "CONTRATOS COLABORACION"], "🤝")
+                    mostrar_carpeta_drive(["EMPRESA", "DNI CEO BO"], "🛡️")
+                with st.expander("🤝 Contrato de Colaboración Mercantil"):
+                    # Es un Word suelto en la raíz de EMPRESA (no subcarpeta)
+                    _emp_id = drive_folder_id_by_path(("EMPRESA",))
+                    if _emp_id:
+                        _emp_items = drive_list_folder(_emp_id)
+                        _contratos = [f for f in _emp_items
+                                      if f.get("mimeType") != "application/vnd.google-apps.folder"
+                                      and "CONTRATO" in f.get("name","").upper()]
+                        if _contratos:
+                            for _cf in _contratos:
+                                _mime = _cf.get("mimeType","")
+                                if "document" in _mime:
+                                    _curl = f"https://docs.google.com/document/d/{_cf['id']}/edit"
+                                else:
+                                    _curl = f"https://drive.google.com/file/d/{_cf['id']}/view"
+                                _cc1, _cc2 = st.columns([5,1])
+                                with _cc1:
+                                    _sz = int(_cf.get("size",0))//1024
+                                    st.markdown(f'<div style="background:#eef4fb;border:1px solid #c0d8ee;border-radius:8px;padding:8px 12px;">🤝 {_cf["name"]}{f" · {_sz} KB" if _sz else ""}</div>', unsafe_allow_html=True)
+                                with _cc2:
+                                    st.link_button("⬇️ Abrir", _curl, use_container_width=True)
+                        else:
+                            st.info("No se encontró el contrato. Comprueba el nombre en Drive.")
+                    else:
+                        st.warning("Carpeta EMPRESA no encontrada.")
 
         # ── TAB SOPORTE ──
         if _sel == "🛠️ SOPORTE":
