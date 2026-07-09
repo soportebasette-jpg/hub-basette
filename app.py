@@ -28,23 +28,82 @@ img_base64 = get_base64_of_bin_file("rosco.jpg")
 # 2. CSS DE ALTA VISIBILIDAD (GENERAL)
 st.markdown("""
     <style>
-    .stApp { background-color: #0e1628; color: #ffffff; }
-    [data-testid="stSidebar"] { background-color: #0b1220 !important; }
-    [data-testid="stSidebar"] * { color: #e6edf3 !important; }
-    [data-testid="stSidebarContent"] { background-color: #0b1220 !important; }
-    header { visibility: hidden; }
-    label[data-testid="stWidgetLabel"] p {
-        color: #d2ff00 !important;
-        font-weight: 900 !important;
-        font-size: 1.25rem !important;
+    /* ── FONDO PRINCIPAL ── */
+    .stApp { background-color: #1a1f2e; color: #ffffff; }
+
+    /* ── SIDEBAR: franjas bandera de España (rojo-amarillo-rojo) ── */
+    [data-testid="stSidebar"] {
+        background: linear-gradient(180deg,
+            #c60b1e 0%, #c60b1e 15%,
+            #f1bf00 15%, #f1bf00 50%,
+            #c60b1e 50%, #c60b1e 100%
+        ) !important;
     }
+    [data-testid="stSidebarContent"] {
+        background: transparent !important;
+    }
+
+    /* ── TEXTOS DEL SIDEBAR EN NEGRO ── */
+    [data-testid="stSidebar"] p,
+    [data-testid="stSidebar"] span,
+    [data-testid="stSidebar"] label,
+    [data-testid="stSidebar"] div,
+    [data-testid="stSidebar"] h1,
+    [data-testid="stSidebar"] h2,
+    [data-testid="stSidebar"] h3 {
+        color: #000000 !important;
+        font-weight: 700 !important;
+    }
+
+    /* ── RADIO BUTTONS DEL SIDEBAR ── */
+    [data-testid="stSidebar"] [data-testid="stMarkdownContainer"] p {
+        color: #000000 !important;
+        font-weight: 900 !important;
+    }
+    /* Etiqueta del radio seleccionado */
+    [data-testid="stSidebar"] [role="radio"][aria-checked="true"] ~ div p {
+        color: #000000 !important;
+        font-weight: 900 !important;
+    }
+    /* Fondo blanco semitransparente en la opción seleccionada */
+    [data-testid="stSidebar"] [data-baseweb="radio"] > div:first-child {
+        background-color: rgba(255,255,255,0.25) !important;
+        border-radius: 6px;
+        padding: 4px 8px;
+    }
+
+    /* ── BOTONES: fondo blanco, borde rojo España, texto negro ── */
     button p, .stDownloadButton button p, .stButton button p { 
         color: #000000 !important; 
         font-weight: 900 !important; 
     }
     button, .stDownloadButton button, .stButton button { 
         background-color: #ffffff !important; 
-        border: 2px solid #d2ff00 !important; 
+        border: 2px solid #c60b1e !important; 
+    }
+    button:hover, .stButton button:hover {
+        background-color: #f1bf00 !important;
+        border-color: #c60b1e !important;
+    }
+
+    /* ── LINK BUTTONS ── */
+    [data-testid="stLinkButton"] a {
+        background-color: #ffffff !important;
+        border: 2px solid #c60b1e !important;
+        color: #000000 !important;
+        font-weight: 900 !important;
+    }
+
+    /* ── SIDEBAR SEPARADORES ── */
+    [data-testid="stSidebar"] hr {
+        border-color: rgba(0,0,0,0.3) !important;
+    }
+
+    header { visibility: hidden; }
+    label[data-testid="stWidgetLabel"] p {
+        color: #f1bf00 !important;
+        font-weight: 900 !important;
+        font-size: 1.15rem !important;
     }
     .stTable { background-color: white !important; border-radius: 10px; }
     .stTable td, .stTable th { color: #000000 !important; text-align: center !important; }
