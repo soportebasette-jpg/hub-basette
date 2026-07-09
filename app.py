@@ -2879,61 +2879,47 @@ elif menu == "🔐 ZONA BACKOFFICE":
 
                             df_cia['CUP_16'] = df_cia[cup_col].apply(norm16)
 
-                            # ── CRUCE 1: Gana CIA ← merge → nuestro CRM ──
-                            # Estrategia: merge individual por CUP, luego combinar tomando
-                            # el primer match encontrado (Luz tiene prioridad sobre Gas)
-                            cols_crm_merge = ['ID','ID Contrato Externo','Cliente','Comercial',
-                                              'Estado','Tarifa','Comisión','CUPS Luz','CUPS Gas']
-                            cols_crm_merge = [c for c in cols_crm_merge if c in df_crm.columns]
+                            # ── CRUCE: CRM vista (filtrado) ↔ Gana CIA por CUP ──
+                            # Cuando hay filtro activo usamos df_crm_vista como base (nuestros contratos
+                            # del mes seleccionado) y buscamos su match en Gana.
+                            # Sin filtro: usamos df_crm completo.
+                            cols_crm_merge = [c for c in ['ID','ID Contrato Externo','Cliente','Comercial',
+                                              'Estado','Tarifa','Comisión','CUPS Luz','CUPS Gas',
+                                              'Fecha Creación','Fecha Activación'] if c in df_crm_vista.columns]
 
-                            # ── LOOKUP: siempre usa df_crm COMPLETO (todos los meses) ──
-                            # El filtro de fecha se aplica DESPUÉS sobre el resultado, no aquí.
-                            # Si se usa df_crm_vista aquí, contratos de otros meses no matchean
-                            # aunque sus CUPs existan en el archivo de Gana → da 0 resultados.
-                            cols_crm_merge_v = [c for c in cols_crm_merge if c in df_crm.columns]
-                            lookup_rows = []
-                            if 'CUP_Luz_16' in df_crm.columns:
-                                tmp = df_crm[df_crm['CUP_Luz_16'].notna()][['CUP_Luz_16'] + cols_crm_merge_v].copy()
-                                tmp = tmp.rename(columns={'CUP_Luz_16': 'CUP_16'})
-                                lookup_rows.append(tmp)
-                            if 'CUP_Gas_16' in df_crm.columns:
-                                tmp = df_crm[df_crm['CUP_Gas_16'].notna()][['CUP_Gas_16'] + cols_crm_merge_v].copy()
-                                tmp = tmp.rename(columns={'CUP_Gas_16': 'CUP_16'})
-                                lookup_rows.append(tmp)
+                            # Construir lookup Gana: CUP_16 → fila Gana
+                            cia_cols_show = [c for c in df_cia.columns if c != 'CUP_16']
+                            df_cia_lookup = df_cia[df_cia['CUP_16'].notna()].drop_duplicates('CUP_16')
 
-                            if lookup_rows:
-                                df_lookup = pd.concat(lookup_rows, ignore_index=True).drop_duplicates('CUP_16')
+                            # Merge: CRM_VISTA (base) ← Gana (lookup) por CUP
+                            crm_luz_rows = []
+                            crm_gas_rows = []
+                            if 'CUP_Luz_16' in df_crm_vista.columns:
+                                crm_luz_rows = df_crm_vista[df_crm_vista['CUP_Luz_16'].notna()][cols_crm_merge + ['CUP_Luz_16']].rename(columns={'CUP_Luz_16':'_cup_match'})
+                            if 'CUP_Gas_16' in df_crm_vista.columns:
+                                crm_gas_rows = df_crm_vista[df_crm_vista['CUP_Gas_16'].notna()][cols_crm_merge + ['CUP_Gas_16']].rename(columns={'CUP_Gas_16':'_cup_match'})
+
+                            df_crm_for_merge = pd.concat(
+                                [r for r in [crm_luz_rows, crm_gas_rows] if isinstance(r, pd.DataFrame) and not r.empty],
+                                ignore_index=True
+                            ).drop_duplicates(subset=['ID'] if 'ID' in cols_crm_merge else ['_cup_match']) if (isinstance(crm_luz_rows, pd.DataFrame) or isinstance(crm_gas_rows, pd.DataFrame)) else pd.DataFrame()
+
+                            if not df_crm_for_merge.empty:
+                                df_merged = pd.merge(
+                                    df_crm_for_merge,
+                                    df_cia_lookup[['CUP_16'] + cia_cols_show].rename(columns={'CUP_16':'_cup_match'}),
+                                    on='_cup_match', how='left', suffixes=('','_cia')
+                                )
                             else:
-                                df_lookup = pd.DataFrame(columns=['CUP_16'] + cols_crm_merge_v)
+                                df_merged = pd.DataFrame(columns=cols_crm_merge + cia_cols_show)
 
-                            # Merge: Gana CIA ↔ CRM completo por CUP_16
-                            df_merged = pd.merge(
-                                df_cia, df_lookup,
-                                on='CUP_16', how='left', suffixes=('', '_crm')
-                            )
-
-                            # Estado Cruce
-                            df_merged['ESTADO CRUCE'] = df_merged['ID'].apply(
-                                lambda x: '✅ En CRM' if (x is not None and str(x) not in ['','nan','None']) else '❌ No en CRM'
-                            )
-
-                            # ── Filtro de fecha DESPUÉS del merge ──
-                            # Filtra sobre las filas que ya tienen match, por Fecha Creación del CRM
-                            if sel_fg and 'Fecha Creación' in df_merged.columns:
-                                def _mes_fila_g(fc_val):
-                                    s = str(fc_val).strip()
-                                    if not s or s in ['','nan','None','NaT']: return ''
-                                    # dd/mm/yyyy → mm/yyyy
-                                    if len(s) >= 10 and s[2] == '/' and s[5] == '/':
-                                        return s[3:5] + '/' + s[6:10]
-                                    # yyyy-mm-dd → mm/yyyy
-                                    if len(s) >= 10 and s[4] == '-' and s[7] == '-':
-                                        return s[5:7] + '/' + s[:4]
-                                    return ''
-                                df_merged['_mes_crm'] = df_merged['Fecha Creación'].apply(_mes_fila_g)
-                                # SOLO mostrar filas cuya Fecha Creación (CRM) coincide con el filtro
-                                # Las "No en CRM" no tienen fecha CRM → no aparecen con filtro activo
-                                df_merged = df_merged[df_merged['_mes_crm'].isin(sel_fg)].copy()
+                            # Estado Cruce: si tiene col Gana (ej: FECHA DE CREACIÓN) entonces matchó
+                            _cia_check = cia_cols_show[0] if cia_cols_show else None
+                            if _cia_check and _cia_check in df_merged.columns:
+                                df_merged['ESTADO CRUCE'] = df_merged[_cia_check].apply(
+                                    lambda x: '✅ En Gana' if (x is not None and str(x) not in ['','nan','None']) else '❌ No en Gana')
+                            else:
+                                df_merged['ESTADO CRUCE'] = '❌ No en Gana' 
 
                             # ── CRUCE 2: Nuestros no en Gana → usa df_crm_vista (filtrado) ──
                             cups_gana_16 = set(df_cia['CUP_16'].dropna())
@@ -2952,8 +2938,8 @@ elif menu == "🔐 ZONA BACKOFFICE":
                                     df_nuestros_no_gana[fc] = df_nuestros_no_gana[fc].apply(fmt_f)
 
                             # ── KPIs ──
-                            n_en_crm   = (df_merged['ESTADO CRUCE'] == '✅ En CRM').sum()
-                            n_no_crm   = (df_merged['ESTADO CRUCE'] == '❌ No en CRM').sum()
+                            n_en_crm   = (df_merged['ESTADO CRUCE'] == '✅ En Gana').sum()
+                            n_no_crm   = (df_merged['ESTADO CRUCE'] == '❌ No en Gana').sum()
                             n_no_gana  = len(df_nuestros_no_gana)
 
                             st.markdown("---")
@@ -2966,16 +2952,14 @@ elif menu == "🔐 ZONA BACKOFFICE":
                             k3.markdown(f'<div style="background:#f8f0ff; border:2px solid #a78bfa; {box_g}"><p style="color:#a78bfa; font-size:0.7rem; font-weight:bold; margin:0;">⚠️ NUESTROS NO EN GANA</p><h2 style="color:#111111; margin:4px 0;">{n_no_gana}</h2></div>', unsafe_allow_html=True)
                             k4.markdown(f'<div style="background:#ffffff; border:2px solid #8b949e; {box_g}"><p style="color:#8b949e; font-size:0.7rem; font-weight:bold; margin:0;">📋 TOTAL EN GANA</p><h2 style="color:#111111; margin:4px 0;">{len(df_cia)}</h2></div>', unsafe_allow_html=True)
 
-                            # ── Columnas resultado principal ──
-                            # Primero las columnas CRM clave (siempre visibles), luego las de Gana
-                            crm_priority = ['ESTADO CRUCE','Comercial','CUPS Luz','CUPS Gas',
-                                            'ID','Cliente','Estado','Tarifa','Comisión','ID Contrato Externo']
-                            cia_cols     = [c for c in df_cia.columns if c != 'CUP_16']
-                            crm_add      = [c for c in crm_priority
-                                            if c in df_merged.columns and c not in cia_cols]
-                            cols_result  = crm_add + cia_cols
-                            cols_result  = [c for c in cols_result if c in df_merged.columns]
-
+                            # ── Columnas resultado: CRM (base) + Gana (lookup) ──
+                            crm_cols_display = [c for c in ['ESTADO CRUCE','Comercial','CUPS Luz','CUPS Gas',
+                                'Fecha Creación','Fecha Activación','ID','Cliente','Estado',
+                                'Tarifa','Comisión','ID Contrato Externo'] if c in df_merged.columns]
+                            cia_cols_display = [c for c in df_merged.columns
+                                if c not in crm_cols_display and not c.startswith('_')]
+                            cols_result = crm_cols_display + cia_cols_display
+                            cols_result = [c for c in cols_result if c in df_merged.columns]
                             # Columnas para nuestros no en Gana
                             cols_nuestros = [c for c in ['ID','ID Contrato Externo','Cliente','Comercial',
                                                           'Estado','Comercializadora','Tarifa',
@@ -3002,7 +2986,7 @@ elif menu == "🔐 ZONA BACKOFFICE":
                                 with _hdr1: st.markdown('<p style="color:#8b949e;font-size:0.83rem;margin:0;">Todos los contratos de Gana + datos CRM donde hay match.</p>', unsafe_allow_html=True)
                                 with _btn1: st.download_button("⬇️ Descargar",
                                     _safe_xlsx({'Gana Completo': df_show1,
-                                        'Gana sin CRM': df_merged[df_merged['ESTADO CRUCE']=='❌ No en CRM'][cols_result].reset_index(drop=True),
+                                        'Gana sin CRM': df_merged[df_merged['ESTADO CRUCE']=='❌ No en Gana'][cols_result].reset_index(drop=True),
                                         'Nuestros no Gana': df_nuestros_no_gana[cols_nuestros].reset_index(drop=True)}),
                                     file_name="gana_cruce_completo.xlsx",
                                     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -3010,7 +2994,7 @@ elif menu == "🔐 ZONA BACKOFFICE":
                                 st.dataframe(df_show1, use_container_width=True, height=420)
 
                             with gt2:
-                                df_show2 = df_merged[df_merged['ESTADO CRUCE']=='❌ No en CRM'][cols_result].reset_index(drop=True)
+                                df_show2 = df_merged[df_merged['ESTADO CRUCE']=='❌ No en Gana'][cols_result].reset_index(drop=True)
                                 _hdr2, _btn2 = st.columns([4,1])
                                 with _hdr2: st.markdown('<p style="color:#ff4b4b;font-size:0.83rem;margin:0;">En Gana pero <b>no en nuestro CRM</b> — verificar si son nuestros.</p>', unsafe_allow_html=True)
                                 with _btn2: st.download_button("⬇️ Descargar",
