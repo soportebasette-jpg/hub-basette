@@ -28,28 +28,52 @@ img_base64 = get_base64_of_bin_file("rosco.jpg")
 # 2. CSS DE ALTA VISIBILIDAD (GENERAL)
 st.markdown("""
     <style>
-    /* ══ SIDEBAR SIEMPRE VISIBLE — botón colapsar/expandir ══ */
-    /* Mostrar siempre el botón de toggle del sidebar */
+    /* ══ BOTÓN EXPANDIR SIDEBAR (cuando está cerrado) ══ */
+    /* El botón que aparece cuando el sidebar está colapsado */
     [data-testid="collapsedControl"] {
         display: flex !important;
         visibility: visible !important;
         opacity: 1 !important;
+        position: fixed !important;
+        left: 0 !important;
+        top: 50% !important;
+        transform: translateY(-50%) !important;
+        z-index: 9999 !important;
         background: linear-gradient(160deg, #c60b1e, #e07010, #f1bf00) !important;
-        border-radius: 0 8px 8px 0 !important;
-        width: 28px !important;
+        border-radius: 0 10px 10px 0 !important;
+        width: 36px !important;
+        height: 48px !important;
         color: white !important;
-        box-shadow: 2px 0 6px rgba(0,0,0,0.2) !important;
+        box-shadow: 3px 0 8px rgba(0,0,0,0.25) !important;
+        cursor: pointer !important;
+        align-items: center !important;
+        justify-content: center !important;
+    }
+    [data-testid="collapsedControl"]:hover {
+        width: 44px !important;
+        background: linear-gradient(160deg, #e07010, #f1bf00) !important;
     }
     [data-testid="collapsedControl"] svg {
         fill: white !important;
         color: white !important;
+        width: 20px !important;
+        height: 20px !important;
     }
-    /* Botón de colapsar dentro del sidebar también visible */
+    /* Botón de colapsar dentro del sidebar */
     button[kind="header"] {
         background: rgba(255,255,255,0.3) !important;
         border-radius: 6px !important;
     }
     button[kind="header"] svg { fill: #000000 !important; }
+    /* Asegurar que el botón de colapsar del sidebar sea visible */
+    [data-testid="stSidebar"] button[data-testid="baseButton-header"] {
+        background: rgba(255,255,255,0.35) !important;
+        border-radius: 8px !important;
+    }
+    section[data-testid="stSidebar"] > div:first-child > div > div > button {
+        background: rgba(255,255,255,0.35) !important;
+        color: #000 !important;
+    }
 
     /* ══ FONDO PRINCIPAL BLANCO ══ */
     .stApp { background-color: #dce8f5 !important; color: #111111 !important; }
@@ -2557,7 +2581,10 @@ elif menu == "🔐 ZONA BACKOFFICE":
                                         col_linea_bern = c
                                         break
 
-                            col_comercial_bern = next((c for c in df_bern.columns if 'agente de venta' in c.lower()), None)
+                            # Columna exacta del comercial en informe Bernardo
+                            col_comercial_bern = next((c for c in df_bern.columns
+                                if 'agente de venta' in c.lower() or
+                                   (c == 'Quote : Opportunity Name : Agente de Venta')), None)
                             col_cliente_bern = next((c for c in df_bern.columns if 'account name' in c.lower() and 'opportunity' in c.lower() and 'tipo' not in c.lower() and 'número' not in c.lower()), None)
                             col_dni_bern = next((c for c in df_bern.columns if 'número de documento' in c.lower()), None)
                             col_plan_bern = next((c for c in df_bern.columns if 'plan description' in c.lower()), None)
@@ -2617,37 +2644,75 @@ elif menu == "🔐 ZONA BACKOFFICE":
                             df_merged['Estado Liq'] = df_merged.apply(clasif_total, axis=1)
                             df_merged['Comercial'] = df_merged.get('Comercial', pd.Series(dtype=str)).fillna('No encontrado')
 
+                            # Tipo energía desde Bernardo (Producto Luz / Producto Gas / Mantenimiento)
+                            _col_energia_bern_merged = 'Energía Bernardo'
+                            if _col_energia_bern_merged in df_merged.columns:
+                                df_merged['Tipo'] = df_merged[_col_energia_bern_merged].apply(lambda x: (
+                                    '⚡ LUZ' if 'luz' in str(x).lower()
+                                    else ('🔥 GAS' if 'gas' in str(x).lower()
+                                    else ('🔧 MANTENIMIENTO' if 'manten' in str(x).lower() else str(x)))
+                                ))
+                            else:
+                                df_merged['Tipo'] = '—'
+
                             # Separar grupos
                             df_pagados = df_merged[df_merged['Estado Liq'] == '✅ PAGADO']
                             df_descom  = df_merged[df_merged['Estado Liq'] == '🔴 DESCOMISIONADO']
                             df_pend    = df_merged[df_merged['Estado Liq'] == '❓ PENDIENTE']
-                            df_no_bern = df_merged[df_merged.get('Cliente', pd.Series(dtype=str)).isna() | (df_merged.get('Cliente', pd.Series(dtype=str)) == '')]
 
-                            total_cobrado = float(df_pagados[col_comision_liq].sum()) if col_comision_liq in df_pagados.columns else 0
-                            total_descom  = abs(float(df_descom[col_comision_liq].sum())) if col_comision_liq in df_descom.columns else 0
+                            # Sub-separar pagados por tipo
+                            df_pag_luz   = df_pagados[df_pagados['Tipo'] == '⚡ LUZ']
+                            df_pag_gas   = df_pagados[df_pagados['Tipo'] == '🔥 GAS']
+                            df_pag_mant  = df_pagados[df_pagados['Tipo'] == '🔧 MANTENIMIENTO']
+
+                            try: total_cobrado = float(df_pagados[col_comision_liq].sum())
+                            except: total_cobrado = 0
+                            try: total_cobrado_luz = float(df_pag_luz[col_comision_liq].sum())
+                            except: total_cobrado_luz = 0
+                            try: total_cobrado_gas = float(df_pag_gas[col_comision_liq].sum())
+                            except: total_cobrado_gas = 0
+                            try: total_cobrado_mant = float(df_pag_mant[col_comision_liq].sum())
+                            except: total_cobrado_mant = 0
+                            try: total_descom = abs(float(df_descom[col_comision_liq].sum()))
+                            except: total_descom = 0
 
                             # ── KPIs ──
                             st.markdown("---")
+                            bxt = "border-radius:10px;padding:12px 8px;text-align:center;margin-bottom:10px;"
+                            # Fila 1: totales generales
                             kt1, kt2, kt3, kt4 = st.columns(4)
-                            bxt = "border-radius:10px;padding:14px 8px;text-align:center;margin-bottom:10px;"
-                            kt1.markdown(f'<div style="background:#f0fff4;border:2px solid #22c55e;{bxt}"><p style="color:#22c55e;font-size:0.7rem;font-weight:bold;margin:0;">✅ PAGADOS</p><h2 style="color:#111;margin:4px 0;">{len(df_pagados)}</h2><p style="color:#22c55e;font-size:0.8rem;font-weight:bold;margin:0;">{total_cobrado:,.0f}€</p></div>', unsafe_allow_html=True)
+                            kt1.markdown(f'<div style="background:#f0fff4;border:2px solid #22c55e;{bxt}"><p style="color:#22c55e;font-size:0.7rem;font-weight:bold;margin:0;">✅ PAGADOS TOTAL</p><h2 style="color:#111;margin:4px 0;">{len(df_pagados)}</h2><p style="color:#22c55e;font-size:0.8rem;font-weight:bold;margin:0;">{total_cobrado:,.0f}€</p></div>', unsafe_allow_html=True)
                             kt2.markdown(f'<div style="background:#fff0f0;border:2px solid #ff4b4b;{bxt}"><p style="color:#ff4b4b;font-size:0.7rem;font-weight:bold;margin:0;">🔴 DESCOMISIONADOS</p><h2 style="color:#111;margin:4px 0;">{len(df_descom)}</h2><p style="color:#ff4b4b;font-size:0.8rem;font-weight:bold;margin:0;">-{total_descom:,.0f}€</p></div>', unsafe_allow_html=True)
                             kt3.markdown(f'<div style="background:#fffbf0;border:2px solid #f1bf00;{bxt}"><p style="color:#b38a00;font-size:0.7rem;font-weight:bold;margin:0;">❓ PENDIENTE</p><h2 style="color:#111;margin:4px 0;">{len(df_pend)}</h2></div>', unsafe_allow_html=True)
                             kt4.markdown(f'<div style="background:#eef4fb;border:2px solid #3b82f6;{bxt}"><p style="color:#3b82f6;font-size:0.7rem;font-weight:bold;margin:0;">📋 TOTAL LIQUIDACIÓN</p><h2 style="color:#111;margin:4px 0;">{len(df_tliq)}</h2></div>', unsafe_allow_html=True)
+                            # Fila 2: desglose pagados por tipo
+                            st.markdown("<br>", unsafe_allow_html=True)
+                            kb1, kb2, kb3 = st.columns(3)
+                            kb1.markdown(f'<div style="background:#fffde7;border:2px solid #f59e0b;{bxt}"><p style="color:#92400e;font-size:0.7rem;font-weight:bold;margin:0;">⚡ PAGADOS LUZ</p><h3 style="color:#111;margin:4px 0;">{len(df_pag_luz)}</h3><p style="color:#92400e;font-size:0.8rem;font-weight:bold;margin:0;">{total_cobrado_luz:,.0f}€</p></div>', unsafe_allow_html=True)
+                            kb2.markdown(f'<div style="background:#fef3f2;border:2px solid #ef4444;{bxt}"><p style="color:#991b1b;font-size:0.7rem;font-weight:bold;margin:0;">🔥 PAGADOS GAS</p><h3 style="color:#111;margin:4px 0;">{len(df_pag_gas)}</h3><p style="color:#991b1b;font-size:0.8rem;font-weight:bold;margin:0;">{total_cobrado_gas:,.0f}€</p></div>', unsafe_allow_html=True)
+                            kb3.markdown(f'<div style="background:#f0f4ff;border:2px solid #6366f1;{bxt}"><p style="color:#3730a3;font-size:0.7rem;font-weight:bold;margin:0;">🔧 MANTENIMIENTOS</p><h3 style="color:#111;margin:4px 0;">{len(df_pag_mant)}</h3><p style="color:#3730a3;font-size:0.8rem;font-weight:bold;margin:0;">{total_cobrado_mant:,.0f}€</p></div>', unsafe_allow_html=True)
 
                             # ── Resumen por Comercial ──
                             if 'Comercial' in df_merged.columns and col_comision_liq in df_merged.columns:
-                                _pagados_com = df_pagados.groupby('Comercial')[col_comision_liq].sum().reset_index()
+                                _p = df_pagados.copy()
+                                _pagados_com = _p.groupby('Comercial')[col_comision_liq].sum().reset_index()
                                 _pagados_com.columns = ['Comercial', 'Total Cobrado €']
-                                _count_com  = df_pagados.groupby('Comercial').size().reset_index(name='Nº Pagados')
-                                _descom_com = df_descom.groupby('Comercial').size().reset_index(name='Nº Descomisionados')
-                                _resumen = _pagados_com.merge(_count_com, on='Comercial', how='outer')
+                                _luz_com = _p[_p['Tipo']=='⚡ LUZ'].groupby('Comercial').size().reset_index(name='Luz')
+                                _gas_com = _p[_p['Tipo']=='🔥 GAS'].groupby('Comercial').size().reset_index(name='Gas')
+                                _mant_com= _p[_p['Tipo']=='🔧 MANTENIMIENTO'].groupby('Comercial').size().reset_index(name='Mant.')
+                                _total_com = _p.groupby('Comercial').size().reset_index(name='Total Pagados')
+                                _descom_com = df_descom.groupby('Comercial').size().reset_index(name='Descomisionados')
+                                _resumen = _pagados_com.merge(_total_com, on='Comercial', how='outer')
+                                _resumen = _resumen.merge(_luz_com, on='Comercial', how='outer')
+                                _resumen = _resumen.merge(_gas_com, on='Comercial', how='outer')
+                                _resumen = _resumen.merge(_mant_com, on='Comercial', how='outer')
                                 _resumen = _resumen.merge(_descom_com, on='Comercial', how='outer').fillna(0)
                                 _resumen['Total Cobrado €'] = _resumen['Total Cobrado €'].round(2)
-                                _resumen = _resumen.sort_values('Total Cobrado €', ascending=False)
+                                _col_order = ['Comercial','Total Cobrado €','Total Pagados','Luz','Gas','Mant.','Descomisionados']
+                                _resumen = _resumen[[c for c in _col_order if c in _resumen.columns]].sort_values('Total Cobrado €', ascending=False)
 
                             # ── Columnas para mostrar ──
-                            _show_cols = ['Comercial','Cliente','DNI','Estado Liq']
+                            _show_cols = ['Comercial','Cliente','DNI','Tipo','Estado Liq']
                             if col_nomoferta: _show_cols.append(col_nomoferta)
                             if col_linea_liq: _show_cols.append(col_linea_liq)
                             if col_energia_liq: _show_cols.append(col_energia_liq)
@@ -2678,9 +2743,11 @@ elif menu == "🔐 ZONA BACKOFFICE":
                             _sel_com_t = st.selectbox("👤 Filtrar por comercial:", _comerciales_t, key="total_com_sel")
                             _df_filt = df_merged if _sel_com_t == 'Todos' else df_merged[df_merged['Comercial'] == _sel_com_t]
 
-                            tt0, tt1, tt2, tt3, tt4 = st.tabs([
+                            tt0, tt1, tt1b, tt1c, tt2, tt3, tt4 = st.tabs([
                                 f"👤 POR COMERCIAL",
-                                f"✅ PAGADOS ({len(df_pagados)})",
+                                f"⚡ LUZ ({len(df_pag_luz)})",
+                                f"🔥 GAS ({len(df_pag_gas)})",
+                                f"🔧 MANTENIMIENTO ({len(df_pag_mant)})",
                                 f"🔴 DESCOMISIONADOS ({len(df_descom)})",
                                 f"❓ PENDIENTE ({len(df_pend)})",
                                 f"📋 COMPLETO ({len(df_merged)})"
@@ -2696,9 +2763,30 @@ elif menu == "🔐 ZONA BACKOFFICE":
 
                             with tt1:
                                 _h1, _b1 = st.columns([4,1])
-                                with _h1: st.markdown(f'<p style="color:#22c55e;margin:0;">Total: <b>{total_cobrado:,.0f}€</b></p>', unsafe_allow_html=True)
-                                with _b1: st.download_button("⬇️ Descargar", _safe_t({'Pagados': df_show_total(df_pagados)}), file_name="total_pagados.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True, key="dl_tt1")
-                                st.dataframe(df_show_total(df_pagados), use_container_width=True, height=400)
+                                with _h1: st.markdown(f'<p style="color:#92400e;margin:0;">Luz pagada: <b>{total_cobrado_luz:,.0f}€</b> — {len(df_pag_luz)} contratos</p>', unsafe_allow_html=True)
+                                with _b1: st.download_button("⬇️ Descargar", _safe_t({'Pagados Luz': df_show_total(df_pag_luz)}), file_name="total_pagados_luz.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True, key="dl_tt1")
+                                if not df_pag_luz.empty:
+                                    st.dataframe(df_show_total(df_pag_luz), use_container_width=True, height=400)
+                                else:
+                                    st.info("Sin pagados de luz en esta liquidación.")
+
+                            with tt1b:
+                                _h1b, _b1b = st.columns([4,1])
+                                with _h1b: st.markdown(f'<p style="color:#991b1b;margin:0;">Gas pagado: <b>{total_cobrado_gas:,.0f}€</b> — {len(df_pag_gas)} contratos</p>', unsafe_allow_html=True)
+                                with _b1b: st.download_button("⬇️ Descargar", _safe_t({'Pagados Gas': df_show_total(df_pag_gas)}), file_name="total_pagados_gas.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True, key="dl_tt1b")
+                                if not df_pag_gas.empty:
+                                    st.dataframe(df_show_total(df_pag_gas), use_container_width=True, height=400)
+                                else:
+                                    st.info("Sin pagados de gas en esta liquidación.")
+
+                            with tt1c:
+                                _h1c, _b1c = st.columns([4,1])
+                                with _h1c: st.markdown(f'<p style="color:#3730a3;margin:0;">Mantenimientos: <b>{total_cobrado_mant:,.0f}€</b> — {len(df_pag_mant)} contratos</p>', unsafe_allow_html=True)
+                                with _b1c: st.download_button("⬇️ Descargar", _safe_t({'Mantenimientos': df_show_total(df_pag_mant)}), file_name="total_mantenimientos.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True, key="dl_tt1c")
+                                if not df_pag_mant.empty:
+                                    st.dataframe(df_show_total(df_pag_mant), use_container_width=True, height=400)
+                                else:
+                                    st.info("Sin mantenimientos en esta liquidación.")
 
                             with tt2:
                                 _h2, _b2 = st.columns([4,1])
