@@ -2477,256 +2477,264 @@ elif menu == "🔐 ZONA BACKOFFICE":
             with liq_tab_total:
                 st.markdown('<div class="block-header" style="font-size:1rem;">🌍 LIQUIDACIÓN TOTAL ENERGIES</div>', unsafe_allow_html=True)
                 st.markdown("""
-                    <div style="background:#ffffff; border-left:4px solid #3b82f6; padding:15px; border-radius:8px; margin-bottom:20px;">
-                        <p style="color:#3b82f6; font-weight:bold; margin:0 0 6px 0;">⚙️ CRUCE AUTOMÁTICO TOTAL ENERGIES</p>
-                        <p style="color:#8b949e; margin:0; font-size:0.82rem;">
-                            Sube la liquidación de Total Energies y el Excel de contratos.
-                            El sistema cruza por <b>Nº Contrato</b> (NombreOferta ↔ ID Contrato Externo),
-                            filtra automáticamente Total Energies, y muestra pagado, pendiente y descomisionado por comercial.
+                    <div style="background:#eef4fb; border-left:4px solid #3b82f6; padding:15px; border-radius:8px; margin-bottom:20px;">
+                        <p style="color:#3b82f6; font-weight:bold; margin:0 0 6px 0;">⚙️ CRUCE TOTAL ENERGIES × INFORME BERNARDO</p>
+                        <p style="color:#555555; margin:0; font-size:0.82rem;">
+                            Sube la <b>liquidación de Total Energies</b> y el <b>informe de Bernardo</b> (CON_CONSUMOSreport...).
+                            El sistema cruza por <b>IdLineaOferta</b> y muestra qué está pagado, pendiente o descomisionado con el comercial correspondiente.
                         </p>
                     </div>
                 """, unsafe_allow_html=True)
 
-                t_col1, t_col2 = st.columns(2)
-                with t_col1:
-                    st.markdown('<p style="color:#3b82f6; font-weight:bold; font-size:1rem; margin-bottom:4px;">📄 Liquidación Total Energies</p>', unsafe_allow_html=True)
+                tc1, tc2 = st.columns(2)
+                with tc1:
+                    st.markdown('<p style="color:#3b82f6; font-weight:bold; font-size:0.95rem; margin-bottom:4px;">📄 Liquidación Total Energies</p>', unsafe_allow_html=True)
                     f_total_liq = st.file_uploader("Liquidación Total Energies", type=['xlsx'], key="total_liq_upload", label_visibility="collapsed")
-                with t_col2:
-                    st.markdown('<p style="color:#3b82f6; font-weight:bold; font-size:1rem; margin-bottom:4px;">📋 Contratos Energía (CRM)</p>', unsafe_allow_html=True)
-                    f_total_con = st.file_uploader("Contratos energía Total", type=['xlsx'], key="total_con_upload", label_visibility="collapsed")
+                with tc2:
+                    st.markdown('<p style="color:#3b82f6; font-weight:bold; font-size:0.95rem; margin-bottom:4px;">📋 Informe Bernardo (CON_CONSUMOS...)</p>', unsafe_allow_html=True)
+                    f_total_bern = st.file_uploader("Informe Bernardo", type=['xlsx'], key="total_bern_upload", label_visibility="collapsed")
 
-                if f_total_liq and f_total_con:
-                    with st.spinner("⏳ Procesando liquidación Total Energies..."):
+                if f_total_liq and f_total_bern:
+                    with st.spinner("⏳ Cruzando Total Energies con informe Bernardo..."):
                         try:
-                            def fmt_fecha_total(val):
+                            def fmt_ft(val):
                                 if val is None or str(val).strip() in ['','nan','None','NaT']: return ''
                                 s = str(val).strip()
                                 if len(s) >= 10 and s[2] == '/': return s[:10]
                                 if len(s) >= 10 and s[4] == '-':
                                     try:
-                                        from datetime import datetime
-                                        return datetime.strptime(s[:10], '%Y-%m-%d').strftime('%d/%m/%Y')
+                                        from datetime import datetime as _dt3
+                                        return _dt3.strptime(s[:10], '%Y-%m-%d').strftime('%d/%m/%Y')
                                     except: return s[:10]
                                 try:
-                                    from datetime import date, timedelta
-                                    return (date(1899,12,30)+timedelta(days=int(float(s)))).strftime('%d/%m/%Y')
+                                    from datetime import date as _d3, timedelta as _td3
+                                    return (_d3(1899,12,30)+_td3(days=int(float(s)))).strftime('%d/%m/%Y')
                                 except: return s
 
-                            def norm_contrato(val):
-                                """Normaliza nº contrato eliminando ceros a la izquierda."""
-                                if val is None or str(val).strip() in ['','nan','None']: return None
-                                try: return str(int(float(str(val).strip()))).lstrip('0') or '0'
-                                except: return str(val).strip().lstrip('0') or str(val).strip()
+                            # ── Leer liquidación Total ──
+                            df_tliq = leer_excel_safe(f_total_liq, header=0)
+                            df_tliq.columns = [str(c).strip() for c in df_tliq.columns]
 
-                            # Leer liquidación Total (tiene header en fila 0)
-                            df_t_liq = leer_excel_safe(f_total_liq, header=0)
-                            df_t_liq.columns = [str(c).strip() for c in df_t_liq.columns]
+                            # Detectar columna IdLineaOferta en Total liq
+                            col_linea_liq = next((c for c in df_tliq.columns
+                                if 'idlinea' in c.lower().replace(' ','') or 'lineaoferta' in c.lower().replace(' ','')), None)
+                            col_nomoferta = next((c for c in df_tliq.columns
+                                if 'nombreoferta' in c.lower().replace(' ','') or 'nombre' in c.lower() and 'oferta' in c.lower()), None)
+                            col_energia_liq = next((c for c in df_tliq.columns if 'energia' in c.lower() or 'energía' in c.lower()), None)
+                            col_concepto = next((c for c in df_tliq.columns if 'concepto' in c.lower()), None)
+                            col_comision_liq = next((c for c in df_tliq.columns if 'comision' in c.lower() or 'comisión' in c.lower()), None)
+                            col_fecha_liq = next((c for c in df_tliq.columns if 'liquidacion' in c.lower() or 'liquidación' in c.lower()), None)
+                            col_fbaja_liq = next((c for c in df_tliq.columns if 'baja' in c.lower()), None)
+                            col_agente = next((c for c in df_tliq.columns if 'agente' in c.lower() or 'asesor' in c.lower()), None)
 
-                            # Detectar columnas clave
-                            col_contrato_liq = next((c for c in df_t_liq.columns if 'NOMBREOFERTA' in c.upper() or 'NOMBRE' in c.upper() and 'OFERTA' in c.upper()), None)
-                            col_agente      = next((c for c in df_t_liq.columns if 'AGENTE' in c.upper() or 'ASESOR' in c.upper()), None)
-                            col_energia     = next((c for c in df_t_liq.columns if 'ENERGIA' in c.upper() or 'ENERGÍA' in c.upper()), None)
-                            col_concepto    = next((c for c in df_t_liq.columns if 'CONCEPTO' in c.upper()), None)
-                            col_comision    = next((c for c in df_t_liq.columns if 'COMISION' in c.upper() or 'COMISIÓN' in c.upper()), None)
-                            col_fecha_liq   = next((c for c in df_t_liq.columns if 'LIQUIDACION' in c.upper() or 'LIQUIDACIÓN' in c.upper()), None)
-                            col_fecha_venta = next((c for c in df_t_liq.columns if 'VENTA' in c.upper()), None)
-                            col_fecha_act   = next((c for c in df_t_liq.columns if 'ACTIVACION' in c.upper() or 'ACTIVACIÓN' in c.upper()), None)
-                            col_fecha_baja  = next((c for c in df_t_liq.columns if 'BAJA' in c.upper()), None)
-                            col_id_linea    = next((c for c in df_t_liq.columns if 'IDLINEA' in c.upper() or 'LINEAOFERTA' in c.upper()), None)
-
-                            if not col_contrato_liq or not col_comision:
-                                st.error("❌ No se encontraron columnas NombreOferta o Comision en la liquidación de Total.")
+                            if not col_linea_liq:
+                                st.error("❌ No se encontró la columna IdLineaOferta en la liquidación de Total.")
+                                st.stop()
+                            if not col_comision_liq:
+                                st.error("❌ No se encontró la columna Comision en la liquidación de Total.")
                                 st.stop()
 
-                            # Normalizar clave de contrato
-                            df_t_liq['contrato_key'] = df_t_liq[col_contrato_liq].apply(norm_contrato)
+                            # Formatear fechas Total liq
+                            for fc in [col_fecha_liq, col_fbaja_liq]:
+                                if fc and fc in df_tliq.columns:
+                                    df_tliq[fc] = df_tliq[fc].apply(fmt_ft)
 
-                            # Formatear fechas
-                            for fc in [col_fecha_liq, col_fecha_venta, col_fecha_act, col_fecha_baja]:
-                                if fc and fc in df_t_liq.columns:
-                                    df_t_liq[fc] = df_t_liq[fc].apply(fmt_fecha_total)
+                            df_tliq['_linea_key'] = df_tliq[col_linea_liq].apply(lambda x: str(x).strip() if x else '')
 
-                            # Leer contratos CRM
-                            df_t_con = leer_excel_safe(f_total_con, header=0)
-                            df_t_con.columns = [str(c).strip() for c in df_t_con.columns]
+                            # ── Leer informe Bernardo ──
+                            df_bern = leer_excel_safe(f_total_bern, header=0)
+                            df_bern.columns = [str(c).strip() for c in df_bern.columns]
 
-                            # Filtrar Total Energies
-                            if 'Comercializadora' in df_t_con.columns:
-                                df_total_crm = df_t_con[
-                                    df_t_con['Comercializadora'].str.contains('Total', case=False, na=False)
-                                ].copy()
-                            else:
-                                df_total_crm = df_t_con.copy()
+                            # Detectar columna Id Línea de Oferta en Bernardo
+                            col_linea_bern = next((c for c in df_bern.columns
+                                if 'id' in c.lower() and 'línea' in c.lower() or 'idl' in c.lower().replace(' ','')
+                                or ('linea' in c.lower().replace(' ','') and 'oferta' in c.lower())), None)
+                            if not col_linea_bern:
+                                # fallback: column that has Salesforce IDs (start with 0QL)
+                                for c in df_bern.columns:
+                                    sample = df_bern[c].dropna()
+                                    if not sample.empty and str(sample.iloc[0]).startswith('0QL'):
+                                        col_linea_bern = c
+                                        break
 
-                            col_id_ext = next((c for c in df_total_crm.columns if 'ID CONTRATO' in c.upper() or 'CONTRATO EXTERNO' in c.upper()), None)
-                            if not col_id_ext:
-                                col_id_ext = 'ID Contrato Externo'
+                            col_comercial_bern = next((c for c in df_bern.columns if 'agente de venta' in c.lower()), None)
+                            col_cliente_bern = next((c for c in df_bern.columns if 'account name' in c.lower() and 'opportunity' in c.lower() and 'tipo' not in c.lower() and 'número' not in c.lower()), None)
+                            col_dni_bern = next((c for c in df_bern.columns if 'número de documento' in c.lower()), None)
+                            col_plan_bern = next((c for c in df_bern.columns if 'plan description' in c.lower()), None)
+                            col_estado_bern = next((c for c in df_bern.columns if c.lower() == 'status'), None)
+                            col_energia_bern = next((c for c in df_bern.columns if c.lower() == 'energia'), None)
+                            col_factivacion_bern = next((c for c in df_bern.columns if 'activación' in c.lower() or 'activacion' in c.lower()), None)
+                            col_fbaja_bern = next((c for c in df_bern.columns if 'baja' in c.lower() and 'fecha' in c.lower()), None)
+                            col_comision_bern = next((c for c in df_bern.columns if c.lower() == 'comision'), None)
 
-                            df_total_crm['contrato_key'] = df_total_crm[col_id_ext].apply(norm_contrato) if col_id_ext in df_total_crm.columns else None
+                            if not col_linea_bern:
+                                st.error("❌ No se encontró la columna 'Id Línea de Oferta' en el informe de Bernardo.")
+                                st.stop()
 
-                            # Formatear fechas CRM
-                            for fc in ['Fecha Creación','Fecha Activación']:
-                                if fc in df_total_crm.columns:
-                                    df_total_crm[fc] = df_total_crm[fc].apply(fmt_fecha_total)
+                            for fc in [col_factivacion_bern, col_fbaja_bern]:
+                                if fc and fc in df_bern.columns:
+                                    df_bern[fc] = df_bern[fc].apply(fmt_ft)
 
-                            # ── CRUCE: nuestros contratos ↔ liquidación Total ──
-                            keys_crm = set(df_total_crm['contrato_key'].dropna())
+                            df_bern['_linea_key'] = df_bern[col_linea_bern].apply(lambda x: str(x).strip() if x else '')
 
-                            # Filtrar liq solo a nuestros contratos
-                            df_liq_nuestros = df_t_liq[df_t_liq['contrato_key'].isin(keys_crm)].copy()
+                            # ── CRUCE: Total liq ↔ Bernardo por IdLineaOferta ──
+                            # Columnas de Bernardo a traer
+                            cols_bern_merge = ['_linea_key']
+                            col_map = {
+                                col_comercial_bern: 'Comercial',
+                                col_cliente_bern: 'Cliente',
+                                col_dni_bern: 'DNI',
+                                col_plan_bern: 'Plan',
+                                col_estado_bern: 'Estado Bernardo',
+                                col_energia_bern: 'Energía Bernardo',
+                                col_comision_bern: 'Comisión Bernardo',
+                                col_factivacion_bern: 'Fecha Activación',
+                                col_fbaja_bern: 'Fecha Baja Bernardo',
+                            }
+                            rename_map = {}
+                            for orig, nuevo in col_map.items():
+                                if orig and orig in df_bern.columns:
+                                    cols_bern_merge.append(orig)
+                                    rename_map[orig] = nuevo
 
-                            # Agrupar por contrato + concepto para resumen de comisiones
-                            # Conceptos que son comisión real: LUZ, GAS, FACILITA, FACILITADUALPLUSHOGAR, FACILITALUZHOGA...
-                            conceptos_comision = {'LUZ','GAS','FACILITA','FACILITADUALPLUSH OGARES','FACILITALUZHOGAR ES','BAJUSTE'}
+                            df_bern_merge = df_bern[cols_bern_merge].rename(columns=rename_map).drop_duplicates('_linea_key')
 
-                            # Merge liq → CRM para añadir datos del contrato
-                            cols_crm_merge = ['ID','Cliente','Comercial','Estado','CUPS Luz','CUPS Gas','Comisión','contrato_key']
-                            cols_crm_merge = [c for c in cols_crm_merge if c in df_total_crm.columns]
                             df_merged = pd.merge(
-                                df_liq_nuestros,
-                                df_total_crm[cols_crm_merge],
-                                on='contrato_key', how='left', suffixes=('','_crm')
+                                df_tliq, df_bern_merge,
+                                on='_linea_key', how='left'
                             )
 
-                            # Estado liquidación por fila
+                            # Estado liquidación
                             def clasif_total(row):
-                                fb = str(row.get(col_fecha_baja,'')).strip() if col_fecha_baja else ''
-                                com = float(row.get(col_comision, 0) or 0)
+                                fb = str(row.get(col_fbaja_liq or '','') or '').strip()
+                                try: com = float(row.get(col_comision_liq, 0) or 0)
+                                except: com = 0
                                 if fb and fb not in ['','nan','None']: return '🔴 DESCOMISIONADO'
                                 if com < 0: return '🔴 DESCOMISIONADO'
                                 if com > 0: return '✅ PAGADO'
                                 return '❓ PENDIENTE'
 
                             df_merged['Estado Liq'] = df_merged.apply(clasif_total, axis=1)
+                            df_merged['Comercial'] = df_merged.get('Comercial', pd.Series(dtype=str)).fillna('No encontrado')
 
-                            # Contratos nuestros NO encontrados en liq
-                            keys_en_liq = set(df_liq_nuestros['contrato_key'].dropna())
-                            df_no_en_liq = df_total_crm[~df_total_crm['contrato_key'].isin(keys_en_liq)].copy()
+                            # Separar grupos
+                            df_pagados = df_merged[df_merged['Estado Liq'] == '✅ PAGADO']
+                            df_descom  = df_merged[df_merged['Estado Liq'] == '🔴 DESCOMISIONADO']
+                            df_pend    = df_merged[df_merged['Estado Liq'] == '❓ PENDIENTE']
+                            df_no_bern = df_merged[df_merged.get('Cliente', pd.Series(dtype=str)).isna() | (df_merged.get('Cliente', pd.Series(dtype=str)) == '')]
+
+                            total_cobrado = float(df_pagados[col_comision_liq].sum()) if col_comision_liq in df_pagados.columns else 0
+                            total_descom  = abs(float(df_descom[col_comision_liq].sum())) if col_comision_liq in df_descom.columns else 0
 
                             # ── KPIs ──
-                            pagados    = df_merged[df_merged['Estado Liq']=='✅ PAGADO']
-                            descom     = df_merged[df_merged['Estado Liq']=='🔴 DESCOMISIONADO']
-                            pendiente  = df_merged[df_merged['Estado Liq']=='❓ PENDIENTE']
-
-                            total_cobrado = float(pagados[col_comision].sum()) if col_comision in pagados.columns else 0
-                            total_descom  = float(descom[col_comision].sum()) if col_comision in descom.columns else 0
-                            n_no_liq      = len(df_no_en_liq)
-
                             st.markdown("---")
-                            kt1, kt2, kt3, kta, ktb = st.columns(5)
-                            box_t = "border-radius:10px; padding:14px 8px; text-align:center; margin-bottom:10px;"
-                            kt1.markdown(f'<div style="background:#f0fff4; border:2px solid #22c55e; {box_t}"><p style="color:#22c55e; font-size:0.7rem; font-weight:bold; margin:0;">✅ PAGADOS</p><h2 style="color:#111111; margin:4px 0;">{len(pagados)}</h2><p style="color:#22c55e; font-size:0.8rem; font-weight:bold; margin:0;">{total_cobrado:,.0f}€</p></div>', unsafe_allow_html=True)
-                            kt2.markdown(f'<div style="background:#fff0f0; border:2px solid #ff4b4b; {box_t}"><p style="color:#ff4b4b; font-size:0.7rem; font-weight:bold; margin:0;">🔴 DESCOMISIONADOS</p><h2 style="color:#111111; margin:4px 0;">{len(descom)}</h2><p style="color:#ff4b4b; font-size:0.8rem; font-weight:bold; margin:0;">{total_descom:,.0f}€</p></div>', unsafe_allow_html=True)
-                            kt3.markdown(f'<div style="background:#ffffff; border:2px solid #8b949e; {box_t}"><p style="color:#8b949e; font-size:0.7rem; font-weight:bold; margin:0;">❓ PENDIENTE</p><h2 style="color:#111111; margin:4px 0;">{len(pendiente)}</h2></div>', unsafe_allow_html=True)
-                            kta.markdown(f'<div style="background:#f8f0ff; border:2px solid #a78bfa; {box_t}"><p style="color:#a78bfa; font-size:0.7rem; font-weight:bold; margin:0;">⚠️ NO EN LIQ</p><h2 style="color:#111111; margin:4px 0;">{n_no_liq}</h2></div>', unsafe_allow_html=True)
-                            ktb.markdown(f'<div style="background:#f0f4ff; border:2px solid #3b82f6; {box_t}"><p style="color:#3b82f6; font-size:0.7rem; font-weight:bold; margin:0;">📋 TOTAL CRM</p><h2 style="color:#111111; margin:4px 0;">{len(df_total_crm)}</h2></div>', unsafe_allow_html=True)
+                            kt1, kt2, kt3, kt4 = st.columns(4)
+                            bxt = "border-radius:10px;padding:14px 8px;text-align:center;margin-bottom:10px;"
+                            kt1.markdown(f'<div style="background:#f0fff4;border:2px solid #22c55e;{bxt}"><p style="color:#22c55e;font-size:0.7rem;font-weight:bold;margin:0;">✅ PAGADOS</p><h2 style="color:#111;margin:4px 0;">{len(df_pagados)}</h2><p style="color:#22c55e;font-size:0.8rem;font-weight:bold;margin:0;">{total_cobrado:,.0f}€</p></div>', unsafe_allow_html=True)
+                            kt2.markdown(f'<div style="background:#fff0f0;border:2px solid #ff4b4b;{bxt}"><p style="color:#ff4b4b;font-size:0.7rem;font-weight:bold;margin:0;">🔴 DESCOMISIONADOS</p><h2 style="color:#111;margin:4px 0;">{len(df_descom)}</h2><p style="color:#ff4b4b;font-size:0.8rem;font-weight:bold;margin:0;">-{total_descom:,.0f}€</p></div>', unsafe_allow_html=True)
+                            kt3.markdown(f'<div style="background:#fffbf0;border:2px solid #f1bf00;{bxt}"><p style="color:#b38a00;font-size:0.7rem;font-weight:bold;margin:0;">❓ PENDIENTE</p><h2 style="color:#111;margin:4px 0;">{len(df_pend)}</h2></div>', unsafe_allow_html=True)
+                            kt4.markdown(f'<div style="background:#eef4fb;border:2px solid #3b82f6;{bxt}"><p style="color:#3b82f6;font-size:0.7rem;font-weight:bold;margin:0;">📋 TOTAL LIQUIDACIÓN</p><h2 style="color:#111;margin:4px 0;">{len(df_tliq)}</h2></div>', unsafe_allow_html=True)
 
-                            # ── Columnas resultado ──
-                            cols_show_t = []
-                            for c in ['ID','Cliente','Comercial','Estado','CUPS Luz','CUPS Gas']:
-                                if c in df_merged.columns: cols_show_t.append(c)
-                            for c in [col_agente, col_energia, col_concepto, col_comision,
-                                       col_fecha_venta, col_fecha_act, col_fecha_baja, col_fecha_liq]:
-                                if c and c in df_merged.columns and c not in cols_show_t:
-                                    cols_show_t.append(c)
-                            cols_show_t.append('Estado Liq')
-                            cols_show_t = [c for c in cols_show_t if c in df_merged.columns]
+                            # ── Resumen por Comercial ──
+                            if 'Comercial' in df_merged.columns and col_comision_liq in df_merged.columns:
+                                _pagados_com = df_pagados.groupby('Comercial')[col_comision_liq].sum().reset_index()
+                                _pagados_com.columns = ['Comercial', 'Total Cobrado €']
+                                _count_com  = df_pagados.groupby('Comercial').size().reset_index(name='Nº Pagados')
+                                _descom_com = df_descom.groupby('Comercial').size().reset_index(name='Nº Descomisionados')
+                                _resumen = _pagados_com.merge(_count_com, on='Comercial', how='outer')
+                                _resumen = _resumen.merge(_descom_com, on='Comercial', how='outer').fillna(0)
+                                _resumen['Total Cobrado €'] = _resumen['Total Cobrado €'].round(2)
+                                _resumen = _resumen.sort_values('Total Cobrado €', ascending=False)
 
-                            # ── Resumen por comercial (filtrable) ──
-                            if 'Comercial' in df_merged.columns and col_comision in df_merged.columns:
-                                resumen_comercial = df_merged.groupby('Comercial').agg(
-                                    Contratos=('contrato_key', 'nunique'),
-                                    Total_Cobrado=(col_comision, lambda x: x[df_merged.loc[x.index,'Estado Liq']=='✅ PAGADO'].sum()),
-                                    Filas_Pagadas=('Estado Liq', lambda x: (x=='✅ PAGADO').sum()),
-                                    Descomisionados=('Estado Liq', lambda x: (x=='🔴 DESCOMISIONADO').sum()),
-                                ).reset_index().sort_values('Total_Cobrado', ascending=False)
-                                resumen_comercial['Total_Cobrado'] = resumen_comercial['Total_Cobrado'].round(2)
+                            # ── Columnas para mostrar ──
+                            _show_cols = ['Comercial','Cliente','DNI','Estado Liq']
+                            if col_nomoferta: _show_cols.append(col_nomoferta)
+                            if col_linea_liq: _show_cols.append(col_linea_liq)
+                            if col_energia_liq: _show_cols.append(col_energia_liq)
+                            if col_concepto: _show_cols.append(col_concepto)
+                            if col_comision_liq: _show_cols.append(col_comision_liq)
+                            if col_fecha_liq: _show_cols.append(col_fecha_liq)
+                            if col_fbaja_liq: _show_cols.append(col_fbaja_liq)
+                            _show_cols = [c for c in _show_cols if c in df_merged.columns]
+                            _rename_show = {}
+                            if col_comision_liq: _rename_show[col_comision_liq] = 'Comisión Total €'
+                            if col_fecha_liq: _rename_show[col_fecha_liq] = 'Fecha Liquidación'
+                            if col_fbaja_liq: _rename_show[col_fbaja_liq] = 'Fecha Baja'
+                            if col_energia_liq: _rename_show[col_energia_liq] = 'Energía'
+                            if col_concepto: _rename_show[col_concepto] = 'Concepto'
 
-                            # ── Tabs ──
+                            def df_show_total(df_sub):
+                                d = df_sub[_show_cols].rename(columns=_rename_show).reset_index(drop=True)
+                                return d
+
+                            def _safe_t(sheets):
+                                return hacer_xlsx_nativo({
+                                    k: v if (isinstance(v, pd.DataFrame) and not v.empty)
+                                       else pd.DataFrame({'(sin datos)': ['No hay registros']})
+                                    for k, v in sheets.items()})
+
+                            # Filtro por comercial
+                            _comerciales_t = ['Todos'] + sorted(df_merged['Comercial'].dropna().unique().tolist()) if 'Comercial' in df_merged.columns else ['Todos']
+                            _sel_com_t = st.selectbox("👤 Filtrar por comercial:", _comerciales_t, key="total_com_sel")
+                            _df_filt = df_merged if _sel_com_t == 'Todos' else df_merged[df_merged['Comercial'] == _sel_com_t]
+
                             tt0, tt1, tt2, tt3, tt4 = st.tabs([
                                 f"👤 POR COMERCIAL",
-                                f"✅ PAGADOS ({len(pagados)})",
-                                f"🔴 DESCOMISIONADOS ({len(descom)})",
-                                f"⚠️ NO EN LIQ ({n_no_liq})",
+                                f"✅ PAGADOS ({len(df_pagados)})",
+                                f"🔴 DESCOMISIONADOS ({len(df_descom)})",
+                                f"❓ PENDIENTE ({len(df_pend)})",
                                 f"📋 COMPLETO ({len(df_merged)})"
                             ])
 
-                            def df_display_total(df_sub):
-                                d = df_sub[cols_show_t].copy().reset_index(drop=True)
-                                return d
-
                             with tt0:
-                                st.markdown('<p style="color:#3b82f6; font-size:0.85rem;">Resumen de comisiones abonadas por comercial. Filtra por comercial para ver el detalle.</p>', unsafe_allow_html=True)
+                                st.markdown('<p style="color:#3b82f6;font-size:0.85rem;">Resumen de comisiones por comercial del informe Bernardo.</p>', unsafe_allow_html=True)
                                 if 'Comercial' in df_merged.columns:
-                                    # Selector de comercial
-                                    comerciales = ['Todos'] + sorted(df_merged['Comercial'].dropna().unique().tolist())
-                                    sel_com = st.selectbox("Filtrar por comercial:", comerciales, key="total_comercial_sel")
-                                    if 'Comercial' in df_merged.columns and col_comision in df_merged.columns:
-                                        st.dataframe(resumen_comercial, use_container_width=True, height=280)
-                                        st.markdown("---")
-                                        if sel_com != 'Todos':
-                                            df_fil = df_merged[df_merged['Comercial']==sel_com]
-                                        else:
-                                            df_fil = df_merged
-                                        st.markdown(f'**Detalle filas** — {sel_com}:')
-                                        st.dataframe(df_display_total(df_fil), use_container_width=True, height=360)
+                                    st.dataframe(_resumen, use_container_width=True, height=280)
+                                    st.markdown("---")
+                                    st.markdown(f'**Detalle:** {_sel_com_t}')
+                                    st.dataframe(df_show_total(_df_filt[_df_filt['Estado Liq']=='✅ PAGADO'] if _sel_com_t != 'Todos' else df_pagados), use_container_width=True, height=320)
 
                             with tt1:
-                                st.markdown(f'<p style="color:#22c55e;">Total abonado: <b>{total_cobrado:,.0f}€</b></p>', unsafe_allow_html=True)
-                                st.dataframe(df_display_total(pagados), use_container_width=True, height=420)
-                                st.download_button("⬇️ Descargar PAGADOS",
-                                    hacer_xlsx_nativo({'Pagados Total': df_display_total(pagados)}),
-                                    file_name="total_energy_pagados.xlsx",
-                                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                                    use_container_width=True)
+                                _h1, _b1 = st.columns([4,1])
+                                with _h1: st.markdown(f'<p style="color:#22c55e;margin:0;">Total: <b>{total_cobrado:,.0f}€</b></p>', unsafe_allow_html=True)
+                                with _b1: st.download_button("⬇️ Descargar", _safe_t({'Pagados': df_show_total(df_pagados)}), file_name="total_pagados.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True, key="dl_tt1")
+                                st.dataframe(df_show_total(df_pagados), use_container_width=True, height=400)
 
                             with tt2:
-                                st.markdown(f'<p style="color:#ff4b4b;">Total descomisionado: <b>{total_descom:,.0f}€</b></p>', unsafe_allow_html=True)
-                                if not descom.empty:
-                                    st.dataframe(df_display_total(descom), use_container_width=True, height=420)
-                                    st.download_button("⬇️ Descargar DESCOMISIONADOS",
-                                        hacer_xlsx_nativo({'Descomisionados': df_display_total(descom)}),
-                                        file_name="total_energy_descomisionados.xlsx",
-                                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                                        use_container_width=True)
+                                _h2, _b2 = st.columns([4,1])
+                                with _h2: st.markdown(f'<p style="color:#ff4b4b;margin:0;">Total descomisionado: <b>-{total_descom:,.0f}€</b></p>', unsafe_allow_html=True)
+                                with _b2: st.download_button("⬇️ Descargar", _safe_t({'Descomisionados': df_show_total(df_descom)}), file_name="total_descomisionados.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True, key="dl_tt2")
+                                if not df_descom.empty:
+                                    st.dataframe(df_show_total(df_descom), use_container_width=True, height=400)
                                 else:
                                     st.success("✅ Sin descomisiones.")
 
                             with tt3:
-                                st.markdown('<p style="color:#a78bfa;">Contratos nuestros con Total Energies que no aparecen en la liquidación — verificar o reclamar.</p>', unsafe_allow_html=True)
-                                cols_no_liq = [c for c in ['ID','ID Contrato Externo','Cliente','Comercial','Estado','Fecha Creación','Fecha Activación','CUPS Luz','CUPS Gas','Comisión'] if c in df_no_en_liq.columns]
-                                if not df_no_en_liq.empty:
-                                    st.dataframe(df_no_en_liq[cols_no_liq].reset_index(drop=True), use_container_width=True, height=420)
-                                    st.download_button("⬇️ Descargar NO EN LIQUIDACIÓN",
-                                        hacer_xlsx_nativo({'No en Liq': df_no_en_liq[cols_no_liq].reset_index(drop=True)}),
-                                        file_name="total_energy_no_liquidados.xlsx",
-                                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                                        use_container_width=True)
+                                _h3, _b3 = st.columns([4,1])
+                                with _h3: st.markdown('<p style="color:#b38a00;margin:0;">Contratos en liquidación con comisión 0 — verificar.</p>', unsafe_allow_html=True)
+                                with _b3: st.download_button("⬇️ Descargar", _safe_t({'Pendiente': df_show_total(df_pend)}), file_name="total_pendiente.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True, key="dl_tt3")
+                                if not df_pend.empty:
+                                    st.dataframe(df_show_total(df_pend), use_container_width=True, height=400)
                                 else:
-                                    st.success("✅ Todos los contratos aparecen en la liquidación.")
+                                    st.success("✅ Sin pendientes.")
 
                             with tt4:
-                                df_comp_t = df_display_total(df_merged)
-                                st.dataframe(df_comp_t, use_container_width=True, height=460)
-                                st.download_button("⬇️ Descargar CRUCE COMPLETO",
-                                    hacer_xlsx_nativo({
-                                        'Completo': df_comp_t,
-                                        'Pagados': df_display_total(pagados),
-                                        'Descomisionados': df_display_total(descom) if not descom.empty else pd.DataFrame(),
-                                        'No en Liq': df_no_en_liq[cols_no_liq].reset_index(drop=True) if not df_no_en_liq.empty else pd.DataFrame(),
-                                    }),
-                                    file_name="total_energy_cruce_completo.xlsx",
-                                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                                    use_container_width=True)
+                                _h4, _b4 = st.columns([4,1])
+                                with _h4: st.markdown('<p style="color:#3b82f6;margin:0;">Todos los registros de la liquidación con su Comercial y estado.</p>', unsafe_allow_html=True)
+                                with _b4: st.download_button("⬇️ Descargar todo",
+                                    _safe_t({'Completo': df_show_total(df_merged), 'Pagados': df_show_total(df_pagados),
+                                             'Descomisionados': df_show_total(df_descom), 'Pendiente': df_show_total(df_pend)}),
+                                    file_name="total_cruce_completo.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True, key="dl_tt4")
+                                st.dataframe(df_show_total(df_merged), use_container_width=True, height=420)
 
                         except Exception as _et:
                             import traceback
-                            st.error(f"❌ Error en liquidación Total Energies: {_et}")
+                            st.error(f"❌ Error en liquidación Total: {_et}")
                             st.code(traceback.format_exc())
                 else:
                     st.markdown("""
-                        <div style="background:#f0f0f0; border:2px dashed #30363d; border-radius:12px; padding:30px; text-align:center; margin-top:10px;">
-                            <p style="color:#8b949e; margin:0;">👆 Sube la liquidación de Total Energies y el archivo de contratos para iniciar el cruce</p>
+                        <div style="background:#eef4fb; border:2px dashed #3b82f6; border-radius:12px; padding:30px; text-align:center; margin-top:10px;">
+                            <p style="color:#3b82f6; margin:0;">👆 Sube la liquidación de Total Energies y el informe de Bernardo para iniciar el cruce</p>
                         </div>
                     """, unsafe_allow_html=True)
 
