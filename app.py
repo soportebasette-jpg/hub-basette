@@ -2029,9 +2029,9 @@ elif menu == "🔐 ZONA BACKOFFICE":
                                 box_k = "border-radius:10px; padding:14px 8px; text-align:center; margin-bottom:10px;"
                                 k1.markdown(f'<div style="background:#f0fff4; border:2px solid #7ee787; {box_k}"><p style="color:#7ee787; font-size:0.72rem; font-weight:bold; margin:0;">✅ PAGADOS</p><h2 style="color:#111111; margin:4px 0;">{len(pagados)}</h2><p style="color:#7ee787; font-size:0.75rem; margin:0;">💡{len(pagados_luz)} 🔥{len(pagados_gas)}</p><p style="color:#7ee787; font-size:0.8rem; margin:4px 0 0 0;font-weight:bold;">{total_cobrado:,.0f}€</p></div>', unsafe_allow_html=True)
                                 k2.markdown(f'<div style="background:#fff0f0; border:2px solid #ff4b4b; {box_k}"><p style="color:#ff4b4b; font-size:0.72rem; font-weight:bold; margin:0;">🔴 DESCOMISIONADOS</p><h2 style="color:#111111; margin:4px 0;">{len(descomisionados)}</h2><p style="color:#ff4b4b; font-size:0.75rem; margin:0;">💡{len(descom_luz)} 🔥{len(descom_gas)}</p><p style="color:#ff4b4b; font-size:0.8rem; margin:4px 0 0 0;font-weight:bold;">-{total_descom:,.0f}€</p></div>', unsafe_allow_html=True)
-                                k3.markdown(f'<div style="background:#1a1000; border:2px solid #ffaa00; {box_k}"><p style="color:#ffaa00; font-size:0.72rem; font-weight:bold; margin:0;">⚠️ SIN MATCH CRM</p><h2 style="color:#111111; margin:4px 0;">{len(sin_match)}</h2><p style="color:#ffaa00; font-size:0.75rem; margin:0;">Verificar manualmente</p></div>', unsafe_allow_html=True)
+                                k3.markdown(f'<div style="background:#fffbf0; border:2px solid #ffaa00; {box_k}"><p style="color:#ffaa00; font-size:0.72rem; font-weight:bold; margin:0;">⚠️ SIN MATCH CRM</p><h2 style="color:#111111; margin:4px 0;">{len(sin_match)}</h2><p style="color:#ffaa00; font-size:0.75rem; margin:0;">Verificar manualmente</p></div>', unsafe_allow_html=True)
                                 k4.markdown(f'<div style="background:#ffffff; border:2px solid #8b949e; {box_k}"><p style="color:#8b949e; font-size:0.72rem; font-weight:bold; margin:0;">❓ PENDIENTE REVISAR</p><h2 style="color:#111111; margin:4px 0;">{len(pendientes)}</h2><p style="color:#8b949e; font-size:0.75rem; margin:0;"> </p></div>', unsafe_allow_html=True)
-                                k5.markdown(f'<div style="background:linear-gradient(135deg,#1e3a1e,#0a280a); border:2px solid #d2ff00; {box_k}"><p style="color:#d2ff00; font-size:0.72rem; font-weight:bold; margin:0;">💰 A RECLAMAR</p><h2 style="color:#d2ff00; margin:4px 0;">{len(sin_match)+len(pendientes)}</h2><p style="color:#d2ff00; font-size:0.8rem; margin:0;font-weight:bold;">{total_a_reclamar:,.0f}€</p></div>', unsafe_allow_html=True)
+                                k5.markdown(f'<div style="background:#f0fff4; border:2px solid #22c55e; {box_k}"><p style="color:#166534; font-size:0.72rem; font-weight:bold; margin:0;">💰 A RECLAMAR</p><h2 style="color:#111111; margin:4px 0;">{len(sin_match)+len(pendientes)}</h2><p style="color:#d2ff00; font-size:0.8rem; margin:0;font-weight:bold;">{total_a_reclamar:,.0f}€</p></div>', unsafe_allow_html=True)
 
                                 st.markdown("<br>", unsafe_allow_html=True)
 
@@ -2070,8 +2070,8 @@ elif menu == "🔐 ZONA BACKOFFICE":
                                     box_ks = "border-radius:8px; padding:10px 8px; text-align:center; margin-bottom:12px;"
                                     ks1.markdown(f'<div style="background:#f0f4ff; border:2px solid #a78bfa; {box_ks}"><p style="color:#a78bfa; font-size:0.7rem; font-weight:bold; margin:0;">⚡ SVA PAGADOS</p><h3 style="color:#111111; margin:4px 0;">{sva_pagados_n}</h3><p style="color:#a78bfa; font-size:0.8rem; margin:0;font-weight:bold;">{sva_total_pagado:,.0f}€</p></div>', unsafe_allow_html=True)
                                     ks2.markdown(f'<div style="background:#fff0f0; border:2px solid #ff4b4b; {box_ks}"><p style="color:#ff4b4b; font-size:0.7rem; font-weight:bold; margin:0;">🔴 SVA DESCOM</p><h3 style="color:#111111; margin:4px 0;">{sva_descom_n}</h3><p style="color:#ff4b4b; font-size:0.8rem; margin:0;font-weight:bold;">{sva_total_descom:,.0f}€</p></div>', unsafe_allow_html=True)
-                                    ks3.markdown(f'<div style="background:#1a1000; border:2px solid #ffaa00; {box_ks}"><p style="color:#ffaa00; font-size:0.7rem; font-weight:bold; margin:0;">⚠️ SVA SIN MATCH</p><h3 style="color:#111111; margin:4px 0;">{sva_sinmatch_n}</h3></div>', unsafe_allow_html=True)
-                                    ks4.markdown(f'<div style="background:#f0f4ff; border:2px solid #d2ff00; {box_ks}"><p style="color:#d2ff00; font-size:0.7rem; font-weight:bold; margin:0;">📋 SVA TOTAL</p><h3 style="color:#111111; margin:4px 0;">{len(df_sva_resultado)}</h3></div>', unsafe_allow_html=True)
+                                    ks3.markdown(f'<div style="background:#fffbf0; border:2px solid #ffaa00; {box_ks}"><p style="color:#ffaa00; font-size:0.7rem; font-weight:bold; margin:0;">⚠️ SVA SIN MATCH</p><h3 style="color:#111111; margin:4px 0;">{sva_sinmatch_n}</h3></div>', unsafe_allow_html=True)
+                                    ks4.markdown(f'<div style="background:#f0f4ff; border:2px solid #d2ff00; {box_ks}"><p style="color:#1d4ed8; font-size:0.7rem; font-weight:bold; margin:0;">📋 SVA TOTAL</p><h3 style="color:#111111; margin:4px 0;">{len(df_sva_resultado)}</h3></div>', unsafe_allow_html=True)
                                     st.markdown("<br>", unsafe_allow_html=True)
 
                                 # ── TABS DE DETALLE ──
@@ -3186,6 +3186,10 @@ elif menu == "🔐 ZONA BACKOFFICE":
                                                 left_on='gas_20', right_on='cup_gas_20', how='inner') if not df_crm_gas_v.empty else pd.DataFrame()
 
                             df_cruce = pd.concat([df_m_luz, df_m_gas], ignore_index=True)
+
+                            # Filtrar df_cruce por Mes de Naturgy para que coincida con el filtro CRM
+                            if sel_fn and 'Mes' in df_cruce.columns:
+                                df_cruce = df_cruce[df_cruce['Mes'].isin(sel_fn)].copy()
 
                             # Renombrar a columnas de la plantilla
                             df_cruce_out = df_cruce.rename(columns={
