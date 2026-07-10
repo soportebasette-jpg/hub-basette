@@ -1899,7 +1899,7 @@ elif menu == "🔐 ZONA BACKOFFICE":
                                   id_val != id_val) or  # NaN check
                                  str(id_val).strip() in ['', 'nan', 'None'])
                     if sin_match:
-                        return '⚠️ SIN MATCH EN CRM'
+                        return '⚠️ EN LIQ. PERO NO EN CRM'
                     # Tiene match en CRM y comisión > 0: PAGADO
                     if com_liq > 0:
                         return '✅ PAGADO'
@@ -2013,7 +2013,7 @@ elif menu == "🔐 ZONA BACKOFFICE":
                                 # ── KPIs ──
                                 pagados = df_resultado[df_resultado['Estado Liquidación'] == '✅ PAGADO']
                                 descomisionados = df_resultado[df_resultado['Estado Liquidación'] == '🔴 DESCOMISIONADO']
-                                sin_match = df_resultado[df_resultado['Estado Liquidación'] == '⚠️ SIN MATCH EN CRM']
+                                sin_match = df_resultado[df_resultado['Estado Liquidación'] == '⚠️ EN LIQ. PERO NO EN CRM']
                                 pendientes = df_resultado[df_resultado['Estado Liquidación'] == '❓ PENDIENTE REVISAR']
 
                                 pagados_luz = pagados[pagados['Tipo'] == 'LUZ']
@@ -2029,7 +2029,7 @@ elif menu == "🔐 ZONA BACKOFFICE":
                                 box_k = "border-radius:10px; padding:14px 8px; text-align:center; margin-bottom:10px;"
                                 k1.markdown(f'<div style="background:#f0fff4; border:2px solid #7ee787; {box_k}"><p style="color:#7ee787; font-size:0.72rem; font-weight:bold; margin:0;">✅ PAGADOS</p><h2 style="color:#111111; margin:4px 0;">{len(pagados)}</h2><p style="color:#7ee787; font-size:0.75rem; margin:0;">💡{len(pagados_luz)} 🔥{len(pagados_gas)}</p><p style="color:#7ee787; font-size:0.8rem; margin:4px 0 0 0;font-weight:bold;">{total_cobrado:,.0f}€</p></div>', unsafe_allow_html=True)
                                 k2.markdown(f'<div style="background:#fff0f0; border:2px solid #ff4b4b; {box_k}"><p style="color:#ff4b4b; font-size:0.72rem; font-weight:bold; margin:0;">🔴 DESCOMISIONADOS</p><h2 style="color:#111111; margin:4px 0;">{len(descomisionados)}</h2><p style="color:#ff4b4b; font-size:0.75rem; margin:0;">💡{len(descom_luz)} 🔥{len(descom_gas)}</p><p style="color:#ff4b4b; font-size:0.8rem; margin:4px 0 0 0;font-weight:bold;">-{total_descom:,.0f}€</p></div>', unsafe_allow_html=True)
-                                k3.markdown(f'<div style="background:#fffbf0; border:2px solid #ffaa00; {box_k}"><p style="color:#ffaa00; font-size:0.72rem; font-weight:bold; margin:0;">⚠️ SIN MATCH CRM</p><h2 style="color:#111111; margin:4px 0;">{len(sin_match)}</h2><p style="color:#ffaa00; font-size:0.75rem; margin:0;">Verificar manualmente</p></div>', unsafe_allow_html=True)
+                                k3.markdown(f'<div style="background:#fffbf0; border:2px solid #ffaa00; {box_k}"><p style="color:#ffaa00; font-size:0.72rem; font-weight:bold; margin:0;">⚠️ EN LIQ. NO EN CRM</p><h2 style="color:#111111; margin:4px 0;">{len(sin_match)}</h2><p style="color:#ffaa00; font-size:0.75rem; margin:0;">Verificar manualmente</p></div>', unsafe_allow_html=True)
                                 k4.markdown(f'<div style="background:#ffffff; border:2px solid #8b949e; {box_k}"><p style="color:#8b949e; font-size:0.72rem; font-weight:bold; margin:0;">❓ PENDIENTE REVISAR</p><h2 style="color:#111111; margin:4px 0;">{len(pendientes)}</h2><p style="color:#8b949e; font-size:0.75rem; margin:0;"> </p></div>', unsafe_allow_html=True)
                                 k5.markdown(f'<div style="background:#f0fff4; border:2px solid #22c55e; {box_k}"><p style="color:#166534; font-size:0.72rem; font-weight:bold; margin:0;">💰 A RECLAMAR</p><h2 style="color:#111111; margin:4px 0;">{len(sin_match)+len(pendientes)}</h2><p style="color:#d2ff00; font-size:0.8rem; margin:0;font-weight:bold;">{total_a_reclamar:,.0f}€</p></div>', unsafe_allow_html=True)
 
@@ -2042,7 +2042,7 @@ elif menu == "🔐 ZONA BACKOFFICE":
                                 # Recalcular subsets usando solo energía (sin SVA)
                                 pagados       = df_energia_resultado[df_energia_resultado['Estado Liquidación']=='✅ PAGADO']
                                 descomisionados = df_energia_resultado[df_energia_resultado['Estado Liquidación']=='🔴 DESCOMISIONADO']
-                                sin_match     = df_energia_resultado[df_energia_resultado['Estado Liquidación']=='⚠️ SIN MATCH EN CRM']
+                                sin_match     = df_energia_resultado[df_energia_resultado['Estado Liquidación']=='⚠️ EN LIQ. PERO NO EN CRM']
                                 pendientes    = df_energia_resultado[df_energia_resultado['Estado Liquidación']=='❓ PENDIENTE REVISAR']
 
                                 pagados_luz   = pagados[pagados['Tipo'] == 'LUZ']
@@ -2057,7 +2057,7 @@ elif menu == "🔐 ZONA BACKOFFICE":
                                 # SVA stats
                                 sva_pagados_n     = len(df_sva_resultado[df_sva_resultado['Estado Liquidación']=='✅ PAGADO'])
                                 sva_descom_n      = len(df_sva_resultado[df_sva_resultado['Estado Liquidación']=='🔴 DESCOMISIONADO'])
-                                sva_sinmatch_n    = len(df_sva_resultado[df_sva_resultado['Estado Liquidación']=='⚠️ SIN MATCH EN CRM'])
+                                sva_sinmatch_n    = len(df_sva_resultado[df_sva_resultado['Estado Liquidación']=='⚠️ EN LIQ. PERO NO EN CRM'])
                                 sva_total_pagado  = float(df_sva_resultado[df_sva_resultado['Estado Liquidación']=='✅ PAGADO']['Comisión_liq'].sum()) if not df_sva_resultado.empty else 0.0
                                 sva_total_descom  = float(df_sva_resultado[df_sva_resultado['Estado Liquidación']=='🔴 DESCOMISIONADO']['Comisión_liq'].sum()) if not df_sva_resultado.empty else 0.0
 
@@ -2070,7 +2070,7 @@ elif menu == "🔐 ZONA BACKOFFICE":
                                     box_ks = "border-radius:8px; padding:10px 8px; text-align:center; margin-bottom:12px;"
                                     ks1.markdown(f'<div style="background:#f0f4ff; border:2px solid #a78bfa; {box_ks}"><p style="color:#a78bfa; font-size:0.7rem; font-weight:bold; margin:0;">⚡ SVA PAGADOS</p><h3 style="color:#111111; margin:4px 0;">{sva_pagados_n}</h3><p style="color:#a78bfa; font-size:0.8rem; margin:0;font-weight:bold;">{sva_total_pagado:,.0f}€</p></div>', unsafe_allow_html=True)
                                     ks2.markdown(f'<div style="background:#fff0f0; border:2px solid #ff4b4b; {box_ks}"><p style="color:#ff4b4b; font-size:0.7rem; font-weight:bold; margin:0;">🔴 SVA DESCOM</p><h3 style="color:#111111; margin:4px 0;">{sva_descom_n}</h3><p style="color:#ff4b4b; font-size:0.8rem; margin:0;font-weight:bold;">{sva_total_descom:,.0f}€</p></div>', unsafe_allow_html=True)
-                                    ks3.markdown(f'<div style="background:#fffbf0; border:2px solid #ffaa00; {box_ks}"><p style="color:#ffaa00; font-size:0.7rem; font-weight:bold; margin:0;">⚠️ SVA SIN MATCH</p><h3 style="color:#111111; margin:4px 0;">{sva_sinmatch_n}</h3></div>', unsafe_allow_html=True)
+                                    ks3.markdown(f'<div style="background:#fffbf0; border:2px solid #ffaa00; {box_ks}"><p style="color:#ffaa00; font-size:0.7rem; font-weight:bold; margin:0;">⚠️ SVA NO EN CRM</p><h3 style="color:#111111; margin:4px 0;">{sva_sinmatch_n}</h3></div>', unsafe_allow_html=True)
                                     ks4.markdown(f'<div style="background:#f0f4ff; border:2px solid #d2ff00; {box_ks}"><p style="color:#1d4ed8; font-size:0.7rem; font-weight:bold; margin:0;">📋 SVA TOTAL</p><h3 style="color:#111111; margin:4px 0;">{len(df_sva_resultado)}</h3></div>', unsafe_allow_html=True)
                                     st.markdown("<br>", unsafe_allow_html=True)
 
@@ -2079,7 +2079,7 @@ elif menu == "🔐 ZONA BACKOFFICE":
                                     f"✅ PAGADOS ({len(pagados)})",
                                     f"🔴 DESCOMISIONADOS ({len(descomisionados)})",
                                     f"💰 A RECLAMAR ({len(sin_match)+len(pendientes)})",
-                                    f"⚠️ SIN MATCH ({len(sin_match)})",
+                                    f"⚠️ EN LIQ. NO EN CRM ({len(sin_match)})",
                                     f"📋 COMPLETO ({len(df_energia_resultado)})",
                                 ]
                                 if not df_sva_resultado.empty:
@@ -2095,9 +2095,14 @@ elif menu == "🔐 ZONA BACKOFFICE":
 
 
                                 # Columnas a mostrar
-                                cols_display = ['Tipo', 'CIF', 'Cliente', 'Comercial', 'Estado', 'CUP Cruce',
-                                                'Producto', 'Comisión_liq', 'Fecha Alta', 'Fecha Baja']
-                                cols_display = [c for c in cols_display if c in df_energia_resultado.columns]
+                                # Detectar columna Comercial (puede venir como 'Comercial' o 'Comercial_crm')
+                                _com_col = 'Comercial' if 'Comercial' in df_energia_resultado.columns else                                            ('Comercial_crm' if 'Comercial_crm' in df_energia_resultado.columns else None)
+                                _base_cols = ['Tipo', 'CIF', 'Cliente', 'Estado', 'CUP Cruce',
+                                              'Producto', 'Comisión_liq', 'Fecha Alta', 'Fecha Baja']
+                                if _com_col:
+                                    _base_cols = ['Tipo', 'CIF', 'Cliente', _com_col, 'Estado', 'CUP Cruce',
+                                                  'Producto', 'Comisión_liq', 'Fecha Alta', 'Fecha Baja']
+                                cols_display = [c for c in _base_cols if c in df_energia_resultado.columns]
 
                                 def df_to_show(df_sub):
                                     """Prepara dataframe para mostrar."""
@@ -2108,6 +2113,8 @@ elif menu == "🔐 ZONA BACKOFFICE":
                                         df_s['Fecha Baja'] = pd.to_datetime(df_s['Fecha Baja'], errors='coerce').dt.strftime('%d/%m/%Y').fillna('-')
                                     if 'Comisión_liq' in df_s.columns:
                                         df_s = df_s.rename(columns={'Comisión_liq': 'Comisión €'})
+                                    if 'Comercial_crm' in df_s.columns:
+                                        df_s = df_s.rename(columns={'Comercial_crm': 'Comercial'})
                                     return df_s.reset_index(drop=True)
 
                                 with t_pagado:
@@ -2735,9 +2742,6 @@ elif menu == "🔐 ZONA BACKOFFICE":
             with col_liq2:
                 with st.expander("🛡️ Liquidaciones Alarmas"):
                     mostrar_carpeta_dir("directivos", "LIQUIDACIONES/ALARMAS", "🛡️")
-                with st.expander("📋 Liquidaciones Generales"):
-                    mostrar_carpeta_dir("directivos", "LIQUIDACIONES/GENERAL", "📋")
-
         # ── TAB DOCS EMPRESA ──
         # ══════════════════════════════════════════════════════
         # ── TAB CRUCES CIAS ──
