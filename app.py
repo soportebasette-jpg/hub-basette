@@ -2654,7 +2654,7 @@ elif menu == "🔐 ZONA BACKOFFICE":
                                 return '❓ PENDIENTE'
 
                             df_merged['Estado Liq'] = df_merged.apply(clasif_total, axis=1)
-                            df_merged['Comercial'] = df_merged.get('Comercial', pd.Series(dtype=str)).fillna('No encontrado')
+                            df_merged['Comercial'] = df_merged['Comercial'].fillna('No encontrado') if 'Comercial' in df_merged.columns else 'No encontrado'
 
                             # Tipo energía desde Bernardo
                             if 'Energía Bernardo' in df_merged.columns:
@@ -2683,7 +2683,10 @@ elif menu == "🔐 ZONA BACKOFFICE":
 
                             # Totales
                             def _sum(df, col):
-                                try: return float(df[col].sum()) if col in df.columns else 0
+                                try:
+                                    if col and col in df.columns:
+                                        return float(pd.to_numeric(df[col], errors='coerce').fillna(0).sum())
+                                    return 0
                                 except: return 0
 
                             total_cobrado     = _sum(df_pagados, col_comision_liq)
@@ -2759,9 +2762,48 @@ elif menu == "🔐 ZONA BACKOFFICE":
                                     else pd.DataFrame({'(sin datos)':['No hay registros']})
                                     for k,v in sheets.items()})
 
+                            # ── Filtro de fecha (mes/año desde FechaLiquidacion de Total) ──
+                            def _mes_ft(val):
+                                s = str(val).strip()
+                                if not s or s in ['','nan','None']: return ''
+                                if len(s) >= 10 and s[2] == '/': return s[3:5]+'/'+s[6:10]
+                                if len(s) >= 10 and s[4] == '-': return s[5:7]+'/'+s[:4]
+                                return ''
+
+                            _fecha_col_merged = col_fecha_liq if col_fecha_liq and col_fecha_liq in df_merged.columns else None
+                            if _fecha_col_merged:
+                                df_merged['_mes_total'] = df_merged[_fecha_col_merged].apply(_mes_ft)
+                                _meses_t = sorted([m for m in df_merged['_mes_total'].unique() if m], reverse=True)
+                            else:
+                                _meses_t = []
+
+                            _fcol1, _fcol2 = st.columns(2)
+                            with _fcol1:
+                                _sel_mes_t = st.multiselect(
+                                    "🗓️ Filtrar por mes/año de liquidación:",
+                                    options=_meses_t, default=[],
+                                    key="total_mes_sel",
+                                    placeholder="Sin filtro — todos los meses"
+                                )
+                            if _sel_mes_t and '_mes_total' in df_merged.columns:
+                                df_merged = df_merged[df_merged['_mes_total'].isin(_sel_mes_t)].copy()
+                                # Recalcular grupos tras filtro de fecha
+                                df_pagados = df_merged[df_merged['Estado Liq']=='✅ PAGADO']
+                                df_descom  = df_merged[df_merged['Estado Liq']=='🔴 DESCOMISIONADO']
+                                df_pend    = df_merged[df_merged['Estado Liq']=='❓ PENDIENTE']
+                                df_pag_luz  = df_pagados[df_pagados['Tipo']=='⚡ LUZ']
+                                df_pag_gas  = df_pagados[df_pagados['Tipo']=='🔥 GAS']
+                                df_pag_mant = df_pagados[df_pagados['Tipo']=='🔧 MANTENIMIENTO']
+                                total_cobrado     = _sum(df_pagados, col_comision_liq)
+                                total_cobrado_luz = _sum(df_pag_luz, col_comision_liq)
+                                total_cobrado_gas = _sum(df_pag_gas, col_comision_liq)
+                                total_cobrado_mant= _sum(df_pag_mant, col_comision_liq)
+                                total_descom      = abs(_sum(df_descom, col_comision_liq))
+
                             # ── Filtro comercial ──
-                            _coms = ['Todos'] + sorted(df_merged['Comercial'].dropna().unique().tolist()) if 'Comercial' in df_merged.columns else ['Todos']
-                            _sel_com = st.selectbox("👤 Filtrar por comercial:", _coms, key="total_com_sel")
+                            with _fcol2:
+                                _coms = ['Todos'] + sorted(df_merged['Comercial'].dropna().unique().tolist()) if 'Comercial' in df_merged.columns else ['Todos']
+                                _sel_com = st.selectbox("👤 Filtrar por comercial:", _coms, key="total_com_sel")
 
                             # ── Tabs ──
                             tt0,tt1,tt1b,tt1c,tt2,tt3,tt4,tt5 = st.tabs([
@@ -2789,25 +2831,37 @@ elif menu == "🔐 ZONA BACKOFFICE":
                                 h,b = st.columns([4,1])
                                 with h: st.markdown(f'<p style="color:#92400e;margin:0;">Luz: <b>{total_cobrado_luz:,.0f}€</b> — {len(df_pag_luz)} contratos</p>', unsafe_allow_html=True)
                                 with b: st.download_button("⬇️",_safe_t({'Pagados Luz':df_st(df_pag_luz)}),file_name="total_luz.xlsx",mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",use_container_width=True,key="dl_tt1")
-                                st.dataframe(df_st(df_pag_luz), use_container_width=True, height=400) if not df_pag_luz.empty else st.info("Sin pagados de luz.")
+                                if not df_pag_luz.empty:
+                                    st.dataframe(df_st(df_pag_luz), use_container_width=True, height=400)
+                                else:
+                                    st.info("Sin pagados de luz.")
 
                             with tt1b:
                                 h,b = st.columns([4,1])
                                 with h: st.markdown(f'<p style="color:#991b1b;margin:0;">Gas: <b>{total_cobrado_gas:,.0f}€</b> — {len(df_pag_gas)} contratos</p>', unsafe_allow_html=True)
                                 with b: st.download_button("⬇️",_safe_t({'Pagados Gas':df_st(df_pag_gas)}),file_name="total_gas.xlsx",mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",use_container_width=True,key="dl_tt1b")
-                                st.dataframe(df_st(df_pag_gas), use_container_width=True, height=400) if not df_pag_gas.empty else st.info("Sin pagados de gas.")
+                                if not df_pag_gas.empty:
+                                    st.dataframe(df_st(df_pag_gas), use_container_width=True, height=400)
+                                else:
+                                    st.info("Sin pagados de gas.")
 
                             with tt1c:
                                 h,b = st.columns([4,1])
                                 with h: st.markdown(f'<p style="color:#3730a3;margin:0;">Mantenimientos: <b>{total_cobrado_mant:,.0f}€</b> — {len(df_pag_mant)} contratos</p>', unsafe_allow_html=True)
                                 with b: st.download_button("⬇️",_safe_t({'Mantenimientos':df_st(df_pag_mant)}),file_name="total_mant.xlsx",mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",use_container_width=True,key="dl_tt1c")
-                                st.dataframe(df_st(df_pag_mant), use_container_width=True, height=400) if not df_pag_mant.empty else st.info("Sin mantenimientos.")
+                                if not df_pag_mant.empty:
+                                    st.dataframe(df_st(df_pag_mant), use_container_width=True, height=400)
+                                else:
+                                    st.info("Sin mantenimientos.")
 
                             with tt2:
                                 h,b = st.columns([4,1])
                                 with h: st.markdown(f'<p style="color:#ff4b4b;margin:0;">Descomisionados: <b>-{total_descom:,.0f}€</b></p>', unsafe_allow_html=True)
                                 with b: st.download_button("⬇️",_safe_t({'Descomisionados':df_st(df_descom)}),file_name="total_descom.xlsx",mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",use_container_width=True,key="dl_tt2")
-                                st.dataframe(df_st(df_descom), use_container_width=True, height=400) if not df_descom.empty else st.success("✅ Sin descomisiones.")
+                                if not df_descom.empty:
+                                    st.dataframe(df_st(df_descom), use_container_width=True, height=400)
+                                else:
+                                    st.success("✅ Sin descomisiones.")
 
                             with tt3:
                                 h,b = st.columns([4,1])
