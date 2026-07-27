@@ -703,8 +703,13 @@ elif menu == "📊 PRECIOS":
         carpeta = "tarifas_visuales"
         archivos_en_carpeta = os.listdir(carpeta) if os.path.exists(carpeta) else []
         
-        # Buscamos cualquier archivo que contenga "PRECIOS JUNIO O2" sin importar mayúsculas
-        archivo_o2 = next((f for f in archivos_en_carpeta if "PRECIOS JUNIO O2" in f.upper()), None)
+        # Buscamos cualquier archivo que contenga "O2" y "TARIFA" (o "PRECIO") sin importar mayúsculas,
+        # así funciona sea cual sea el mes en el nombre del archivo
+        archivo_o2 = next(
+            (f for f in archivos_en_carpeta
+             if "O2" in f.upper() and ("TARIFA" in f.upper() or "PRECIO" in f.upper())),
+            None
+        )
         
         if archivo_o2:
             st.image(f"{carpeta}/{archivo_o2}", use_container_width=True)
@@ -1041,6 +1046,7 @@ elif menu == "🕒 CONTROL LABORAL":
         "LAURA RUBIO GARCIA":         {"alta": date(2026, 5, 25), "baja": date(2026, 5, 27)},
         "MARIA JOSE ARACIL RUEDA":    {"alta": date(2026, 5,  4), "baja": None},   # activa
         "RAQUEL GUADALUPE CASTILLO":  {"alta": date(2026, 3, 2), "baja": None},    # activa
+        "ENRIQUE NIETO":              {"alta": date(2026, 7,  6), "baja": date(2026, 7, 31)},
     }
 
     # Periodo de gracia: del 02/03 al 18/03 Raquel aparece como OK aunque no haya fichado
@@ -1523,6 +1529,7 @@ elif menu == "🔐 ZONA BACKOFFICE":
                 "LUIS RODRIGUEZ GOMEZ":       {"alta": date(2025, 4,  6), "baja": date(2026, 4, 24), "estado": "🔴 BAJA"},
                 "MARIA JOSE MORENO":          {"alta": date(2026, 5,  4), "baja": date(2026, 5, 18), "estado": "🔴 BAJA"},
                 "LAURA RUBIO GARCIA":         {"alta": date(2026, 5, 25), "baja": date(2026, 5, 27), "estado": "🔴 BAJA"},
+                "ENRIQUE NIETO":              {"alta": date(2026, 7,  6), "baja": None,               "estado": "✅ ACTIVA"},  # activo hasta 31/07/2026 - cambiar baja cuando cause baja real
             }
 
             activos = [k for k, v in empleados_dir.items() if v["baja"] is None]
