@@ -1074,27 +1074,64 @@ elif menu == "🕒 CONTROL LABORAL":
                     return True
         return False
 
-    # ── VACACIONES ──
+    # ── VACACIONES ── (cada persona dispone de 30 días/año; puede tener varios periodos)
+    DIAS_VACACIONES_ANUALES = 30
     vacaciones = {
-        "RAQUEL GUADALUPE": (date(2026, 8, 17), date(2026, 8, 23)),
-        "MARIA JOSE ARACIL": (date(2026, 8, 3), date(2026, 8, 16))
+        "RAQUEL GUADALUPE":  [(date(2026, 8, 17), date(2026, 8, 23))],
+        "MARIA JOSE ARACIL": [(date(2026, 8, 3), date(2026, 8, 16))],
     }
+
+    def _periodos_vacaciones_persona(nombre_completo):
+        nombre_up = nombre_completo.upper()
+        for clave, periodos in vacaciones.items():
+            if clave.upper() in nombre_up or nombre_up in clave.upper():
+                return periodos
+        return []
 
     # ── PANEL DE INFO ──
     tab_vac, tab_emp = st.tabs(["🏖️ Vacaciones Programadas", "👥 Plantilla / Bajas Empresa"])
 
     with tab_vac:
-        cols = st.columns(len(vacaciones))
-        for i, (nombre, (inicio, fin)) in enumerate(vacaciones.items()):
-            dias_hasta = (inicio - date.today()).days
-            estado_color = "#d2ff00" if dias_hasta > 7 else "#ffaa00" if dias_hasta > 0 else "#7ee787"
-            cols[i].markdown(f"""
-                <div style="background:#ffffff; padding:15px; border-radius:10px; border:2px solid {estado_color}; text-align:center;">
-                <p style="margin:0; font-size:0.85rem; color:{estado_color}; font-weight:bold;">{nombre}</p>
-                <b style="font-size:1rem; color:white;">{inicio.strftime('%d/%m/%Y')} → {fin.strftime('%d/%m/%Y')}</b>
-                <p style="margin:4px 0 0 0; font-size:0.75rem; color:#8b949e;">{(fin - inicio).days + 1} días laborables</p>
-                </div>
-            """, unsafe_allow_html=True)
+        st.markdown(f'<p style="color:#8b949e; font-size:0.85rem; margin-bottom:14px;">Cada persona dispone de <b style="color:#d2ff00;">{DIAS_VACACIONES_ANUALES} días</b> de vacaciones al año. Debajo se muestran los días ya disfrutados, los que están en curso o programados, y los que quedan pendientes por pedir.</p>', unsafe_allow_html=True)
+
+        empleados_activos_vac = [
+            nombre for nombre, p in empleados_empresa.items()
+            if p["baja"] is None or date.today() <= p["baja"]
+        ]
+
+        for nombre in empleados_activos_vac:
+            periodos = _periodos_vacaciones_persona(nombre)
+            disfrutados = [(i, f) for (i, f) in periodos if f < date.today()]
+            en_curso    = [(i, f) for (i, f) in periodos if i <= date.today() <= f]
+            programados = [(i, f) for (i, f) in periodos if i > date.today()]
+
+            dias_disfrutados = sum((f - i).days + 1 for i, f in disfrutados)
+            dias_en_curso    = sum((f - i).days + 1 for i, f in en_curso)
+            dias_programados = sum((f - i).days + 1 for i, f in programados)
+            dias_usados     = dias_disfrutados + dias_en_curso + dias_programados
+            dias_restantes  = max(DIAS_VACACIONES_ANUALES - dias_usados, 0)
+
+            st.markdown(f'<h4 style="color:#d2ff00; margin:10px 0 8px 0;">👤 {nombre}</h4>', unsafe_allow_html=True)
+
+            c1, c2, c3, c4 = st.columns(4)
+            c1.markdown(f'<div style="background:#f0fff4;border:1px solid #7ee787;border-radius:8px;padding:10px;text-align:center;"><p style="margin:0;color:#7ee787;font-size:0.7rem;font-weight:bold;">✅ DISFRUTADOS</p><h3 style="margin:4px 0;color:#111111;">{dias_disfrutados} d</h3></div>', unsafe_allow_html=True)
+            c2.markdown(f'<div style="background:#fffbe6;border:1px solid #ffaa00;border-radius:8px;padding:10px;text-align:center;"><p style="margin:0;color:#ffaa00;font-size:0.7rem;font-weight:bold;">🟡 EN CURSO</p><h3 style="margin:4px 0;color:#111111;">{dias_en_curso} d</h3></div>', unsafe_allow_html=True)
+            c3.markdown(f'<div style="background:#eef6ff;border:1px solid #58a6ff;border-radius:8px;padding:10px;text-align:center;"><p style="margin:0;color:#58a6ff;font-size:0.7rem;font-weight:bold;">📅 PROGRAMADOS</p><h3 style="margin:4px 0;color:#111111;">{dias_programados} d</h3></div>', unsafe_allow_html=True)
+            c4.markdown(f'<div style="background:#f5f5f5;border:1px solid #6b7280;border-radius:8px;padding:10px;text-align:center;"><p style="margin:0;color:#6b7280;font-size:0.7rem;font-weight:bold;">⏳ PENDIENTES POR PEDIR</p><h3 style="margin:4px 0;color:#111111;">{dias_restantes} d</h3></div>', unsafe_allow_html=True)
+
+            if periodos:
+                for i, f in sorted(periodos):
+                    if f < date.today():
+                        etiqueta, color = "Disfrutadas", "#7ee787"
+                    elif i <= date.today() <= f:
+                        etiqueta, color = "En curso", "#ffaa00"
+                    else:
+                        etiqueta, color = "Programadas", "#58a6ff"
+                    st.markdown(f'<div style="background:#fafafa; border-left:4px solid {color}; border-radius:6px; padding:6px 12px; margin-bottom:4px;"><span style="color:#111111; font-size:0.85rem;">{i.strftime("%d/%m/%Y")} → {f.strftime("%d/%m/%Y")}</span> <span style="color:{color}; font-size:0.75rem; font-weight:bold;"> · {etiqueta} ({(f - i).days + 1} días)</span></div>', unsafe_allow_html=True)
+            else:
+                st.markdown('<p style="color:#8b949e; font-size:0.8rem;">Sin vacaciones registradas todavía.</p>', unsafe_allow_html=True)
+
+            st.markdown("<hr style='margin:10px 0; opacity:0.15;'>", unsafe_allow_html=True)
 
     with tab_emp:
         st.markdown('<p style="color:#8b949e; font-size:0.85rem; margin-bottom:10px;">Los días fuera del rango Alta–Baja se marcan como <b style="color:#888">BAJA EMPRESA</b> y no computan como falta.</p>', unsafe_allow_html=True)
@@ -1190,7 +1227,10 @@ elif menu == "🕒 CONTROL LABORAL":
                 continue
 
             # ── Vacaciones ──
-            es_vac = any(com_sel.upper() in nom.upper() and i <= fecha <= f for nom, (i, f) in vacaciones.items())
+            es_vac = any(
+                com_sel.upper() in nom.upper() and any(i <= fecha <= f for i, f in periodos)
+                for nom, periodos in vacaciones.items()
+            )
             if es_vac:
                 dias_vac += 1
                 historial_diario.append({
