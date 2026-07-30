@@ -1077,7 +1077,7 @@ elif menu == "🕒 CONTROL LABORAL":
     # ── VACACIONES ── (cada persona dispone de 30 días/año; puede tener varios periodos)
     DIAS_VACACIONES_ANUALES = 30
     vacaciones = {
-        "RAQUEL GUADALUPE":  [(date(2026, 8, 17), date(2026, 8, 23))],
+        "RAQUEL GUADALUPE":  [(date(2026, 6, 22), date(2026, 6, 28)), (date(2026, 8, 17), date(2026, 8, 23))],
         "MARIA JOSE ARACIL": [(date(2026, 8, 3), date(2026, 8, 16))],
     }
 
