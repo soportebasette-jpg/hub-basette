@@ -633,6 +633,7 @@ if menu == "🚀 CRM":
     st.markdown('<div class="block-header">💡 🔥 ENERGÍA</div>', unsafe_allow_html=True)
     energia = [
         {"n": "CRM BASETTE", "u": "https://crm.grupobasette.eu/login"}, 
+        {"n": "CRM NUEVO", "u": "https://crm.tecomparotodo.es/dashboard"}, 
         {"n": "GANA ENERGÍA", "u": "https://colaboradores.ganaenergia.com/"}, 
         {"n": "NATURGY", "u": "https://checkout.naturgy.es/backoffice"}, 
         {"n": "TOTAL ENERGY", "u": "https://totalenergiesespana.my.site.com/portalcolaboradores/s/login/?ec=302&startURL=%2Fportalcolaboradores%2Fs%2F"}, 
@@ -1075,8 +1076,8 @@ elif menu == "🕒 CONTROL LABORAL":
 
     # ── VACACIONES ──
     vacaciones = {
-        "RAQUEL GUADALUPE": (date(2026, 6, 22), date(2026, 6, 28)),
-        "MARIA JOSE ARACIL": (date(2026, 8, 3), date(2026, 8, 9))
+        "RAQUEL GUADALUPE": (date(2026, 8, 17), date(2026, 8, 23)),
+        "MARIA JOSE ARACIL": (date(2026, 8, 3), date(2026, 8, 16))
     }
 
     # ── PANEL DE INFO ──
