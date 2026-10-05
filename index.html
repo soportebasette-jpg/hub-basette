@@ -799,6 +799,9 @@ footer a{color:var(--orange);text-decoration:underline;cursor:pointer}
 
       <p class="form-note">🔒 Tus datos son seguros. Solo te contactamos para gestionar el cambio.</p>
 
+      <div id="turnstileBox" style="display:flex;justify-content:center;margin:0 0 12px;"></div>
+      <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit&onload=turnstileListo" async defer></script>
+
       <button class="btn-modal-submit" onclick="enviarFormulario()">
         🚀 ¡Quiero mi tarifa más barata!
       </button>
@@ -829,16 +832,16 @@ if(window['pdfjsLib']){
 <script>
 // === TARIFAS ===
 var T = {
-  naturgy:   { n:'Naturgy',        c:'#00A651', logo:'logo_naturgy.png',     luz:{kwh:0.112,pot:0.185,exc:0.060}, gas:{RL1:{kwh:0.080,fijo:5.15},RL2:{kwh:0.077,fijo:9.15}} },
+  naturgy:   { n:'Naturgy',        c:'#00A651', logo:'logo_naturgy.png',     luz:{kwh:0.123,pot:0.185,exc:0.060}, gas:{RL1:{kwh:0.080,fijo:5.15},RL2:{kwh:0.077,fijo:9.15}} },
   gana:      { n:'Gana Energía',   c:'#005BAC', logo:'logo_gana.png',        luz:{kwh:0.139,pot:0.198,exc:0.060}, gas:{RL1:{kwh:0.0779,fijo:3.93},RL2:{kwh:0.0758,fijo:8.11}}, promoGas:'⚠️ Tarifa INDEXADA' },
-  total:     { n:'Total Energies', c:'#FF6600', logo:'logo_totalenergy.png', luz:{kwh:0.1190,pot:0.158,exc:0.070},    gas:{RL1:{kwh:0.073,fijo:9.50},RL2:{kwh:0.071,fijo:14.50}}, reqPotenciaMax:4, promo:'⚠️ Sin DAZN · Solo para potencia contratada &lt;4 kW' },
-  total2:    { n:'Total Energies (DAZN)', c:'#FF6600', logo:'logo_totalenergy.png', luz:{kwh:0.129,pot:0.25194,exc:0.070},    gas:{RL1:{kwh:0.073,fijo:9.50},RL2:{kwh:0.071,fijo:14.50}}, reqPotenciaMax:4, promo:'🎁 DAZN Premium GRATIS (Fútbol o Motor) · Solo potencia &lt;4 kW' },
-  repsol:    { n:'Repsol',         c:'#E8001C', logo:'logo_repsol.png',      luz:{kwh:0.129,pot:0.180,exc:0.060},    gas:null, promo:'⛽ 20 € de regalo en gasolina Waylet' },
+  total:     { n:'Total Energies', c:'#FF6600', logo:'logo_totalenergy.png', luz:{kwh:0.0999,pot:0.172548,exc:0.070},    gas:{RL1:{kwh:0.0839,fijo:7},RL2:{kwh:0.0819,fijo:12}}, gasDuo:{RL1:{kwh:0.0789,fijo:7},RL2:{kwh:0.0769,fijo:12}}, reqPotenciaMax:4, promo:'⚠️ Sin DAZN · Solo para potencia contratada &lt;4 kW' },
+  total2:    { n:'Total Energies (DAZN)', c:'#FF6600', logo:'logo_totalenergy.png', luz:{kwh:0.129,pot:0.25194,exc:0.070},    gas:{RL1:{kwh:0.0839,fijo:7},RL2:{kwh:0.0819,fijo:12}}, gasDuo:{RL1:{kwh:0.0789,fijo:7},RL2:{kwh:0.0769,fijo:12}}, reqPotenciaMax:4, promo:'🎁 DAZN Premium GRATIS (Fútbol o Motor) · Solo potencia &lt;4 kW' },
+  repsol:    { n:'Repsol',         c:'#E8001C', logo:'logo_repsol.png',      luz:{kwh:0.129,pot:0.180274,exc:0.060},    gas:{RL1:{kwh:0.0849,fijo:6.90},RL2:{kwh:0.0849,fijo:13.90}}, promoGas:'⚠️ Tarifa INDEXADA', promo:'⛽ 20 € de regalo en gasolina Waylet' },
   iberdrola: { n:'Iberdrola',      c:'#006EB6', logo:'logo_iberdrola.png',   luz:{kwh:0.1652264,pot:0.195835,exc:0.050},    gas:{RL1:{kwh:0.095728,fijo:6.25},RL2:{kwh:0.090965,fijo:11.18}} },
   niba:      { n:'Niba',           c:'#2E7D32', logo:'logo_niba.png',        luz:{kwh:0.119,pot:0.182,exc:0.060},    gas:{RL1:{kwh:0.085,fijo:6.03},RL2:{kwh:0.089,fijo:11.30}} },
-  endesa:    { n:'Endesa',         c:'#00B451', logo:'logo_endesa.png',      luz:{kwh:0.137131,pot:0.187332,exc:0.060},    gas:{RL1:{kwh:0.084,fijo:7.18},RL2:{kwh:0.079,fijo:14.60}} },
+  endesa:    { n:'Endesa',         c:'#00B451', logo:'logo_endesa.png',      luz:{kwh:0.128561,pot:0.187332,exc:0.060},    gas:{RL1:{kwh:0.095374,fijo:7.181},RL2:{kwh:0.09504,fijo:14.60}}, promo:'25% de descuento el primer año', promoGas:'Dto. 10% el 1er año' },
   nordy:     { n:'Nordy',          c:'#003B2F', logo:'logo_nordy.png',       luz:{kwh:0.143,pot:0.180,exc:0.050},        gas:null, promo:'ℹ️ Precio energía 0,119 €/kWh + Gastos de gestión 0,024 €/kWh (revisable trimestralmente)' },
-  imagina:   { n:'Imagina Energía', c:'#EF4123', logo:'logo_imagina.png',    luz:{kwh:0.099,pot:0.252,exc:0.04},     gas:null, promo:'🔥 -20% en energía el primer año (antes 0,123 €/kWh) · Precio fijo 24h · Compatible con autoconsumo · 🔋 Batería virtual: excedentes a 0,04 €/kWh' }
+  imagina:   { n:'Imagina Energía', c:'#EF4123', logo:'logo_imagina.png',    luz:{kwh:0.099,pot:0.10,exc:0.04},     gas:null, promo:'🔥 -20% en energía el primer año (antes 0,123 €/kWh) · Precio fijo 24h · Compatible con autoconsumo · 🔋 Batería virtual: excedentes a 0,04 €/kWh' }
 };
 var IMP_E = 0.0511, IMP_H = 0.00234, ALQL = 0.81, ALQG = 1.20;
 var BONO_DIA = 0.024688, ALQL_DIA = 0.02663014;
@@ -1239,6 +1242,12 @@ function parsearFacturaLuz(texto){
     var mp2 = t.match(/Punta\s+(\d{1,2}(?:[.,]\d+)?)\s*kW\b/i);
     if(mp2) potencias.push(numESPotencia(mp2[1]));
   }
+  if(potencias.length === 0){
+    // Formato "Potencias contratadas: punta-llano 5,976 kW; valle 5,976 kW" (Endesa).
+    // Se toma la primera cifra (punta-llano), que es la potencia contratada.
+    var mpPlural = t.match(/Potencias\s+contratadas:?\s*(?:punta[\s-]*llano|punta|P1)?\s*:?\s*(\d{1,2}(?:[.,]\d+)?)\s*kW\b/i);
+    if(mpPlural) potencias.push(numESPotencia(mpPlural[1]));
+  }
   if(potencias.length > 0){
     datos.potencia = potencias[0];
   }
@@ -1396,7 +1405,7 @@ function computarResultados(tipoFactura, kwhLuz, pot, kwhGas, tarGas, dias, impo
       totalLuz = baseImpE + imp + BONO_DIA * dias + ALQL_DIA * dias;
     }
     if(quiereGas && t.gas && t.gas[tarGas]){
-      var g = t.gas[tarGas];
+      var g = (quiereLuz && t.gasDuo ? t.gasDuo[tarGas] : t.gas[tarGas]);
       precioKwhGas = g.kwh;
       costeFijoGas = g.fijo;
       costeEnergiaGas = g.kwh * kwhGas;
@@ -1760,7 +1769,42 @@ function generarPDFComparativa(P, logos){
 }
 
 // === MODAL ===
+// === Captcha antibots (Cloudflare Turnstile) ===
+// El widget se dibuja en el modal; cada token vale para un solo envío, así que
+// se reinicia al abrir el modal y tras cada intento de envío.
+var TURNSTILE_SITEKEY = '0x4AAAAAAFOHswzdomMJdtWI';
+var turnstileWidgetId = null;
+function turnstileListo(){ prepararTurnstile(); }
+function prepararTurnstile(){
+  if(!window.turnstile || !document.getElementById('turnstileBox')) return;
+  try{
+    if(turnstileWidgetId === null){
+      turnstileWidgetId = window.turnstile.render('#turnstileBox', { sitekey: TURNSTILE_SITEKEY, language: 'es' });
+    } else {
+      window.turnstile.reset(turnstileWidgetId);
+    }
+  }catch(e){ console.error('[Comparador] Turnstile:', e); }
+}
+function turnstileToken(){
+  try{
+    if(window.turnstile && turnstileWidgetId !== null) return window.turnstile.getResponse(turnstileWidgetId) || '';
+  }catch(e){}
+  return '';
+}
+function mostrarErrorModal(texto){
+  var errorBox = document.getElementById('modalError');
+  if(!errorBox){
+    errorBox = document.createElement('div');
+    errorBox.id = 'modalError';
+    errorBox.style.cssText = 'margin-top:10px;padding:10px 12px;border-radius:8px;background:#fde2e2;color:#a11;font-size:13px;';
+    document.getElementById('modalForm').appendChild(errorBox);
+  }
+  errorBox.textContent = texto;
+}
+
+if(window.turnstile){ prepararTurnstile(); } // por si api.js terminó de cargar antes que este script
 function abrirModal(){
+  prepararTurnstile();
   document.getElementById('modalOverlay').classList.add('active');
   document.getElementById('modalForm').style.display = 'block';
   document.getElementById('modalSuccess').style.display = 'none';
@@ -1783,6 +1827,14 @@ function enviarFormulario(){
   if(!nombre){ document.getElementById('inputNombre').focus(); return; }
   if(!tel || tel.length < 9){ document.getElementById('inputTelefono').focus(); return; }
 
+  // Si el captcha ya cargó pero aún no ha terminado de verificar, se pide esperar.
+  // Si no cargó (bloqueador de anuncios, red), se envía igualmente y decide el servidor.
+  var tokenCaptcha = turnstileToken();
+  if(window.turnstile && turnstileWidgetId !== null && !tokenCaptcha){
+    mostrarErrorModal('Estamos verificando que eres una persona. Espera un segundo e inténtalo de nuevo.');
+    return;
+  }
+
   var btn = document.querySelector('.btn-modal-submit');
   if(btn){ btn.disabled = true; btn.textContent = 'Enviando...'; }
 
@@ -1795,17 +1847,20 @@ function enviarFormulario(){
   fetch(URL_GUARDAR_LEAD, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ nombre: nombre, telefono: tel })
+    body: JSON.stringify({ nombre: nombre, telefono: tel, turnstile_token: tokenCaptcha })
   }).then(function(res){
     return res.json().catch(function(){ return null; }).then(function(data){
       if(!res.ok || !data || !data.ok){
-        throw new Error('Respuesta del servidor: ' + res.status + ' ' + JSON.stringify(data));
+        var errServidor = new Error('Respuesta del servidor: ' + res.status + ' ' + JSON.stringify(data));
+        errServidor.mensajeServidor = data && data.error;
+        throw errServidor;
       }
       console.log('[Comparador] Lead guardado correctamente en IONOS:', data);
       document.getElementById('modalForm').style.display = 'none';
       document.getElementById('modalSuccess').style.display = 'block';
     });
   }).catch(function(err){
+    prepararTurnstile();
     // Si falla el guardado, avisamos al usuario en vez de fingir que todo fue bien.
     // Revisa la pestaña Network del navegador (F12): si ves un error CORS o 404 en
     // guardar_lead_comparador.php, significa que ese script no es accesible desde
@@ -1819,7 +1874,7 @@ function enviarFormulario(){
       errorBox.style.cssText = 'margin-top:10px;padding:10px 12px;border-radius:8px;background:#fde2e2;color:#a11;font-size:13px;';
       document.getElementById('modalForm').appendChild(errorBox);
     }
-    errorBox.textContent = 'No se ha podido enviar tu inscripción. Comprueba tu conexión e inténtalo de nuevo.';
+    errorBox.textContent = (err && err.mensajeServidor) || 'No se ha podido enviar tu inscripción. Comprueba tu conexión e inténtalo de nuevo.';
   });
 }
 
